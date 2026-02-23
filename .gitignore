@@ -2,8 +2,11 @@
 
 # Ralph Loop Runtime State (never tracked - archived only)
 .ralph/
-.ralph-state.json
-.ralph-*.json
+
+# Ralph templates are tracked (they're templates, not runtime state)
+!.ralph-state-template.json
+!.ralph-story-template.json
+!.ralph-quota-config.json
 
 # Checkpoints (can be regenerated)
 .claude/checkpoints/

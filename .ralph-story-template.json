@@ -1,0 +1,38 @@
+{
+  "_comment": "Template for a Ralph story",
+  "id": "REQ-001",
+  "title": "User Login",
+  "description": "Users can log in with email and password",
+  "priority": "high|medium|low",
+  "status": "pending|ready|in_progress|testing|completed|failed|blocked",
+  "acceptanceCriteria": [
+    "User can enter email and password",
+    "System validates credentials",
+    "Session is created on success"
+  ],
+  "dependencies": [],
+  "blockedBy": [],
+  "blocks": [],
+  "codeImpact": {
+    "files": [],
+    "modules": []
+  },
+  "taskId": "claude-task-id",
+  "subagentId": null,
+  "implementation": {
+    "files": [],
+    "startedAt": null,
+    "completedAt": null
+  },
+  "tests": {
+    "files": [],
+    "status": "pending|passed|failed",
+    "results": []
+  },
+  "commits": [],
+  "iterations": {
+    "logic": 0,
+    "formatting": 0
+  },
+  "feedback": []
+}

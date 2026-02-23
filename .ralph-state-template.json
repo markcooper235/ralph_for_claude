@@ -1,0 +1,87 @@
+{
+  "_comment": "Template for Ralph Loop state - actual state stored in .ralph/ (not tracked in git)",
+  "runId": "spec-name-timestamp",
+  "specFile": "specs/prds/example.prd.md",
+  "status": "idle|parsing|architecture|implementing|testing|proving|harvesting|complete|failed|paused_quota|paused_user|paused_error",
+  "createdAt": "2026-02-23T14:50:23Z",
+  "updatedAt": "2026-02-23T14:50:23Z",
+  "currentIteration": 1,
+  "maxIterations": {
+    "logic": 5,
+    "formatting": 3,
+    "global": null,
+    "enabled": false
+  },
+  "paused": false,
+  "pausedAt": null,
+  "pauseReason": null,
+  "resumePhase": null,
+  "resumedAt": null,
+  "resumeCount": 0,
+  "quota": {
+    "limit": 200000,
+    "totalUsed": 0,
+    "currentSessionUsed": 0,
+    "warningThreshold": 150000,
+    "safetyThreshold": 170000,
+    "estimatedRemaining": 0,
+    "lastCheck": null,
+    "phaseUsage": {
+      "parsing": 0,
+      "architecture": 0,
+      "implementing": 0,
+      "testing": 0,
+      "proving": 0
+    },
+    "storyUsage": {}
+  },
+  "git": {
+    "originBranch": "main",
+    "ralphBranch": "ralph/spec-name-20260223145023",
+    "branchCreated": true,
+    "commits": []
+  },
+  "stories": [],
+  "dependencies": {},
+  "progress": {
+    "totalStories": 0,
+    "completedStories": 0,
+    "failedStories": 0,
+    "inProgressStories": 0
+  },
+  "testResults": {
+    "lint": {
+      "status": "pending|passed|failed",
+      "iterations": 0,
+      "lastRun": null,
+      "output": ""
+    },
+    "unit": {
+      "status": "pending|passed|failed",
+      "iterations": 0,
+      "lastRun": null,
+      "output": "",
+      "coverage": 0
+    },
+    "integration": {
+      "status": "pending|passed|failed",
+      "iterations": 0,
+      "lastRun": null,
+      "output": ""
+    },
+    "ui": {
+      "status": "pending|passed|failed|not_required",
+      "iterations": 0,
+      "lastRun": null,
+      "output": ""
+    },
+    "codeQuality": {
+      "status": "pending|passed|failed",
+      "iterations": 0,
+      "lastRun": null,
+      "output": ""
+    }
+  },
+  "feedback": [],
+  "artifacts": []
+}

@@ -36,6 +36,15 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Full audit trail of decisions and changes
 - Resume capability if interrupted
 
+**Quota Management** ⭐ NEW
+- Monitors context quota usage in real-time
+- Estimates task costs before starting
+- Pauses gracefully before quota exhaustion
+- Never starts tasks that won't finish
+- Seamless resume after quota replenishment
+- Optional max iteration limits
+- Configurable thresholds (warning: 75%, safety: 85%)
+
 **Git Integration**
 - Each run creates feature branch: `ralph/<spec-name>-<timestamp>`
 - Branched from main/master/development (user's choice)
@@ -90,8 +99,16 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Display run progress
 - Show story statuses
 - Check iteration counts
+- Show quota usage
 - Identify blockers
 - Show next steps
+
+**`/ralph-resume`** - Resume paused Ralph run
+- Resume after quota replenishment
+- Resume after user interruption
+- Resume after error fix
+- Validates quota availability
+- Continues from exact pause point
 
 #### Testing Skills
 
@@ -475,8 +492,11 @@ archive/user-auth-20260223145023/
 # Start Ralph Loop
 /ralph-loop specs/prds/<spec-name>.prd.md
 
-# Check status
+# Check status (including quota)
 /ralph-status
+
+# Resume paused run
+/ralph-resume
 
 # Complete and archive
 /ralph-archive
@@ -510,7 +530,66 @@ See `examples/` for:
 - `README.md` - Framework overview
 - `docs/QUICKSTART.md` - 5-minute getting started
 - `docs/ralph-loop-guide.md` - Complete guide
+- `docs/QUOTA-MANAGEMENT.md` - Quota management guide ⭐ NEW
 - `archive/*/summary.md` - Per-run summaries
+
+### Quota Management
+
+**How it works:**
+1. Ralph monitors context quota usage throughout run
+2. Estimates cost of each story before starting
+3. Checks: will this task finish with available quota?
+4. If quota insufficient: pauses gracefully BEFORE starting task
+5. All progress saved, nothing lost
+6. Resume with `/ralph-resume` after quota replenishment
+
+**Thresholds (configurable):**
+- Warning: 75% (150K/200K) - User notified
+- Safety: 85% (170K/200K) - Pause before next task
+- Reserve: 5K always kept for cleanup operations
+
+**Example:**
+```
+Current usage: 155K/200K (77.5%)
+Next story (REQ-004): estimated 17K
+After task: 172K (86%) - EXCEEDS SAFETY
+Decision: Pause before REQ-004
+Action: Save state, notify user
+Resume: /ralph-resume (when quota replenished)
+```
+
+**Max Iterations (optional):**
+```json
+{
+  "maxIterations": {
+    "enabled": true,
+    "global": 100,        // Max 100 iterations total
+    "perStory": 20,       // Max 20 per story
+    "warningAt": 80       // Warn at 80
+  }
+}
+```
+
+**Pause/Resume Flow:**
+```
+1. Ralph detects quota approaching limit
+2. Completes current story (REQ-003)
+3. Commits REQ-003
+4. Pauses BEFORE starting REQ-004
+5. Saves state: paused_quota
+6. User sees quota status and resume instructions
+7. Later: /ralph-resume
+8. Ralph validates quota available
+9. Continues with REQ-004
+10. Can pause/resume multiple times
+```
+
+**Configuration:**
+- Default: `.ralph-quota-config.json`
+- Override: `.ralph/quota-config.json`
+- Customize: thresholds, limits, behavior
+
+**See:** `docs/QUOTA-MANAGEMENT.md` for complete guide
 
 ---
 
