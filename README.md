@@ -12,22 +12,57 @@ The Ralph Loop Framework is a structured approach to software development that c
 
 The name "Ralph" represents the continuous cycle: **R**equirement → **A**rchitecture → **L**oop → **P**rove → **H**arvest
 
+## Installation
+
+### Quick Install
+
+Install Ralph Loop Framework globally and add to a new or existing project:
+
+```bash
+# Clone or download the framework
+git clone <framework-repo-url>
+cd ralph_for_claude
+
+# Install globally + create new project
+./install-ralph-loop.sh --install-global --new-project my-app --type typescript
+
+# OR: Install globally + add to existing project
+cd /path/to/existing/project
+/path/to/ralph_for_claude/install-ralph-loop.sh --install-global --init
+
+# OR: Install skills globally only
+./install-ralph-loop.sh --install-global
+```
+
+### Supported Project Types
+
+- **TypeScript/JavaScript** - npm, yarn, pnpm, bun support
+- **Python** - pip, poetry, pipenv support
+- **Go** - Standard Go tooling
+- **Rust** - Cargo support
+- **C/C++** - CMake, Make support
+
+See `docs/INSTALLATION.md` for detailed installation guide including:
+- Auto-detection of existing projects
+- Interactive configuration
+- Backup system
+- Troubleshooting
+
 ## Quick Start
 
 1. **Create a specification:**
    ```bash
-   # Use the PRD template
+   # Interactive PRD creation (recommended)
+   /ralph-create-prd
+
+   # Or use templates manually
    cp .claude/templates/prd-template.md specs/prds/my-feature.prd.md
    # Edit the PRD with your requirements
-
-   # Or use the OpenSpec template
-   cp .claude/templates/openspec-template.yaml specs/openspecs/my-api.openspec.yaml
-   # Edit the OpenSpec with your contracts
    ```
 
 2. **Start the Ralph Loop:**
    ```bash
-   /ralph-loop specs/prds/my-feature.prd.md
+   /ralph-loop
    ```
 
 3. **Claude will automatically:**

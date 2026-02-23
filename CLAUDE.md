@@ -76,6 +76,32 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Workspace cleaned after archive
 - Ready for next run immediately
 
+### Installation & Setup
+
+The Ralph Loop Framework includes an installation script for easy setup:
+
+```bash
+# Install skills globally
+./install-ralph-loop.sh --install-global
+
+# Create new project with Ralph Loop
+./install-ralph-loop.sh --install-global --new-project <name> --type <language>
+
+# Add to existing project
+cd /path/to/project
+./install-ralph-loop.sh --install-global --init
+```
+
+**Features:**
+- Installs all 15 Ralph skills to `~/.claude/skills/`
+- Auto-detects existing project type and tools
+- Interactive configuration (package manager, test framework, etc.)
+- Backs up existing files before modifying
+- Supports TypeScript, Python, Go, Rust, C, C++
+- Creates complete project structure with documentation
+
+See `docs/INSTALLATION.md` for detailed installation guide.
+
 ### Available Skills
 
 #### Primary Workflow Skills
