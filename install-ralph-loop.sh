@@ -111,7 +111,7 @@ install_global_skills() {
 
             cp "${skill_file}" "${target}"
             print_success "Installed: ${skill_name}"
-            ((installed_count++))
+            installed_count=$((installed_count + 1))
         fi
     done
 
@@ -907,29 +907,29 @@ create_new_project() {
     # Create basic project structure based on type
     case "${project_type}" in
         typescript)
-            create_typescript_project "${project_dir}"
+            create_typescript_project "."
             ;;
         python)
-            create_python_project "${project_dir}"
+            create_python_project "."
             ;;
         go)
-            create_go_project "${project_dir}" "${project_name}"
+            create_go_project "." "${project_name}"
             ;;
         rust)
-            create_rust_project "${project_dir}" "${project_name}"
+            create_rust_project "." "${project_name}"
             ;;
         c|cpp)
-            create_c_project "${project_dir}" "${project_type}"
+            create_c_project "." "${project_type}"
             ;;
     esac
 
     # Create Ralph structure
-    create_ralph_structure "${project_dir}"
+    create_ralph_structure "."
 
     # Create configuration files
-    create_claude_md "${project_dir}" "${project_type}"
-    create_gitignore "${project_dir}"
-    create_readme "${project_dir}" "${project_name}" "${project_type}"
+    create_claude_md "." "${project_type}"
+    create_gitignore "."
+    create_readme "." "${project_name}" "${project_type}"
 
     # Initial git commit
     git add .
