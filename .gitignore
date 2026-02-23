@@ -1,0 +1,92 @@
+# Ralph Loop Framework - Git Ignore
+
+# Ralph Loop Runtime State (never tracked - archived only)
+.ralph/
+.ralph-state.json
+.ralph-*.json
+
+# Checkpoints (can be regenerated)
+.claude/checkpoints/
+
+# Feedback results (can be regenerated)
+feedback/
+!feedback/.gitkeep
+
+# Auto-generated feedback configs (can be regenerated)
+.claude/feedback-configs/*.json
+
+# Implementation artifacts (project-specific)
+implementations/*/node_modules/
+implementations/*/venv/
+implementations/*/target/
+implementations/*/.pytest_cache/
+implementations/*/__pycache__/
+implementations/*/dist/
+implementations/*/build/
+
+# Test artifacts
+tests/browser/screenshots/actual/
+tests/browser/screenshots/diff/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.coverage
+coverage/
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Dependencies
+node_modules/
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+
+# Compiled files
+*.o
+*.so
+*.dll
+*.exe
+*.out
+*.app
+
+# Keep example files
+!examples/**
+
+# Keep template files
+!.claude/templates/**
+
+# Keep skill files
+!.claude/skills/**
+
+# Keep documentation
+!docs/**
+!README.md
+!CLAUDE.md

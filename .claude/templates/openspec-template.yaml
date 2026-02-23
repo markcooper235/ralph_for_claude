@@ -1,0 +1,301 @@
+# OpenSpec Template
+# Declarative specification format for behavior-driven development
+
+name: ProjectName
+version: 1.0.0
+description: Brief description of what this specification covers
+
+# Type Definitions
+types:
+  # Define data structures and their constraints
+  User:
+    id: string
+    email: string
+    name: string
+    createdAt: datetime
+    constraints:
+      - id must be UUID v4
+      - email matches /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      - name length between 1 and 100
+      - createdAt is ISO 8601 format
+
+  Session:
+    id: string
+    userId: string
+    token: string
+    expiresAt: datetime
+    constraints:
+      - id must be UUID v4
+      - token is JWT format
+      - expiresAt > now()
+
+  Result<T, E>:
+    oneOf:
+      - success: { value: T }
+      - failure: { error: E }
+
+# Behavioral Contracts
+contracts:
+  # Each contract specifies a function's behavior
+  createUser:
+    signature: (email: string, name: string, password: string) -> Result<User, Error>
+
+    require:  # Preconditions that must be true before execution
+      - email is valid email format
+      - name is not empty
+      - password length >= 8
+      - password contains at least one number
+      - password contains at least one uppercase letter
+      - email is not already registered
+
+    ensure:  # Postconditions that must be true after execution
+      - if success, returned User.email == email
+      - if success, returned User.name == name
+      - if success, User is persisted in database
+      - if success, password is hashed and not stored in plaintext
+      - if failure with duplicate email, error code is DUPLICATE_EMAIL
+      - if failure with invalid password, error code is WEAK_PASSWORD
+
+    invariants:  # Properties that always hold
+      - User.id is unique across all users
+      - User.createdAt is always in the past
+
+    examples:
+      - name: successful user creation
+        input:
+          email: user@example.com
+          name: John Doe
+          password: SecurePass123
+        output:
+          success: true
+          value:
+            id: "550e8400-e29b-41d4-a716-446655440000"
+            email: user@example.com
+            name: John Doe
+            createdAt: "2024-01-15T10:30:00Z"
+
+      - name: duplicate email fails
+        input:
+          email: existing@example.com
+          name: Jane Doe
+          password: SecurePass123
+        output:
+          success: false
+          error:
+            code: DUPLICATE_EMAIL
+            message: Email already registered
+
+      - name: weak password fails
+        input:
+          email: newuser@example.com
+          name: Bob Smith
+          password: weak
+        output:
+          success: false
+          error:
+            code: WEAK_PASSWORD
+            message: Password does not meet requirements
+
+  login:
+    signature: (email: string, password: string) -> Result<Session, Error>
+
+    require:
+      - email is valid email format
+      - password is not empty
+      - user with email exists
+
+    ensure:
+      - if success, returned Session.userId matches User.id
+      - if success, Session.token is valid JWT
+      - if success, Session.expiresAt is 24 hours from now
+      - if failure with wrong password, error code is INVALID_CREDENTIALS
+      - if failure with non-existent user, error code is INVALID_CREDENTIALS
+      - failed login attempts are logged
+
+    invariants:
+      - Session.token is unique across all sessions
+      - Session.expiresAt is always in the future for active sessions
+
+    examples:
+      - name: successful login
+        input:
+          email: user@example.com
+          password: SecurePass123
+        output:
+          success: true
+          value:
+            id: "660e8400-e29b-41d4-a716-446655440001"
+            userId: "550e8400-e29b-41d4-a716-446655440000"
+            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            expiresAt: "2024-01-16T10:30:00Z"
+
+      - name: invalid credentials
+        input:
+          email: user@example.com
+          password: WrongPassword
+        output:
+          success: false
+          error:
+            code: INVALID_CREDENTIALS
+            message: Invalid email or password
+
+  logout:
+    signature: (sessionId: string) -> Result<void, Error>
+
+    require:
+      - sessionId is not empty
+      - session with sessionId exists
+
+    ensure:
+      - session is invalidated
+      - session token cannot be used for authentication
+      - if session not found, error code is SESSION_NOT_FOUND
+
+    examples:
+      - name: successful logout
+        input:
+          sessionId: "660e8400-e29b-41d4-a716-446655440001"
+        output:
+          success: true
+
+      - name: session not found
+        input:
+          sessionId: "invalid-session-id"
+        output:
+          success: false
+          error:
+            code: SESSION_NOT_FOUND
+            message: Session does not exist
+
+# Property-Based Specifications
+properties:
+  # Properties that should hold for all valid inputs
+  login_deterministic:
+    description: Logging in with same credentials twice produces equivalent sessions
+    forAll: [email, password]
+    where:
+      - email is valid email
+      - password meets requirements
+      - user exists
+    holds: |
+      let session1 = login(email, password)
+      let session2 = login(email, password)
+      session1.userId == session2.userId
+
+  user_email_unique:
+    description: No two users can have the same email
+    forAll: [user1, user2]
+    where:
+      - user1 is User
+      - user2 is User
+      - user1 != user2
+    holds: user1.email != user2.email
+
+  session_expiry_future:
+    description: Active sessions always expire in the future
+    forAll: [session]
+    where:
+      - session is Session
+      - session is active
+    holds: session.expiresAt > now()
+
+  password_never_stored_plaintext:
+    description: Passwords are never stored in plaintext
+    forAll: [user]
+    where:
+      - user is User
+    holds: user.passwordHash != user.originalPassword
+
+# Edge Cases and Boundary Conditions
+edgeCases:
+  - name: empty database
+    description: System works correctly when no users exist
+    scenarios:
+      - login with any credentials fails
+      - createUser with valid data succeeds
+
+  - name: maximum users
+    description: System handles large number of users
+    scenarios:
+      - can create 1 million users
+      - login performance remains acceptable
+
+  - name: concurrent logins
+    description: Multiple simultaneous logins for same user
+    scenarios:
+      - both logins succeed
+      - separate sessions are created
+      - both sessions are valid
+
+  - name: session expiry boundary
+    description: Sessions exactly at expiry time
+    scenarios:
+      - session at exact expiry time is invalid
+      - session 1ms before expiry is valid
+
+# Performance Requirements
+performance:
+  createUser:
+    latency:
+      p50: < 100ms
+      p95: < 250ms
+      p99: < 500ms
+    throughput: >= 100 requests/second
+
+  login:
+    latency:
+      p50: < 50ms
+      p95: < 150ms
+      p99: < 300ms
+    throughput: >= 500 requests/second
+
+# Security Requirements
+security:
+  - passwords hashed with bcrypt, cost factor >= 12
+  - sessions use secure random tokens (256 bits)
+  - JWT tokens signed with HS256 or RS256
+  - all API endpoints require authentication except createUser and login
+  - rate limiting: 5 login attempts per minute per IP
+  - sensitive data (email, name) encrypted at rest
+
+# Testing Strategy
+testing:
+  unit:
+    - test each contract with all examples
+    - test all properties with property-based testing (100 iterations minimum)
+    - test all edge cases
+
+  integration:
+    - test complete user registration and login flow
+    - test session management across multiple requests
+    - test concurrent operations
+
+  performance:
+    - load test with 1000 concurrent users
+    - stress test until system degrades
+    - measure latency at various loads
+
+  security:
+    - test authentication bypass attempts
+    - test SQL injection vectors
+    - test XSS vectors
+    - test CSRF protection
+
+---
+
+# Usage with Ralph Loop
+
+To use this OpenSpec with the Ralph Loop Framework:
+
+```bash
+/parse-openspec specs/openspecs/[this-file].openspec.yaml
+/ralph-loop specs/openspecs/[this-file].openspec.yaml
+```
+
+The framework will:
+1. Parse all contracts and types
+2. Generate property-based tests
+3. Generate contract validation tests
+4. Generate example-based tests
+5. Create tasks for implementation
+6. Execute the Ralph Loop
