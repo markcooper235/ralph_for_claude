@@ -60,6 +60,16 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - **Integration Tests**: Full system validation
 - Iteration not complete until ALL tests pass
 
+**Spec Modification** ⭐ NEW
+- Modify specs during run without losing progress
+- Add requirements when gaps discovered
+- Clarify criteria when ambiguous
+- Reprioritize based on learnings
+- Update dependencies when found
+- Revert completed stories if needed
+- All versions archived with history
+- Seamless resumption after changes
+
 **Archival System**
 - Complete run archived to `archive/<spec-name>-<timestamp>/`
 - Includes: spec, state, logs, test results, git history
@@ -109,6 +119,22 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Resume after error fix
 - Validates quota availability
 - Continues from exact pause point
+
+**`/ralph-modify-spec`** - Modify specification during run ⭐ NEW
+- Add new requirements (discovered gaps)
+- Modify existing requirements (clarify criteria)
+- Change priorities (reprioritize based on learnings)
+- Update dependencies (add/remove dependencies)
+- Remove requirements (scope changes)
+- Handles completed stories (revert and re-implement)
+- Maintains all progress
+- Spec versioning tracked
+
+**`/ralph-add-requirement`** - Quick add single requirement ⭐ NEW
+- Fast way to add discovered gap
+- Simplified version of ralph-modify-spec
+- Single requirement addition
+- Automatic dependency analysis
 
 #### Testing Skills
 
@@ -498,6 +524,11 @@ archive/user-auth-20260223145023/
 # Resume paused run
 /ralph-resume
 
+# Modify spec during run (if gap discovered)
+/ralph-modify-spec
+# Or quick add single requirement
+/ralph-add-requirement "Email verification" --priority=high
+
 # Complete and archive
 /ralph-archive
 
@@ -530,7 +561,9 @@ See `examples/` for:
 - `README.md` - Framework overview
 - `docs/QUICKSTART.md` - 5-minute getting started
 - `docs/ralph-loop-guide.md` - Complete guide
-- `docs/QUOTA-MANAGEMENT.md` - Quota management guide ⭐ NEW
+- `docs/COMPLETE-WORKFLOW.md` - End-to-end workflow with all commands
+- `docs/QUOTA-MANAGEMENT.md` - Quota management guide
+- `docs/SPEC-MODIFICATIONS.md` - Modifying specs during run ⭐ NEW
 - `archive/*/summary.md` - Per-run summaries
 
 ### Quota Management
