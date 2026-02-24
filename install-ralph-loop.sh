@@ -911,10 +911,11 @@ create_new_project() {
     mkdir -p "${project_dir}"
     cd "${project_dir}"
 
-    # Initialize git if not already a repo
-    if [ ! -d ".git" ]; then
+    # Initialize git if not already in a git repository
+    # Check both local .git and parent git repos (to avoid nested repos)
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
         git init
-        print_success "Initialized git repository"
+        print_success "Initialized git repository in project"
     fi
 
     # Detect project type if not specified
@@ -1256,11 +1257,16 @@ main() {
 
     # Create new project if requested
     if [ -n "${new_project}" ]; then
-        # Validate parent directory
+        # Create parent directory if it doesn't exist
         if [ ! -d "${parent_dir}" ]; then
-            print_error "Parent directory does not exist: ${parent_dir}"
-            echo "Create it first or use a different path"
-            exit 1
+            mkdir -p "${parent_dir}"
+            print_success "Created parent directory: ${parent_dir}"
+        fi
+
+        # Initialize git in parent directory if not already a git repo
+        if [ ! -d "${parent_dir}/.git" ]; then
+            (cd "${parent_dir}" && git init)
+            print_success "Initialized git repository in: ${parent_dir}"
         fi
 
         create_new_project "${new_project}" "${project_type}" "${parent_dir}"
