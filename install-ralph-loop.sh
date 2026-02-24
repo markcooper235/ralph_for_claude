@@ -2664,17 +2664,19 @@ main() {
         create_new_project "${new_project}" "${project_type}" "${parent_dir}"
         install_skills_for_project "${parent_dir}/${new_project}"
 
-        # Single git commit after everything is in place (structure + skills + commands)
+        # Single git commit after everything is in place (structure + skills + commands).
+        # cd into the project first so all git commands run in the correct context.
         local project_abs="${parent_dir}/${new_project}"
-        if git -C "${project_abs}" rev-parse --git-dir >/dev/null 2>&1; then
-            git -C "${project_abs}" add .
-            if [ -n "$(git -C "${project_abs}" status --porcelain 2>/dev/null)" ]; then
+        cd "${project_abs}"
+        if git rev-parse --git-dir >/dev/null 2>&1; then
+            git add .
+            if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
                 # Use "Add Ralph Loop Framework" if there's already a commit (e.g. NX workspace),
                 # otherwise this is the very first commit.
-                if git -C "${project_abs}" rev-parse HEAD >/dev/null 2>&1; then
-                    git -C "${project_abs}" commit -m "Add Ralph Loop Framework to project"
+                if git rev-parse HEAD >/dev/null 2>&1; then
+                    git commit -m "Add Ralph Loop Framework to project"
                 else
-                    git -C "${project_abs}" commit -m "Initial commit: Ralph Loop Framework"
+                    git commit -m "Initial commit: Ralph Loop Framework"
                 fi
                 print_success "Git commit created — all setup files included"
             fi
