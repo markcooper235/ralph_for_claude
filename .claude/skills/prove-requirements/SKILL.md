@@ -35,8 +35,12 @@ When this skill is invoked:
    - Check that tests actually validate the requirement
 
 4. **Execute All Tests**
-   - Run complete test suite
-   - Run `/test-spec --all` to execute requirement tests
+   - Check for NX workspace (`.ralph/nx-workspace.json` or `nx.json`)
+   - **Standard project:** run complete test suite, then `/test-spec --all`
+   - **NX workspace:**
+     - Run `nx run-many -t test,lint` to validate all projects
+     - Or use `nx affected -t test --base=main` for changed projects only (faster in CI)
+     - Map each failing test back to its NX project for scoped re-runs
    - If UI requirements exist, run `/browser-test`
    - Collect all test results
 

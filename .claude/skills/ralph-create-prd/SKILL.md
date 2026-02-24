@@ -75,6 +75,11 @@ Continue until user says "done" or has 3-10 stories.
 - If existing codebase, ask: "Which files/modules will this touch?"
 - Use Glob/Grep to search relevant code
 - Note potential conflicts with other requirements
+- **NX workspace:** if `nx.json` or `.ralph/nx-workspace.json` exists, also ask:
+  "Which NX project(s) does this requirement touch?"
+  (e.g., `react-app`, `nest-api`, `shared-lib`)
+  Store as `nx_projects: [react-app, nest-api]` in the requirement metadata.
+  This is used by `/test-spec` and `/ralph-loop` to scope test execution per project.
 
 **Validate dependencies:**
 - Check for circular dependencies
@@ -228,6 +233,11 @@ Create: `specs/prds/<spec-name>.stories.json`
     "REQ-003": ["REQ-001"]
   },
   "codeImpact": {},
+  "nxProjects": {
+    "REQ-001": ["react-app"],
+    "REQ-002": ["nest-api"],
+    "REQ-003": ["react-app", "nest-api"]
+  },
   "testRequirements": {
     "unit": true,
     "integration": true,

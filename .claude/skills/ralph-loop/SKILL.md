@@ -15,6 +15,26 @@ Execute the complete Ralph Loop development cycle: Requirement → Architecture 
 /ralph-loop [spec-file] [--phase=<phase>] [--resume=<checkpoint>]
 ```
 
+## NX Workspace Detection
+
+Before starting any phase, check if this is an NX monorepo:
+- Check for `.ralph/nx-workspace.json` (written by installer)
+- Or check for `nx.json` in the project root
+
+If NX workspace detected, read `.ralph/nx-workspace.json` to get:
+- `frontends` — frontend project names (e.g., `react-app`)
+- `backends` — backend project names (e.g., `nest-api`)
+- `unit_test` — default runner (jest/vitest)
+
+**NX command substitutions:**
+| Standard command | NX equivalent |
+|---|---|
+| `npm test` | `nx run <project>:test` |
+| `npm run build` | `nx run <project>:build` |
+| `npm run lint` | `nx run <project>:lint` |
+| Run all tests | `nx run-many -t test` |
+| Run affected only | `nx affected -t test --base=main` |
+
 ## Instructions
 
 When this skill is invoked:
@@ -44,6 +64,7 @@ When this skill is invoked:
      - Implement the requirement
      - Write corresponding tests
      - Run `/test-spec` for the specific requirement
+       - **NX workspace:** `/test-spec` will automatically scope to the correct NX project(s) listed in the requirement's `nx_projects` metadata
      - Update task status to 'completed' if tests pass
      - If tests fail, create new tasks for fixes
    - Continue until all tasks are completed or blocked
@@ -54,6 +75,8 @@ When this skill is invoked:
      - UI: `/browser-test`
      - API: Integration test suite
      - Library: Unit test suite with coverage
+   - **NX workspace:** use `nx run-many -t test,lint` to validate all projects,
+     or `nx affected -t test --base=main` to test only changed projects
    - Generate test report in feedback/ directory
    - Identify any failing requirements
 

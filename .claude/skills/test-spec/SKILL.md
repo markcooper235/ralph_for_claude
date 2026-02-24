@@ -15,6 +15,17 @@ Test implementation against specification requirements with detailed feedback.
 /test-spec [requirement-id] [--all] [--verbose]
 ```
 
+## NX Workspace Detection
+
+Before executing any tests, check for an NX workspace:
+- Check `.ralph/nx-workspace.json` — exists if project was created with `--type nx`
+- Or check `nx.json` in project root
+
+If NX workspace, determine which project(s) to scope tests to:
+1. Read the requirement's `nx_projects` field from the PRD metadata (if present)
+2. If not specified, check `.ralph/nx-workspace.json` for all project names and ask user which applies
+3. Use `nx run <project>:test` instead of bare test commands
+
 ## Instructions
 
 When this skill is invoked:
@@ -75,6 +86,27 @@ When this skill is invoked:
    - Offer to fix issues immediately or create tasks
 
 ## Test Execution by Project Type
+
+### NX Monorepo Projects
+```bash
+# Run tests for a specific NX project
+nx run <project>:test
+
+# Run with test name filter (Jest)
+nx run <project>:test -- --testNamePattern="REQ-001"
+
+# Run with test name filter (Vitest)
+nx run <project>:test -- --reporter=verbose -t "REQ-001"
+
+# Run all projects
+nx run-many -t test
+
+# Run only affected projects (CI-friendly)
+nx affected -t test --base=main
+
+# Run lint for a specific project
+nx run <project>:lint
+```
 
 ### Python Projects
 ```bash
