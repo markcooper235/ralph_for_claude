@@ -56,6 +56,7 @@ OPTIONS:
     --install-global            Install skills globally to ~/.claude/skills/
     --new-project <name>        Create new project with Ralph framework
     --type <language>           Project type (typescript, python, go, rust, c, cpp)
+    --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
     --help                      Show this help message
@@ -64,8 +65,11 @@ EXAMPLES:
     # Install skills globally only
     $0 --install-global
 
-    # Create new TypeScript project
+    # Create new TypeScript project in current directory
     $0 --install-global --new-project my-app --type typescript
+
+    # Create project in specific directory
+    $0 --install-global --new-project my-app --type python --parent-dir ~/projects
 
     # Initialize existing project
     cd /path/to/project
@@ -1199,6 +1203,7 @@ main() {
     local install_global=false
     local new_project=""
     local project_type="unknown"
+    local parent_dir="."
     local init_existing=false
     local backup_dir=""
 
@@ -1215,6 +1220,10 @@ main() {
                 ;;
             --type)
                 project_type="$2"
+                shift 2
+                ;;
+            --parent-dir)
+                parent_dir="$2"
                 shift 2
                 ;;
             --init)
@@ -1247,7 +1256,14 @@ main() {
 
     # Create new project if requested
     if [ -n "${new_project}" ]; then
-        create_new_project "${new_project}" "${project_type}"
+        # Validate parent directory
+        if [ ! -d "${parent_dir}" ]; then
+            print_error "Parent directory does not exist: ${parent_dir}"
+            echo "Create it first or use a different path"
+            exit 1
+        fi
+
+        create_new_project "${new_project}" "${project_type}" "${parent_dir}"
     fi
 
     # Initialize existing project if requested
