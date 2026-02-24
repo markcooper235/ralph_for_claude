@@ -1739,49 +1739,115 @@ create_typescript_project() {
     mkdir -p "${project_dir}/src"
     mkdir -p "${project_dir}/tests"
 
-    # package.json
+    # package.json — Node.js TypeScript with jest + ts-jest + eslint
     cat > "${project_dir}/package.json" << 'EOF'
 {
   "name": "project",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
     "test": "jest",
-    "lint": "eslint src --ext ts,tsx"
+    "lint": "eslint src tests --ext .ts"
   },
   "devDependencies": {
+    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
   }
 }
 EOF
 
-    # tsconfig.json
+    # tsconfig.json — CommonJS for jest compatibility
     cat > "${project_dir}/tsconfig.json" << 'EOF'
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
-    "moduleResolution": "bundler",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
+}
+EOF
+
+    # jest.config.ts
+    cat > "${project_dir}/jest.config.ts" << 'EOF'
+import type { Config } from 'jest';
+
+const config: Config = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.ts'],
+  collectCoverageFrom: ['src/**/*.ts'],
+};
+
+export default config;
+EOF
+
+    # .eslintrc.json
+    cat > "${project_dir}/.eslintrc.json" << 'EOF'
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "env": { "node": true, "jest": true }
 }
 EOF
 
     # src/index.ts
     cat > "${project_dir}/src/index.ts" << 'EOF'
 // Ralph Loop Framework - TypeScript Project
-console.log('Hello from Ralph Loop!');
+
+export function greet(name: string): string {
+  return `Hello, ${name}!`;
+}
+
+if (require.main === module) {
+  console.log(greet('Ralph Loop'));
+}
 EOF
+
+    # tests/index.test.ts
+    cat > "${project_dir}/tests/index.test.ts" << 'EOF'
+import { greet } from '../src/index';
+
+describe('greet', () => {
+  it('returns a greeting with the given name', () => {
+    expect(greet('World')).toBe('Hello, World!');
+  });
+
+  it('returns a greeting for Ralph Loop', () => {
+    expect(greet('Ralph Loop')).toBe('Hello, Ralph Loop!');
+  });
+});
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+coverage/
+.nyc_output/
+*.js.map
+.env
+.env.local
+EOF
+
+    print_info "Installing npm dependencies..."
+    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
 
     print_success "Created TypeScript project structure"
 }
@@ -1795,7 +1861,6 @@ create_python_project() {
 
     # requirements.txt
     cat > "${project_dir}/requirements.txt" << 'EOF'
-# Ralph Loop Framework - Python Project
 pytest>=7.0.0
 pytest-cov>=4.0.0
 black>=23.0.0
@@ -1823,11 +1888,40 @@ EOF
     cat > "${project_dir}/src/main.py" << 'EOF'
 """Ralph Loop Framework - Python Project"""
 
+
+def greet(name: str) -> str:
+    """Return a greeting for the given name."""
+    return f"Hello, {name}!"
+
+
 def main():
-    print("Hello from Ralph Loop!")
+    print(greet("Ralph Loop"))
+
 
 if __name__ == "__main__":
     main()
+EOF
+
+    # tests/__init__.py
+    touch "${project_dir}/tests/__init__.py"
+
+    # tests/test_main.py
+    cat > "${project_dir}/tests/test_main.py" << 'EOF'
+"""Tests for src/main.py"""
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from main import greet
+
+
+def test_greet_returns_greeting():
+    assert greet("World") == "Hello, World!"
+
+
+def test_greet_ralph_loop():
+    assert greet("Ralph Loop") == "Hello, Ralph Loop!"
 EOF
 
     # pytest.ini
@@ -1837,7 +1931,37 @@ testpaths = tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
+addopts = --cov=src --cov-report=term-missing
 EOF
+
+    # .flake8
+    cat > "${project_dir}/.flake8" << 'EOF'
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .venv,venv,__pycache__,.git
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+EOF
+
+    print_info "Installing Python dependencies..."
+    (cd "${project_dir}" && python3 -m pip install -r requirements.txt -q) && print_success "pip install complete" || print_warning "pip install failed — run manually: cd ${project_dir} && pip install -r requirements.txt"
 
     print_success "Created Python project structure"
 }
@@ -1845,6 +1969,8 @@ EOF
 create_go_project() {
     local project_dir="$1"
     local project_name="$2"
+
+    mkdir -p "${project_dir}/internal"
 
     # go.mod
     cat > "${project_dir}/go.mod" << EOF
@@ -1860,12 +1986,58 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Hello from Ralph Loop!")
+	fmt.Println(Greet("Ralph Loop"))
+}
+
+// Greet returns a greeting for the given name.
+func Greet(name string) string {
+	return fmt.Sprintf("Hello, %s!", name)
 }
 EOF
 
-    # Create test directory
-    mkdir -p "${project_dir}/internal"
+    # main_test.go
+    cat > "${project_dir}/main_test.go" << 'EOF'
+package main
+
+import "testing"
+
+func TestGreet(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"basic greeting", "World", "Hello, World!"},
+		{"ralph loop greeting", "Ralph Loop", "Hello, Ralph Loop!"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Greet(tt.input)
+			if result != tt.expected {
+				t.Errorf("Greet(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+# Compiled binaries
+*.exe
+*.out
+/dist/
+/build/
+
+# Test cache
+/tmp/
+coverage.out
+coverage.html
+EOF
+
+    print_info "Running go mod tidy..."
+    (cd "${project_dir}" && go mod tidy) && print_success "go mod tidy complete" || print_warning "go mod tidy failed — run manually: cd ${project_dir} && go mod tidy"
 
     print_success "Created Go project structure"
 }
@@ -1887,12 +2059,40 @@ EOF
     # Create src directory
     mkdir -p "${project_dir}/src"
 
-    # src/main.rs
+    # src/main.rs — includes inline tests
     cat > "${project_dir}/src/main.rs" << 'EOF'
 fn main() {
-    println!("Hello from Ralph Loop!");
+    println!("{}", greet("Ralph Loop"));
+}
+
+/// Returns a greeting for the given name.
+pub fn greet(name: &str) -> String {
+    format!("Hello, {}!", name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_greet_basic() {
+        assert_eq!(greet("World"), "Hello, World!");
+    }
+
+    #[test]
+    fn test_greet_ralph_loop() {
+        assert_eq!(greet("Ralph Loop"), "Hello, Ralph Loop!");
+    }
 }
 EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+/target/
+EOF
+
+    print_info "Running cargo check..."
+    (cd "${project_dir}" && cargo check --quiet) && print_success "cargo check complete" || print_warning "cargo check failed — run manually: cd ${project_dir} && cargo check"
 
     print_success "Created Rust project structure"
 }
@@ -1902,6 +2102,7 @@ create_angular_project() {
     local project_name="$2"
 
     mkdir -p "${project_dir}/src/app"
+    mkdir -p "${project_dir}/src/assets"
 
     cat > "${project_dir}/package.json" << EOF
 {
@@ -1911,7 +2112,7 @@ create_angular_project() {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "test": "ng test",
+    "test": "ng test --watch=false --browsers=ChromeHeadless",
     "lint": "ng lint"
   },
   "dependencies": {
@@ -1929,10 +2130,14 @@ create_angular_project() {
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.0.0",
     "@angular/cli": "^17.0.0",
+    "@angular/compiler-cli": "^17.0.0",
     "@types/jasmine": "^5.1.0",
+    "jasmine-core": "^5.1.0",
     "karma": "^6.4.0",
     "karma-chrome-launcher": "^3.2.0",
+    "karma-coverage": "^2.2.0",
     "karma-jasmine": "^5.1.0",
+    "karma-jasmine-html-reporter": "^2.1.0",
     "typescript": "^5.2.0"
   }
 }
@@ -1946,30 +2151,205 @@ EOF
     "lib": ["ES2022", "dom"],
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
   }
 }
 EOF
 
+    # tsconfig.spec.json for tests
+    cat > "${project_dir}/tsconfig.spec.json" << 'EOF'
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    "types": ["jasmine"]
+  },
+  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+}
+EOF
+
+    # angular.json — required for all ng commands
+    cat > "${project_dir}/angular.json" << EOF
+{
+  "\$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "${project_name}": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": { "standalone": true },
+        "@schematics/angular:directive": { "standalone": true },
+        "@schematics/angular:pipe": { "standalone": true }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/${project_name}",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.json",
+            "assets": ["src/assets"],
+            "styles": [],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
+                { "type": "anyComponentStyle", "maximumWarning": "2kb", "maximumError": "4kb" }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": { "buildTarget": "${project_name}:build:production" },
+            "development": { "buildTarget": "${project_name}:build:development" }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "tsConfig": "tsconfig.spec.json",
+            "assets": ["src/assets"],
+            "styles": [],
+            "scripts": [],
+            "codeCoverage": true
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+    # karma.conf.js
+    cat > "${project_dir}/karma.conf.js" << 'EOF'
+module.exports = function (config) {
+  config.set({
+    basePath: '',
+    frameworks: ['jasmine', '@angular-devkit/build-angular'],
+    plugins: [
+      require('karma-jasmine'),
+      require('karma-chrome-launcher'),
+      require('karma-jasmine-html-reporter'),
+      require('karma-coverage'),
+      require('@angular-devkit/build-angular/plugins/karma'),
+    ],
+    client: { jasmine: {}, clearContext: false },
+    coverageReporter: { dir: require('path').join(__dirname, './coverage/${project_name}'), subdir: '.', reporters: [{ type: 'html' }, { type: 'text-summary' }] },
+    reporters: ['progress', 'kjhtml'],
+    browsers: ['ChromeHeadless'],
+    singleRun: true,
+  });
+};
+EOF
+
+    # src/index.html
+    cat > "${project_dir}/src/index.html" << EOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>${project_name^}</title>
+  <base href="/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>
+EOF
+
+    # src/app/app.component.ts
     cat > "${project_dir}/src/app/app.component.ts" << 'EOF'
 import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-root',
   template: '<h1>Hello from Ralph Loop!</h1>',
-  standalone: true
+  standalone: true,
 })
 export class AppComponent {
   title = 'app';
+
+  greet(name: string): string {
+    return `Hello, ${name}!`;
+  }
 }
 EOF
 
+    # src/app/app.component.spec.ts
+    cat > "${project_dir}/src/app/app.component.spec.ts" << 'EOF'
+import { TestBed } from '@angular/core/testing';
+import { AppComponent } from './app.component';
+
+describe('AppComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [AppComponent],
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app).toBeTruthy();
+  });
+
+  it('should greet by name', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app.greet('World')).toBe('Hello, World!');
+  });
+});
+EOF
+
+    # src/main.ts
     cat > "${project_dir}/src/main.ts" << 'EOF'
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 
-bootstrapApplication(AppComponent);
+bootstrapApplication(AppComponent).catch((err) => console.error(err));
 EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+out-tsc/
+coverage/
+.angular/
+.env
+.env.local
+EOF
+
+    print_info "Installing npm dependencies (Angular — this may take a minute)..."
+    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
 
     print_success "Created Angular project structure"
 }
@@ -1990,7 +2370,9 @@ create_react_project() {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
@@ -1998,9 +2380,19 @@ create_react_project() {
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^24.0.0",
     "typescript": "^5.2.0",
     "vite": "^5.0.0",
     "vitest": "^1.0.0"
@@ -2024,23 +2416,78 @@ EOF
 }
 EOF
 
+    # vite.config.ts — includes vitest config
     cat > "${project_dir}/vite.config.ts" << 'EOF'
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+    },
+  },
 });
 EOF
 
+    # .eslintrc.json
+    cat > "${project_dir}/.eslintrc.json" << 'EOF'
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "react", "react-hooks"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
+  ],
+  "settings": { "react": { "version": "detect" } },
+  "rules": { "react/react-in-jsx-scope": "off" }
+}
+EOF
+
+    # src/setupTests.ts
+    cat > "${project_dir}/src/setupTests.ts" << 'EOF'
+import '@testing-library/jest-dom';
+EOF
+
+    # src/App.tsx
     cat > "${project_dir}/src/App.tsx" << 'EOF'
-function App() {
-  return <h1>Hello from Ralph Loop!</h1>;
+interface AppProps {
+  name?: string;
+}
+
+function App({ name = 'Ralph Loop' }: AppProps) {
+  return <h1>Hello from {name}!</h1>;
 }
 
 export default App;
 EOF
 
+    # src/App.test.tsx
+    cat > "${project_dir}/src/App.test.tsx" << 'EOF'
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+describe('App', () => {
+  it('renders default greeting', () => {
+    render(<App />);
+    expect(screen.getByText('Hello from Ralph Loop!')).toBeInTheDocument();
+  });
+
+  it('renders custom name greeting', () => {
+    render(<App name="World" />);
+    expect(screen.getByText('Hello from World!')).toBeInTheDocument();
+  });
+});
+EOF
+
+    # src/main.tsx
     cat > "${project_dir}/src/main.tsx" << 'EOF'
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -2053,6 +2500,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 EOF
 
+    # public/index.html
     cat > "${project_dir}/public/index.html" << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -2060,6 +2508,19 @@ EOF
 <body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>
 EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+coverage/
+.nyc_output/
+.env
+.env.local
+EOF
+
+    print_info "Installing npm dependencies..."
+    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
 
     print_success "Created React project structure"
 }
@@ -2070,6 +2531,7 @@ create_nextjs_project() {
 
     mkdir -p "${project_dir}/src/app"
     mkdir -p "${project_dir}/src/app/api"
+    mkdir -p "${project_dir}/src/__tests__"
     mkdir -p "${project_dir}/public"
 
     cat > "${project_dir}/package.json" << EOF
@@ -2081,7 +2543,8 @@ create_nextjs_project() {
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "next": "^14.0.0",
@@ -2089,20 +2552,49 @@ create_nextjs_project() {
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
+    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
-    "typescript": "^5.2.0",
-    "jest": "^29.0.0"
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.2.0"
   }
 }
 EOF
 
+    # next.config.js
     cat > "${project_dir}/next.config.js" << 'EOF'
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 module.exports = nextConfig;
 EOF
 
+    # jest.config.ts — uses Next.js jest preset
+    cat > "${project_dir}/jest.config.ts" << 'EOF'
+import type { Config } from 'jest';
+import nextJest from 'next/jest.js';
+
+const createJestConfig = nextJest({ dir: './' });
+
+const config: Config = {
+  coverageProvider: 'v8',
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+};
+
+export default createJestConfig(config);
+EOF
+
+    # jest.setup.ts
+    cat > "${project_dir}/jest.setup.ts" << 'EOF'
+import '@testing-library/jest-dom';
+EOF
+
+    # tsconfig.json
     cat > "${project_dir}/tsconfig.json" << 'EOF'
 {
   "compilerOptions": {
@@ -2113,13 +2605,16 @@ EOF
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["src", "next.config.js"],
+  "include": ["src", "next.config.js", "jest.config.ts", "jest.setup.ts"],
   "exclude": ["node_modules"]
 }
 EOF
 
+    # src/app/layout.tsx
     cat > "${project_dir}/src/app/layout.tsx" << 'EOF'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -2130,11 +2625,44 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 EOF
 
+    # src/app/page.tsx
     cat > "${project_dir}/src/app/page.tsx" << 'EOF'
 export default function Home() {
-  return <main><h1>Hello from Ralph Loop!</h1></main>;
+  return (
+    <main>
+      <h1>Hello from Ralph Loop!</h1>
+    </main>
+  );
 }
 EOF
+
+    # src/__tests__/page.test.tsx
+    cat > "${project_dir}/src/__tests__/page.test.tsx" << 'EOF'
+import { render, screen } from '@testing-library/react';
+import Home from '../app/page';
+
+describe('Home page', () => {
+  it('renders heading', () => {
+    render(<Home />);
+    expect(screen.getByRole('heading', { name: /Hello from Ralph Loop!/i })).toBeInTheDocument();
+  });
+});
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+.next/
+out/
+dist/
+coverage/
+.env
+.env.local
+.env.*.local
+EOF
+
+    print_info "Installing npm dependencies..."
+    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
 
     print_success "Created Next.js project structure"
 }
@@ -2156,30 +2684,38 @@ create_express_project() {
     "start": "node dist/index.js",
     "build": "tsc",
     "test": "jest",
-    "lint": "eslint src --ext ts"
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src tests --ext .ts"
   },
   "dependencies": {
     "express": "^4.18.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.0",
+    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.2.0",
-    "nodemon": "^3.0.0",
-    "ts-node": "^10.9.0",
+    "@types/supertest": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
     "jest": "^29.0.0",
+    "nodemon": "^3.0.0",
     "supertest": "^6.3.0",
-    "@types/supertest": "^6.0.0"
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.2.0"
   }
 }
 EOF
 
+    # tsconfig.json
     cat > "${project_dir}/tsconfig.json" << 'EOF'
 {
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
     "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true
@@ -2189,6 +2725,34 @@ EOF
 }
 EOF
 
+    # jest.config.ts
+    cat > "${project_dir}/jest.config.ts" << 'EOF'
+import type { Config } from 'jest';
+
+const config: Config = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.ts'],
+  collectCoverageFrom: ['src/**/*.ts'],
+  globals: {
+    'ts-jest': { tsconfig: { module: 'commonjs' } },
+  },
+};
+
+export default config;
+EOF
+
+    # .eslintrc.json
+    cat > "${project_dir}/.eslintrc.json" << 'EOF'
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "env": { "node": true, "jest": true }
+}
+EOF
+
+    # src/index.ts
     cat > "${project_dir}/src/index.ts" << 'EOF'
 import express from 'express';
 
@@ -2201,13 +2765,20 @@ app.get('/', (_req, res) => {
   res.json({ message: 'Hello from Ralph Loop!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 export default app;
 EOF
 
+    # src/routes/index.ts
     cat > "${project_dir}/src/routes/index.ts" << 'EOF'
 import { Router } from 'express';
 
@@ -2219,6 +2790,40 @@ router.get('/health', (_req, res) => {
 
 export default router;
 EOF
+
+    # tests/index.test.ts
+    cat > "${project_dir}/tests/index.test.ts" << 'EOF'
+import request from 'supertest';
+import app from '../src/index';
+
+describe('GET /', () => {
+  it('returns hello message', async () => {
+    const res = await request(app).get('/');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Hello from Ralph Loop!');
+  });
+});
+
+describe('GET /health', () => {
+  it('returns status ok', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+  });
+});
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+EOF
+
+    print_info "Installing npm dependencies..."
+    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
 
     print_success "Created Express project structure"
 }
@@ -2279,11 +2884,23 @@ testpaths = tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
+addopts = --cov=app --cov-report=term-missing
+EOF
+
+    cat > "${project_dir}/.flake8" << 'EOF'
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .venv,venv,__pycache__,.git
+EOF
+
+    cat > "${project_dir}/tests/__init__.py" << 'EOF'
 EOF
 
     cat > "${project_dir}/tests/test_app.py" << 'EOF'
 import pytest
 from app import create_app
+
 
 @pytest.fixture
 def client():
@@ -2292,14 +2909,44 @@ def client():
     with app.test_client() as client:
         yield client
 
-def test_index(client):
+
+def test_index_returns_200(client):
     response = client.get('/')
     assert response.status_code == 200
 
-def test_health(client):
+
+def test_index_returns_message(client):
+    response = client.get('/')
+    data = response.get_json()
+    assert data['message'] == 'Hello from Ralph Loop!'
+
+
+def test_health_returns_ok(client):
     response = client.get('/health')
     assert response.status_code == 200
+    assert response.get_json()['status'] == 'ok'
 EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+instance/
+EOF
+
+    print_info "Installing Python dependencies..."
+    (cd "${project_dir}" && python3 -m pip install -r requirements.txt -q) && print_success "pip install complete" || print_warning "pip install failed — run manually: cd ${project_dir} && pip install -r requirements.txt"
 
     print_success "Created Flask project structure"
 }
@@ -2361,6 +3008,27 @@ AllCops:
 Style/Documentation:
   Enabled: false
 EOF
+
+    # .rspec
+    cat > "${project_dir}/.rspec" << 'EOF'
+--require spec_helper
+--format documentation
+--color
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+.bundle/
+vendor/bundle/
+*.gem
+.byebug_history
+coverage/
+.yardoc/
+doc/
+EOF
+
+    print_info "Installing Ruby gems..."
+    (cd "${project_dir}" && bundle install --quiet) && print_success "bundle install complete" || print_warning "bundle install failed — run manually: cd ${project_dir} && bundle install"
 
     print_success "Created Ruby project structure"
 }
