@@ -50,14 +50,17 @@ Create a new project with Ralph Loop pre-configured:
 
 **What it does:**
 1. Installs global skills (if `--install-global` specified)
-2. Creates project directory with basic structure
+2. Creates project directory with language-appropriate source, test, and config files
 3. Asks configuration questions (package manager, test framework, etc.)
 4. Sets up Ralph Loop structure (`ralph/.ralph/`, `ralph/specs/`, `ralph/archive/`, etc.)
 5. Creates `CLAUDE.md` with project-specific guidance
-6. Updates `.gitignore` with Ralph Loop entries
+6. Creates `.gitignore` for the language (node_modules, dist, venv, target, etc.)
 7. Creates `README.md` with Ralph Loop workflow
-8. Initializes git repository
-9. Makes initial commit
+8. **Installs dependencies** — runs `npm install`, `pip install`, `go mod tidy`, `cargo check`, or `bundle install` as appropriate
+9. Initializes git repository
+10. Makes initial commit
+
+The project is ready to build, test, and lint immediately after creation — no manual setup required.
 
 **Project types supported:**
 - `typescript` - TypeScript/JavaScript with npm/yarn/pnpm/bun
@@ -209,23 +212,27 @@ project/
 
 ### Global Skills (~/.claude/skills/)
 
-All 15 Ralph Loop skills installed globally:
+Skills are installed as subdirectories (e.g., `~/.claude/skills/ralph-loop/SKILL.md`).
+Commands are installed as flat files (e.g., `~/.claude/commands/ralph-archive.md`).
 
-1. `ralph-create-prd.md` - Interactive PRD creation
-2. `ralph-loop-v2.md` - Main orchestrator with parallel subagents
-3. `ralph-archive.md` - Archive, validate, and merge
-4. `ralph-status.md` - Progress and quota monitoring
-5. `ralph-resume.md` - Resume paused runs
-6. `ralph-quota.md` - Quota management utilities
-7. `ralph-modify-spec.md` - Full spec modification
-8. `ralph-add-requirement.md` - Quick requirement addition
-9. `parse-prd.md` - Parse PRD documents
-10. `parse-openspec.md` - Parse OpenSpec documents
-11. `test-spec.md` - Test against requirements
-12. `prove-requirements.md` - Comprehensive validation
-13. `browser-test.md` - Playwright UI testing
-14. `feedback-selector.md` - Test strategy selection
-15. `auto-feedback-prove.md` - Automated feedback
+**Skills** (invoke with `/skill-name`):
+1. `ralph-loop/` - Main orchestrator with parallel subagents
+2. `ralph-create-prd/` - Interactive PRD creation
+3. `test-spec/` - Test against requirements
+4. `browser-test/` - Playwright UI testing
+5. `feedback-selector/` - Test strategy selection
+6. `parse-prd/` - Parse PRD documents
+7. `parse-openspec/` - Parse OpenSpec documents
+8. `prove-requirements/` - Comprehensive validation
+
+**Commands** (invoke with `/command-name`):
+9. `ralph-archive` - Archive, validate, and merge
+10. `ralph-status` - Progress monitoring
+11. `ralph-resume` - Resume paused runs
+12. `ralph-quota` - Quota management utilities
+13. `ralph-modify-spec` - Full spec modification
+14. `ralph-add-requirement` - Quick requirement addition
+15. `ralph-loop-v2` - Alias for ralph-loop
 
 ---
 
@@ -361,15 +368,15 @@ CLAUDE.md → CLAUDE.md.ralph-backup-20260223-153045
 ./install-ralph-loop.sh --install-global --new-project my-web-app --type typescript
 
 # Answers:
-# Package manager? (npm/yarn/pnpm/bun) [npm]: yarn
-# Test framework? (jest/vitest/mocha) [jest]: vitest
-# Use build tool? (none/webpack/vite/esbuild) [vite]: vite
-# Include browser testing setup? (yes/no) [yes]: yes
+# Package manager? (npm/yarn/pnpm/bun) [npm]: (enter)
+# Test framework? (jest/vitest/mocha) [jest]: (enter)
+# Include browser testing setup? (yes/no) [yes]: no
 
 # Result:
-# ✓ Created my-web-app/
-# ✓ TypeScript project with yarn + vitest + vite
-# ✓ Ralph Loop fully configured
+# ✓ Created my-web-app/ with src/, tests/, jest.config.ts, .eslintrc.json
+# ✓ npm install run — project ready to build/test/lint immediately
+# ✓ .gitignore created (node_modules/, dist/, coverage/)
+# ✓ Ralph Loop structure configured
 # ✓ Initial git commit made
 
 cd my-web-app
@@ -520,15 +527,17 @@ cat CLAUDE.md
 
 **Expected output:**
 ```
-# Global skills (15 files)
-ralph-add-requirement.md
+# Global skills (subdirectories in ~/.claude/skills/)
+ralph-loop/
+ralph-create-prd/
+test-spec/
+browser-test/
+...
+
+# Global commands (flat files in ~/.claude/commands/)
 ralph-archive.md
-ralph-create-prd.md
-ralph-loop-v2.md
-ralph-modify-spec.md
-ralph-quota.md
-ralph-resume.md
 ralph-status.md
+ralph-resume.md
 ...
 
 # Project structure
@@ -583,13 +592,18 @@ To remove Ralph Loop:
 ### Remove Global Skills
 
 ```bash
-rm ~/.claude/skills/ralph-*.md
-rm ~/.claude/skills/parse-*.md
-rm ~/.claude/skills/test-spec.md
-rm ~/.claude/skills/prove-requirements.md
-rm ~/.claude/skills/browser-test.md
-rm ~/.claude/skills/feedback-selector.md
-rm ~/.claude/skills/auto-feedback-prove.md
+# Skills are subdirectories
+rm -rf ~/.claude/skills/ralph-loop/
+rm -rf ~/.claude/skills/ralph-create-prd/
+rm -rf ~/.claude/skills/test-spec/
+rm -rf ~/.claude/skills/browser-test/
+rm -rf ~/.claude/skills/feedback-selector/
+rm -rf ~/.claude/skills/parse-prd/
+rm -rf ~/.claude/skills/parse-openspec/
+rm -rf ~/.claude/skills/prove-requirements/
+
+# Commands are flat files
+rm -f ~/.claude/commands/ralph-*.md
 ```
 
 ### Remove from Project

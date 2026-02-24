@@ -280,6 +280,60 @@ pending → ready → in_progress → testing → completed
 /ralph-archive --abandon  # Archive without merge
 ```
 
+### 11. Context Optimization 🧠
+
+**What Changed:**
+- v1: All subagent output accumulated in main context
+- v2: Subagents log to files, return one-line summaries only
+
+**Key optimizations:**
+- Each subagent writes full details to `ralph/.ralph/logs/progress-<ID>-<ITER>.log`
+- Returns `"REQ-001: OK | 3 files | 5 tests"` to main context (not 2,000 tokens)
+- Per-story brief files: `ralph/.ralph/stories/<ID>-brief.md` contains requirements + impl approach, so impl subagents read one focused file instead of multiple large JSON files
+- Architecture section written into each story brief — impl subagents never read the full `architecture.json`
+- Artifact index: `ralph/.ralph/artifacts-index.json` updated after each test; prove pre-check reads 1 file instead of N artifact files
+- **Context cycling**: at 60% quota usage at a phase boundary, state is saved and loop exits cleanly. `/ralph-resume` continues with fresh context
+
+**Token savings per 8-story run:**
+- File logging pattern: ~40,000 tokens
+- Story briefs + arch embedding: ~24,800 tokens
+- Artifacts index: ~6,400 tokens
+- Total: ~71,000 tokens saved per typical run
+
+### 12. Spec Modification During Run 📝
+
+**What Changed:**
+- v1: No way to modify spec mid-run
+- v2: Full spec modification without losing progress
+
+**Capabilities:**
+- Add new requirements when gaps discovered
+- Modify existing requirements (criteria, description)
+- Change priorities (reorder execution)
+- Update dependencies (add/remove)
+- Remove requirements (scope reduction)
+- Revert completed stories for re-implementation
+- All versions archived with change history
+
+**Usage:**
+```bash
+# Full modification menu
+/ralph-modify-spec
+
+# Quick single requirement addition
+/ralph-add-requirement "Email verification" --priority=high
+```
+
+**Workflow:**
+1. Ralph pauses current implementation
+2. Displays all stories with current status
+3. User makes modifications
+4. Spec version incremented (backup created)
+5. Execution plan re-analyzed
+6. Ralph resumes seamlessly
+
+---
+
 ## Migration from v1
 
 If you have v1 PRDs:
@@ -324,12 +378,16 @@ Total: ~44 minutes (33% faster)
 ## New Commands
 
 - `/ralph-create-prd` - Interactive PRD creation
-- `/ralph-status` - Check current run status
-- `/ralph-archive` - Complete and archive run
+- `/ralph-status` - Check current run status and quota
+- `/ralph-archive` - Complete, validate, and archive run
+- `/ralph-resume` - Resume paused run (quota cycle or error)
+- `/ralph-modify-spec` - Modify specification mid-run
+- `/ralph-add-requirement` - Quick single requirement addition
+- `/ralph-quota` - Check and manage quota usage
 
 ## Updated Commands
 
-- `/ralph-loop` - Now uses subagents, git, state management
+- `/ralph-loop` - Now uses subagents, git, state management, context cycling
 
 ## Configuration
 
@@ -381,12 +439,12 @@ ralph_for_claude/
 Future enhancements being considered:
 
 - **v3 possibilities:**
-  - Support for > 3 parallel (configurable)
   - Cross-spec dependencies
   - Automatic PR creation
   - CI/CD integration templates
   - Performance analytics dashboard
   - Story estimation using historical data
+  - Configurable parallel limit (current max: 3)
 
 ## Feedback
 

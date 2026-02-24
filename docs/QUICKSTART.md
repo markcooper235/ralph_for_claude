@@ -115,8 +115,8 @@ Claude will automatically:
 While the loop runs, you can check status:
 
 ```bash
-# View all tasks
-Use TaskList in Claude Code
+# View current status, story progress, quota usage
+/ralph-status
 
 # Test specific requirement
 /test-spec REQ-001
@@ -270,14 +270,21 @@ The first loop might not be perfect. That's OK!
 
 ### Try Advanced Features
 
-**Resume from checkpoint:**
+**Resume after quota pause or interruption:**
 ```bash
-/ralph-loop --resume=feature-checkpoint-3
+/ralph-resume
 ```
 
-**Run specific phase:**
+**Check status and quota usage:**
 ```bash
-/ralph-loop ralph/specs/prds/feature.prd.md --phase=implement
+/ralph-status
+```
+
+**Modify spec mid-run (discovered a gap?):**
+```bash
+/ralph-modify-spec
+# Or quick add:
+/ralph-add-requirement "Email verification" --priority=high
 ```
 
 **Interactive browser testing:**
@@ -293,10 +300,12 @@ The first loop might not be perfect. That's OK!
 
 ### Extend the Framework
 
-**Add custom skills:**
+**Add custom skills (subdirectory format):**
 ```bash
-# Create new skill file
-vim .claude/skills/my-skill.md
+# Create skill subdirectory
+mkdir -p .claude/skills/my-skill
+# Create SKILL.md with YAML frontmatter and "When this skill is invoked:"
+vim .claude/skills/my-skill/SKILL.md
 
 # Use it
 /my-skill
@@ -310,9 +319,10 @@ vim .claude/templates/my-project-template.md
 
 ## Troubleshooting
 
-**Q: Loop gets stuck?**
+**Q: Loop gets stuck or paused?**
 ```bash
-/ralph-loop status
+/ralph-status
+/ralph-resume
 ```
 
 **Q: Tests keep failing?**
@@ -339,8 +349,17 @@ vim .claude/templates/my-project-template.md
 ## Quick Reference
 
 ```bash
-# Core commands
+# Main workflow
+/ralph-create-prd <name>             # Create PRD interactively
 /ralph-loop <spec-file>              # Run complete loop
+/ralph-status                        # Check progress and quota
+/ralph-resume                        # Resume paused run
+/ralph-modify-spec                   # Modify spec mid-run
+/ralph-add-requirement "..."         # Quick add requirement
+/ralph-archive                       # Complete, merge, and archive
+/ralph-archive --abandon             # Abandon failed run
+
+# Testing
 /test-spec <REQ-ID>                  # Test one requirement
 /test-spec --all                     # Test everything
 /prove-requirements <spec-file>      # Comprehensive validation
@@ -352,8 +371,7 @@ vim .claude/templates/my-project-template.md
 
 # Utilities
 /feedback-selector                   # Determine test strategy
-/ralph-loop --resume=<checkpoint>    # Resume from checkpoint
-/ralph-loop <spec> --phase=<phase>   # Run specific phase
+/ralph-quota                         # Check quota usage
 ```
 
 ## Example: Complete Flow
