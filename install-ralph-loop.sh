@@ -1626,7 +1626,7 @@ create_new_project() {
         create_claude_md "." "nx"
         create_gitignore "."
         create_project_settings "."
-        git add . && git commit -m "Add Ralph Loop Framework to NX workspace" || true
+        # Git commit is deferred to main() so skills are included
         echo
         print_success "Project created successfully: ${project_dir}"
         print_info "Project configured with:"
@@ -1710,10 +1710,7 @@ create_new_project() {
     create_gitignore "."
     create_readme "." "${project_name}" "${project_type}"
     create_project_settings "."
-
-    # Initial git commit
-    git add .
-    git commit -m "Initial commit with Ralph Loop Framework"
+    # Git commit is deferred to main() so skills are included
 
     echo
     print_success "Project created successfully: ${project_dir}"
@@ -2666,6 +2663,22 @@ main() {
 
         create_new_project "${new_project}" "${project_type}" "${parent_dir}"
         install_skills_for_project "${parent_dir}/${new_project}"
+
+        # Single git commit after everything is in place (structure + skills + commands)
+        local project_abs="${parent_dir}/${new_project}"
+        if git -C "${project_abs}" rev-parse --git-dir >/dev/null 2>&1; then
+            git -C "${project_abs}" add .
+            if [ -n "$(git -C "${project_abs}" status --porcelain 2>/dev/null)" ]; then
+                # Use "Add Ralph Loop Framework" if there's already a commit (e.g. NX workspace),
+                # otherwise this is the very first commit.
+                if git -C "${project_abs}" rev-parse HEAD >/dev/null 2>&1; then
+                    git -C "${project_abs}" commit -m "Add Ralph Loop Framework to project"
+                else
+                    git -C "${project_abs}" commit -m "Initial commit: Ralph Loop Framework"
+                fi
+                print_success "Git commit created — all setup files included"
+            fi
+        fi
     fi
 
     # Initialize existing project if requested
