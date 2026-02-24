@@ -2635,23 +2635,37 @@ main() {
         install_global_skills
     fi
 
+    # Helper: decide where to install skills for a project.
+    # Rules (evaluated in order):
+    #   1. --install-global was passed → globals already handled above, skip project-level
+    #   2. Ralph skills are already installed globally → update globals instead of project-level
+    #   3. No globals at all → install at project level
+    install_skills_for_project() {
+        local project_abs_dir="$1"
+        if [ "${install_global}" = true ]; then
+            print_info "Skipping project-level skills (already installed globally — no duplicates)"
+        elif [ -d "${CLAUDE_GLOBAL_SKILLS}/ralph-loop" ] || [ -f "${CLAUDE_GLOBAL_COMMANDS}/ralph-archive.md" ]; then
+            print_info "Global Ralph skills detected — updating globals rather than installing project-level"
+            install_global_skills
+        else
+            install_project_skills "${project_abs_dir}"
+        fi
+    }
+
     # Create new project if requested
     if [ -n "${new_project}" ]; then
-        # Create parent directory if it doesn't exist
+        # Create parent directory if it doesn't exist, then resolve to absolute path.
+        # Resolving BEFORE create_new_project is critical: that function does an internal
+        # `cd` into the new project, which would make relative paths like "./myapp" resolve
+        # to "<project>/myapp" instead of the intended parent directory.
         if [ ! -d "${parent_dir}" ]; then
             mkdir -p "${parent_dir}"
             print_success "Created parent directory: ${parent_dir}"
         fi
+        parent_dir="$(cd "${parent_dir}" && pwd)"
 
         create_new_project "${new_project}" "${project_type}" "${parent_dir}"
-
-        # Install skills/commands at project level only when NOT installing globally.
-        # If global install was done, ~/.claude/ already covers all projects — no duplication.
-        if [ "${install_global}" = false ]; then
-            install_project_skills "${parent_dir}/${new_project}"
-        else
-            print_info "Skipping project-level skills (already installed globally — no duplicates)"
-        fi
+        install_skills_for_project "${parent_dir}/${new_project}"
     fi
 
     # Initialize existing project if requested
@@ -2660,14 +2674,10 @@ main() {
             print_error "Cannot use --new-project and --init together"
             exit 1
         fi
-        initialize_existing_project "$(pwd)"
-
-        # Install skills/commands at project level only when NOT installing globally.
-        if [ "${install_global}" = false ]; then
-            install_project_skills "$(pwd)"
-        else
-            print_info "Skipping project-level skills (already installed globally — no duplicates)"
-        fi
+        local init_dir
+        init_dir="$(pwd)"
+        initialize_existing_project "${init_dir}"
+        install_skills_for_project "${init_dir}"
     fi
 
     # If no action specified, show usage
