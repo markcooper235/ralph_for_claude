@@ -707,6 +707,7 @@ create_ralph_structure() {
     mkdir -p "${project_dir}/.claude/templates"
     mkdir -p "${project_dir}/.claude/feedback-configs"
     mkdir -p "${project_dir}/ralph/specs/prds"
+    mkdir -p "${project_dir}/ralph/specs/openspecs"
     mkdir -p "${project_dir}/ralph/archive"
     mkdir -p "${project_dir}/ralph/docs"
     mkdir -p "${project_dir}/ralph/tests/browser"

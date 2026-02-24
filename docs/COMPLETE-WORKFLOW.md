@@ -12,13 +12,13 @@ This document outlines the **complete end-to-end workflow** from starting a Ralp
 ```
 Git branch: main (clean)
 Git status: nothing to commit, working tree clean
-Ralph state: None (.ralph/ does not exist)
+Ralph state: None (ralph/.ralph/ does not exist)
 ```
 
 ### Validation Checks
 ```bash
 # Check 1: No Ralph run in progress
-if [ -d .ralph ]; then
+if [ -d ralph/.ralph ]; then
   echo "ERROR: Ralph run already in progress"
   echo "Complete with /ralph-archive or abandon with /ralph-archive --abandon"
   exit 1
@@ -121,18 +121,18 @@ fi
 [Ralph Create PRD] Estimated quota: ~145K tokens
 [Ralph Create PRD] May require 1 pause/resume cycle
 [Ralph Create PRD]
-[Ralph Create PRD] ✓ PRD created: specs/prds/user-authentication.prd.md
-[Ralph Create PRD] ✓ Story breakdown: specs/prds/user-authentication.stories.json
+[Ralph Create PRD] ✓ PRD created: ralph/specs/prds/user-authentication.prd.md
+[Ralph Create PRD] ✓ Story breakdown: ralph/specs/prds/user-authentication.stories.json
 [Ralph Create PRD]
 [Ralph Create PRD] Ready to start Ralph Loop!
 [Ralph Create PRD]
-[Ralph Create PRD] Next: /ralph-loop specs/prds/user-authentication.prd.md
+[Ralph Create PRD] Next: /ralph-loop ralph/specs/prds/user-authentication.prd.md
 ```
 
 ### Files Created
 ```
-specs/prds/user-authentication.prd.md          # Full PRD
-specs/prds/user-authentication.stories.json    # Story breakdown
+ralph/specs/prds/user-authentication.prd.md          # Full PRD
+ralph/specs/prds/user-authentication.stories.json    # Story breakdown
 ```
 
 ---
@@ -141,7 +141,7 @@ specs/prds/user-authentication.stories.json    # Story breakdown
 
 ### Command
 ```bash
-/ralph-loop specs/prds/user-authentication.prd.md
+/ralph-loop ralph/specs/prds/user-authentication.prd.md
 ```
 
 ### 2.1: Initialization
@@ -152,7 +152,7 @@ specs/prds/user-authentication.stories.json    # Story breakdown
 [Ralph Loop] Ralph Loop v2 Starting
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[Ralph Loop] Specification: specs/prds/user-authentication.prd.md
+[Ralph Loop] Specification: ralph/specs/prds/user-authentication.prd.md
 [Ralph Loop] Run ID: user-authentication-20260223152030
 
 [Ralph Loop] Checking prerequisites...
@@ -161,9 +161,9 @@ specs/prds/user-authentication.stories.json    # Story breakdown
 [Ralph Loop] ✓ On branch: main
 
 [Ralph Loop] Creating Ralph state directory...
-[Ralph Loop] ✓ Created .ralph/
-[Ralph Loop] ✓ Created .ralph/logs/
-[Ralph Loop] ✓ Created .ralph/artifacts/
+[Ralph Loop] ✓ Created ralph/.ralph/
+[Ralph Loop] ✓ Created ralph/.ralph/logs/
+[Ralph Loop] ✓ Created ralph/.ralph/artifacts/
 [Ralph Loop] ✓ Initialized state.json
 
 [Ralph Loop] Creating git branch...
@@ -185,8 +185,8 @@ Commits: 0 new commits yet
 
 #### State Files Created
 ```
-.ralph/state.json           # Run state
-.ralph/quota-config.json    # Quota configuration
+ralph/.ralph/state.json           # Run state
+ralph/.ralph/quota-config.json    # Quota configuration
 ```
 
 ### 2.2: Parse Specification (Subagent)
@@ -201,7 +201,7 @@ Commits: 0 new commits yet
 [Ralph Loop] Estimated cost: 3,000 tokens
 [Ralph Loop] Quota check: 0K + 3K = 3K (1.5%) ✓
 
-[Subagent: Parse] Reading PRD: specs/prds/user-authentication.prd.md
+[Subagent: Parse] Reading PRD: ralph/specs/prds/user-authentication.prd.md
 [Subagent: Parse] Extracting requirements...
 [Subagent: Parse] Found 8 functional requirements
 [Subagent: Parse] Found 4 non-functional requirements
@@ -232,8 +232,8 @@ Commits: 0 new commits yet
 
 #### State Files Updated
 ```
-.ralph/state.json          # Status: parsing → architecture
-.ralph/stories.json        # All stories with dependencies
+ralph/.ralph/state.json          # Status: parsing → architecture
+ralph/.ralph/stories.json        # All stories with dependencies
 ```
 
 ### 2.3: Architecture Design (Subagent)
@@ -266,7 +266,7 @@ Commits: 0 new commits yet
 [Subagent: Arch] - Quality: ESLint complexity checks
 
 [Subagent: Arch] ✓ Architecture complete
-[Subagent: Arch] Saved: .ralph/architecture.json
+[Subagent: Arch] Saved: ralph/.ralph/architecture.json
 
 [Ralph Loop] ✓ Subagent completed
 [Ralph Loop] Actual cost: 4,203 tokens
@@ -436,7 +436,7 @@ Status: clean (all changes committed)
 
 #### State Files (Paused)
 ```
-.ralph/state.json:
+ralph/.ralph/state.json:
   status: "paused_quota"
   pausedAt: "2026-02-23T16:45:00Z"
   pauseReason: "quota_safety_threshold"
@@ -465,7 +465,7 @@ Status: clean (all changes committed)
 [Ralph Status] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Status] Run ID: user-authentication-20260223152030
-[Ralph Status] Specification: specs/prds/user-authentication.prd.md
+[Ralph Status] Specification: ralph/specs/prds/user-authentication.prd.md
 [Ralph Status] Status: PAUSED (quota_safety_threshold)
 [Ralph Status] Started: 2026-02-23T15:20:30Z
 [Ralph Status] Paused: 2026-02-23T16:45:00Z
@@ -529,8 +529,8 @@ Status: clean (all changes committed)
 [Ralph Resume] Status: ✓ Sufficient quota
 
 [Ralph Resume] Loading state...
-[Ralph Resume] ✓ State loaded from .ralph/state.json
-[Ralph Resume] ✓ Stories loaded from .ralph/stories.json
+[Ralph Resume] ✓ State loaded from ralph/.ralph/state.json
+[Ralph Resume] ✓ Stories loaded from ralph/.ralph/stories.json
 [Ralph Resume] ✓ Architecture loaded
 
 [Ralph Resume] Resuming execution...
@@ -589,7 +589,7 @@ Status: clean (all changes committed)
 [Ralph Loop] ALL REQUIREMENTS PROVEN ✓
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[Ralph Loop] Proof report: .ralph/artifacts/proof-report.md
+[Ralph Loop] Proof report: ralph/.ralph/artifacts/proof-report.md
 
 [Ralph Loop] Total quota used: 178,651/200,000 (89.3%)
 [Ralph Loop] Moving to Harvest phase...
@@ -610,7 +610,7 @@ Status: clean (all changes committed)
 [Ralph Loop] - Git history: 8 commits
 
 [Ralph Loop] Generating harvest summary...
-[Ralph Loop] ✓ Summary saved: .ralph/artifacts/harvest-summary.md
+[Ralph Loop] ✓ Summary saved: ralph/.ralph/artifacts/harvest-summary.md
 
 [Ralph Loop] Final Statistics:
 [Ralph Loop] - Stories: 8/8 completed (100%)
@@ -703,10 +703,10 @@ Working tree: clean
 #### Output
 ```
 [Ralph Archive] Creating archive directory...
-[Ralph Archive] Archive path: archive/user-authentication-20260223152030/
+[Ralph Archive] Archive path: ralph/archive/user-authentication-20260223152030/
 
 [Ralph Archive] Copying artifacts...
-[Ralph Archive] ✓ Spec: specs/prds/user-authentication.prd.md
+[Ralph Archive] ✓ Spec: ralph/specs/prds/user-authentication.prd.md
 [Ralph Archive] ✓ State files: 3 files → archive/*/state/
 [Ralph Archive] ✓ Logs: 12 files → archive/*/logs/
 [Ralph Archive] ✓ Artifacts: 17 files → archive/*/artifacts/
@@ -737,12 +737,12 @@ Working tree: clean
 [Ralph Archive] Checking archive integrity...
 
 [Ralph Archive] Check 1: Required directories exist
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/spec/
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/state/
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/logs/
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/artifacts/
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/tests/
-[Ralph Archive] ✓ archive/user-authentication-20260223152030/git-info/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/spec/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/state/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/logs/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/artifacts/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/tests/
+[Ralph Archive] ✓ ralph/archive/user-authentication-20260223152030/git-info/
 
 [Ralph Archive] Check 2: Required files exist
 [Ralph Archive] ✓ summary.md (12,345 bytes)
@@ -785,7 +785,7 @@ Working tree: clean
 [Ralph Archive] ✓ Harvest log: present
 
 [Ralph Archive] Check 8: Archive structure valid
-[Ralph Archive] Running: tree archive/user-authentication-20260223152030/
+[Ralph Archive] Running: tree ralph/archive/user-authentication-20260223152030/
 [Ralph Archive] ✓ All expected directories present
 [Ralph Archive] ✓ No empty directories
 [Ralph Archive] ✓ All files readable
@@ -839,7 +839,7 @@ Working tree: clean
 [Ralph Archive] If problem persists:
 [Ralph Archive] 1. Check disk space
 [Ralph Archive] 2. Check file permissions
-[Ralph Archive] 3. Review .ralph/ contents
+[Ralph Archive] 3. Review ralph/.ralph/ contents
 [Ralph Archive] 4. Contact support if needed
 [Ralph Archive]
 [Ralph Archive] Ralph state preserved for debugging
@@ -868,7 +868,7 @@ Working tree: clean
 ────────────────────────────────────────────────────────
 Merge Ralph Loop: user-authentication-20260223152030
 
-Completed all requirements from specs/prds/user-authentication.prd.md
+Completed all requirements from ralph/specs/prds/user-authentication.prd.md
 
 Stories completed: 8/8
 Test coverage: 89%
@@ -879,7 +879,7 @@ All tests passing:
 - Lint: passed
 - Code quality: passed
 
-Archive: archive/user-authentication-20260223152030/
+Archive: ralph/archive/user-authentication-20260223152030/
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ────────────────────────────────────────────────────────
@@ -935,7 +935,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 **Compromise: Keep with auto-cleanup**
 ```json
-// In .ralph/quota-config.json
+// In ralph/.ralph/quota-config.json
 {
   "archive": {
     "keepRalphBranch": true,        // Default: keep
@@ -954,12 +954,12 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Archive] Removing Ralph state directory...
-[Ralph Archive] ✓ Removed .ralph/state.json
-[Ralph Archive] ✓ Removed .ralph/stories.json
-[Ralph Archive] ✓ Removed .ralph/architecture.json
-[Ralph Archive] ✓ Removed .ralph/logs/ (12 files)
-[Ralph Archive] ✓ Removed .ralph/artifacts/ (17 files)
-[Ralph Archive] ✓ Removed .ralph/
+[Ralph Archive] ✓ Removed ralph/.ralph/state.json
+[Ralph Archive] ✓ Removed ralph/.ralph/stories.json
+[Ralph Archive] ✓ Removed ralph/.ralph/architecture.json
+[Ralph Archive] ✓ Removed ralph/.ralph/logs/ (12 files)
+[Ralph Archive] ✓ Removed ralph/.ralph/artifacts/ (17 files)
+[Ralph Archive] ✓ Removed ralph/.ralph/
 
 [Ralph Archive] Removing temporary files...
 [Ralph Archive] ✓ Cleaned up temp files
@@ -977,7 +977,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 [Ralph Archive] Current branch: main ✓
 
 [Ralph Archive] Check 2: Ralph state removed
-[Ralph Archive] .ralph/ exists: No ✓
+[Ralph Archive] ralph/.ralph/ exists: No ✓
 
 [Ralph Archive] Check 3: Working tree clean
 [Ralph Archive] git status: nothing to commit, working tree clean ✓
@@ -1011,7 +1011,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 [Ralph Archive] - Coverage: 89%
 
 [Ralph Archive] Archive Location:
-[Ralph Archive]   archive/user-authentication-20260223152030/
+[Ralph Archive]   ralph/archive/user-authentication-20260223152030/
 
 [Ralph Archive] Git Status:
 [Ralph Archive] - Current branch: main
@@ -1024,13 +1024,13 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 [Ralph Archive] - Ready for next run: ✓ Yes
 
 [Ralph Archive] To review this run:
-[Ralph Archive]   cat archive/user-authentication-20260223152030/summary.md
+[Ralph Archive]   cat ralph/archive/user-authentication-20260223152030/summary.md
 [Ralph Archive]   git log m9n0p1q
 [Ralph Archive]   git show ralph/user-authentication-20260223152030
 
 [Ralph Archive] To start next run:
 [Ralph Archive]   /ralph-create-prd <next-feature>
-[Ralph Archive]   /ralph-loop specs/prds/<next-feature>.prd.md
+[Ralph Archive]   /ralph-loop ralph/specs/prds/<next-feature>.prd.md
 
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Archive] Ready for next Ralph Loop! 🚀
@@ -1061,8 +1061,8 @@ a1b2c3d REQ-001: User Login
 
 ### File System
 ```
-✓ .ralph/ - REMOVED
-✓ archive/user-authentication-20260223152030/ - CREATED (45 files)
+✓ ralph/.ralph/ - REMOVED
+✓ ralph/archive/user-authentication-20260223152030/ - CREATED (45 files)
 ✓ src/ - UPDATED (8 new files)
 ✓ tests/ - UPDATED (8 new test files)
 ```
@@ -1089,7 +1089,7 @@ Status: READY FOR NEXT RALPH RUN ✓
 /ralph-create-prd user-authentication
 
 # 2. Start Ralph Loop
-/ralph-loop specs/prds/user-authentication.prd.md
+/ralph-loop ralph/specs/prds/user-authentication.prd.md
 
 # 3. (Optional) Check status during run
 /ralph-status

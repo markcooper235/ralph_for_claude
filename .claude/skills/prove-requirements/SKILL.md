@@ -161,5 +161,5 @@ When this skill is invoked:
 ```
 
 ```
-/prove-requirements specs/openspecs/api-spec.openspec.yaml --report
+/prove-requirements ralph/specs/openspecs/api-spec.openspec.yaml --report
 ```

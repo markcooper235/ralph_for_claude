@@ -16,7 +16,7 @@ Choose a format based on what you're building:
 
 ```bash
 # Copy the PRD template
-cp .claude/templates/prd-template.md specs/prds/my-feature.prd.md
+cp .claude/templates/prd-template.md ralph/specs/prds/my-feature.prd.md
 
 # Edit the file with your requirements
 # Focus on these sections:
@@ -44,7 +44,7 @@ cp .claude/templates/prd-template.md specs/prds/my-feature.prd.md
 
 ```bash
 # Copy the OpenSpec template
-cp .claude/templates/openspec-template.yaml specs/openspecs/my-api.openspec.yaml
+cp .claude/templates/openspec-template.yaml ralph/specs/openspecs/my-api.openspec.yaml
 
 # Edit the file with your contracts
 # Focus on these sections:
@@ -75,7 +75,7 @@ contracts:
 Start the development cycle:
 
 ```bash
-/ralph-loop specs/prds/my-feature.prd.md
+/ralph-loop ralph/specs/prds/my-feature.prd.md
 ```
 
 ### What Happens Next
@@ -130,7 +130,7 @@ Use TaskList in Claude Code
 After the loop completes, review:
 
 ### Proof Report
-Located at: `feedback/<spec-name>/proof-report.md`
+Located at: `ralph/feedback/<spec-name>/proof-report.md`
 
 Contains:
 - ✓ Fully implemented requirements
@@ -151,7 +151,7 @@ Your code will be organized logically with:
 
 ```bash
 # 1. Create minimal PRD
-cat > specs/prds/quick-feature.prd.md << EOF
+cat > ralph/specs/prds/quick-feature.prd.md << EOF
 # Quick Feature
 
 ## Functional Requirements
@@ -166,7 +166,7 @@ cat > specs/prds/quick-feature.prd.md << EOF
 EOF
 
 # 2. Run the loop
-/ralph-loop specs/prds/quick-feature.prd.md
+/ralph-loop ralph/specs/prds/quick-feature.prd.md
 
 # 3. Done! Check implementations/ directory
 ```
@@ -175,7 +175,7 @@ EOF
 
 ```bash
 # 1. Start with template
-cp .claude/templates/prd-template.md specs/prds/user-auth.prd.md
+cp .claude/templates/prd-template.md ralph/specs/prds/user-auth.prd.md
 
 # 2. Write detailed requirements (8-10 requirements)
 # Include:
@@ -188,20 +188,20 @@ cp .claude/templates/prd-template.md specs/prds/user-auth.prd.md
 /feedback-selector
 
 # 4. Run the loop
-/ralph-loop specs/prds/user-auth.prd.md
+/ralph-loop ralph/specs/prds/user-auth.prd.md
 
 # 5. For UI features, also run browser tests
 /browser-test src/components/LoginForm.tsx --a11y
 
 # 6. Prove everything works
-/prove-requirements specs/prds/user-auth.prd.md
+/prove-requirements ralph/specs/prds/user-auth.prd.md
 ```
 
 ### Workflow 3: API Development
 
 ```bash
 # 1. Start with OpenSpec
-cp .claude/templates/openspec-template.yaml specs/openspecs/user-api.openspec.yaml
+cp .claude/templates/openspec-template.yaml ralph/specs/openspecs/user-api.openspec.yaml
 
 # 2. Define contracts with:
 # - Type definitions
@@ -210,10 +210,10 @@ cp .claude/templates/openspec-template.yaml specs/openspecs/user-api.openspec.ya
 # - Examples
 
 # 3. Parse and generate tests
-/parse-openspec specs/openspecs/user-api.openspec.yaml
+/parse-openspec ralph/specs/openspecs/user-api.openspec.yaml
 
 # 4. Run the loop (tests already generated!)
-/ralph-loop specs/openspecs/user-api.openspec.yaml
+/ralph-loop ralph/specs/openspecs/user-api.openspec.yaml
 
 # 5. Tests include:
 # - Property-based tests
@@ -277,7 +277,7 @@ The first loop might not be perfect. That's OK!
 
 **Run specific phase:**
 ```bash
-/ralph-loop specs/prds/feature.prd.md --phase=implement
+/ralph-loop ralph/specs/prds/feature.prd.md --phase=implement
 ```
 
 **Interactive browser testing:**
@@ -360,16 +360,16 @@ vim .claude/templates/my-project-template.md
 
 ```bash
 # 1. Create spec (2 minutes)
-cp .claude/templates/prd-template.md specs/prds/calculator.prd.md
+cp .claude/templates/prd-template.md ralph/specs/prds/calculator.prd.md
 # Edit: Add REQ-001 (add), REQ-002 (subtract), REQ-003 (multiply), REQ-004 (divide)
 
 # 2. Run loop (5 minutes)
-/ralph-loop specs/prds/calculator.prd.md
+/ralph-loop ralph/specs/prds/calculator.prd.md
 
 # Claude creates 4 tasks, implements calculator, writes tests, runs tests
 
 # 3. Review (1 minute)
-# Check feedback/calculator/proof-report.md
+# Check ralph/feedback/calculator/proof-report.md
 # All requirements ✓ proven!
 
 # Total time: 8 minutes

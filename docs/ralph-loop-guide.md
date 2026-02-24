@@ -294,10 +294,10 @@ properties:
 **Examples:**
 ```bash
 # Full loop
-/ralph-loop specs/prds/feature.prd.md
+/ralph-loop ralph/specs/prds/feature.prd.md
 
 # Specific phase
-/ralph-loop specs/prds/feature.prd.md --phase=implement
+/ralph-loop ralph/specs/prds/feature.prd.md --phase=implement
 
 # Resume from checkpoint
 /ralph-loop --resume=feature-checkpoint-3
@@ -341,7 +341,7 @@ properties:
 
 **Examples:**
 ```bash
-/prove-requirements specs/prds/feature.prd.md --report
+/prove-requirements ralph/specs/prds/feature.prd.md --report
 ```
 
 **When to Use**: Before deployment, milestone validation, demo preparation
@@ -614,8 +614,8 @@ specs/
 
 Run loops independently or in sequence:
 ```bash
-/ralph-loop specs/prds/auth.prd.md
-/ralph-loop specs/prds/dashboard.prd.md --phase=implement
+/ralph-loop ralph/specs/prds/auth.prd.md
+/ralph-loop ralph/specs/prds/dashboard.prd.md --phase=implement
 ```
 
 ### CI/CD Integration
@@ -636,7 +636,7 @@ jobs:
       - name: Prove Requirements
         run: |
           # Run prove-requirements for each spec
-          /prove-requirements specs/prds/*.prd.md
+          /prove-requirements ralph/specs/prds/*.prd.md
 ```
 
 ### Custom Skills

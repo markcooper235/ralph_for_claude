@@ -12,7 +12,7 @@ The Ralph Loop Framework installation script (`install-ralph-loop.sh`) provides 
 ✅ **Auto-Detection** - Detects project type and existing tools
 ✅ **Interactive Configuration** - Asks about preferences (package manager, test framework, etc.)
 ✅ **Safe Backups** - Backs up any files before replacing
-✅ **Multi-Language Support** - TypeScript, Python, Go, Rust, C, C++
+✅ **Multi-Language Support** - TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
 
 ## Installation Methods
 
@@ -52,7 +52,7 @@ Create a new project with Ralph Loop pre-configured:
 1. Installs global skills (if `--install-global` specified)
 2. Creates project directory with basic structure
 3. Asks configuration questions (package manager, test framework, etc.)
-4. Sets up Ralph Loop structure (`.ralph/`, `specs/`, `archive/`, etc.)
+4. Sets up Ralph Loop structure (`ralph/.ralph/`, `ralph/specs/`, `ralph/archive/`, etc.)
 5. Creates `CLAUDE.md` with project-specific guidance
 6. Updates `.gitignore` with Ralph Loop entries
 7. Creates `README.md` with Ralph Loop workflow
@@ -64,8 +64,12 @@ Create a new project with Ralph Loop pre-configured:
 - `python` - Python with pip/poetry/pipenv
 - `go` - Go with standard tooling
 - `rust` - Rust with Cargo
-- `c` - C with CMake/Make
-- `cpp` - C++ with CMake/Make
+- `angular` - Angular with npm/yarn
+- `react` - React with npm/yarn
+- `nextjs` - Next.js with npm/yarn
+- `express` - Express.js with npm/yarn
+- `flask` - Flask with pip/poetry
+- `ruby` - Ruby with bundler
 
 **Use when:**
 - Starting a new project from scratch
@@ -165,18 +169,6 @@ Include browser testing setup? (yes/no) [yes]:
 > no
 ```
 
-### C/C++
-
-```
-Build system? (cmake/make/meson) [cmake]:
-> cmake
-
-Test framework? (gtest/catch2/doctest) [gtest]:
-> gtest
-
-Include browser testing setup? (yes/no) [yes]:
-> no
-```
 
 **Defaults in brackets** - Detected from existing files or common choices
 
@@ -188,27 +180,29 @@ Include browser testing setup? (yes/no) [yes]:
 
 ```
 project/
-├── .ralph/                           # Runtime state (not tracked)
 ├── .claude/
 │   ├── templates/
 │   │   ├── prd-template.md
 │   │   └── openspec-template.yaml
 │   └── feedback-configs/             # Auto-generated configs
-├── specs/
-│   └── prds/                         # Your PRD files
-├── archive/                          # Completed runs
-├── docs/
-│   ├── QUICKSTART.md
-│   ├── COMPLETE-WORKFLOW.md
-│   ├── QUOTA-MANAGEMENT.md
-│   ├── SPEC-MODIFICATIONS.md
-│   └── ralph-loop-guide.md
-├── tests/
-│   └── browser/                      # Browser tests
-├── feedback/                         # Test results
-├── .ralph-state-template.json        # State template
-├── .ralph-story-template.json        # Story template
-├── .ralph-quota-config.json          # Quota config
+├── ralph/
+│   ├── .ralph/                       # Runtime state (not tracked)
+│   ├── specs/
+│   │   ├── prds/                     # Your PRD files
+│   │   └── openspecs/                # OpenSpec files
+│   ├── archive/                      # Completed runs
+│   ├── docs/
+│   │   ├── QUICKSTART.md
+│   │   ├── COMPLETE-WORKFLOW.md
+│   │   ├── QUOTA-MANAGEMENT.md
+│   │   ├── SPEC-MODIFICATIONS.md
+│   │   └── ralph-loop-guide.md
+│   ├── tests/
+│   │   └── browser/                  # Browser tests
+│   ├── feedback/                     # Test results
+│   ├── .ralph-state-template.json    # State template
+│   ├── .ralph-story-template.json    # Story template
+│   └── .ralph-quota-config.json      # Quota config
 ├── CLAUDE.md                         # Claude guidance
 └── README.md                         # Project readme
 ```
@@ -495,8 +489,7 @@ rm -rf .ralph-backups/
 **Solution:**
 ```bash
 # Remove Ralph Loop files
-rm -rf .ralph/ .claude/ specs/ archive/ docs/
-rm .ralph-*.json
+rm -rf ralph/ .claude/
 
 # Restore from backup if needed
 cp .ralph-backups/CLAUDE.md.ralph-backup-* CLAUDE.md
@@ -541,11 +534,13 @@ ralph-status.md
 # Project structure
 .
 ├── .claude/
-├── .ralph-state-template.json
-├── archive/
-├── docs/
+├── ralph/
+│   ├── archive/
+│   ├── docs/
+│   ├── specs/
+│   └── .ralph-quota-config.json
 ├── CLAUDE.md
-└── specs/
+└── README.md
 ```
 
 ---
@@ -561,7 +556,7 @@ After installation:
 
 2. **Review Spec**:
    ```bash
-   cat specs/prds/<spec-name>.prd.md
+   cat ralph/specs/prds/<spec-name>.prd.md
    ```
 
 3. **Run Loop**:
@@ -601,12 +596,8 @@ rm ~/.claude/skills/auto-feedback-prove.md
 
 ```bash
 # Remove Ralph Loop files
-rm -rf .ralph/
+rm -rf ralph/
 rm -rf .claude/
-rm -rf specs/
-rm -rf archive/
-rm -rf docs/
-rm .ralph-*.json
 
 # Restore original files from backup
 cp .ralph-backups/CLAUDE.md.ralph-backup-* CLAUDE.md
@@ -662,7 +653,7 @@ The Ralph Loop installation script provides:
 ✅ **Auto-detection** - Detects project type and tools
 ✅ **Interactive configuration** - Tailored questions by project type
 ✅ **Safe backups** - Never lose existing work
-✅ **Multi-language support** - TypeScript, Python, Go, Rust, C, C++
+✅ **Multi-language support** - TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
 ✅ **Flexible modes** - New projects or existing projects
 ✅ **Complete setup** - Documentation, templates, configs
 

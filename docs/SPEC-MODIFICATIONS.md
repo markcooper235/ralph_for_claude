@@ -234,9 +234,9 @@ v3: Second modification (updated REQ-003 criteria)
 ### Backup Files
 
 ```
-specs/prds/user-authentication.prd.md              # v3 (current)
-specs/prds/user-authentication.prd.md.v1.backup    # Original
-specs/prds/user-authentication.prd.md.v2.backup    # First mod
+ralph/specs/prds/user-authentication.prd.md              # v3 (current)
+ralph/specs/prds/user-authentication.prd.md.v1.backup    # Original
+ralph/specs/prds/user-authentication.prd.md.v2.backup    # First mod
 ```
 
 ### Modification Metadata
@@ -278,7 +278,7 @@ Each spec includes modification history:
 ### Archive Structure
 
 ```
-archive/user-authentication-20260223152030/
+ralph/archive/user-authentication-20260223152030/
 ├── spec/
 │   ├── user-authentication.prd.md              # v3 (final)
 │   ├── user-authentication.prd.md.v1.backup    # Original

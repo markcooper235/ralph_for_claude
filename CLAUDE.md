@@ -31,7 +31,7 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Each story = 1 Claude Task
 
 **State Management**
-- All state in `.ralph/` directory (not tracked in git)
+- All state in `ralph/.ralph/` directory (not tracked in git)
 - State persists between iterations
 - Full audit trail of decisions and changes
 - Resume capability if interrupted
@@ -71,7 +71,7 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - Seamless resumption after changes
 
 **Archival System**
-- Complete run archived to `archive/<spec-name>-<timestamp>/`
+- Complete run archived to `ralph/archive/<spec-name>-<timestamp>/`
 - Includes: spec, state, logs, test results, git history
 - Workspace cleaned after archive
 - Ready for next run immediately
@@ -97,7 +97,7 @@ cd /path/to/project
 - Auto-detects existing project type and tools
 - Interactive configuration (package manager, test framework, etc.)
 - Backs up existing files before modifying
-- Supports TypeScript, Python, Go, Rust, C, C++
+- Supports TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
 - Creates complete project structure with documentation
 
 See `docs/INSTALLATION.md` for detailed installation guide.
@@ -206,7 +206,7 @@ See `docs/INSTALLATION.md` for detailed installation guide.
 # - Validate completeness
 
 # 2. Start Ralph Loop (creates branch, runs in parallel)
-/ralph-loop specs/prds/user-authentication.prd.md
+/ralph-loop ralph/specs/prds/user-authentication.prd.md
 
 # Claude will:
 # - Create branch: ralph/user-authentication-20260223145023
@@ -229,21 +229,21 @@ See `docs/INSTALLATION.md` for detailed installation guide.
 
 # Claude will:
 # - Verify all tests pass
-# - Archive to archive/user-authentication-20260223145023/
+# - Archive to ralph/archive/user-authentication-20260223145023/
 # - Merge to main (regular merge, preserves commits)
-# - Clean .ralph/ state
+# - Clean ralph/.ralph/ state
 # - Workspace ready for next run
 
 # 5. Start next feature
 /ralph-create-prd dashboard-widgets
-/ralph-loop specs/prds/dashboard-widgets.prd.md
+/ralph-loop ralph/specs/prds/dashboard-widgets.prd.md
 ```
 
 #### Quick Workflow (Existing PRD)
 
 ```bash
 # If you already have a PRD
-/ralph-loop specs/prds/existing-feature.prd.md
+/ralph-loop ralph/specs/prds/existing-feature.prd.md
 
 # Check progress
 /ralph-status
@@ -335,10 +335,10 @@ Phase 3 (parallel, deps satisfied):
 
 ### State Files
 
-**All state in `.ralph/` (NOT tracked in git):**
+**All state in `ralph/.ralph/` (NOT tracked in git):**
 
 ```
-.ralph/
+ralph/.ralph/
 ├── state.json              # Current run state
 ├── stories.json            # All stories with status/deps
 ├── architecture.json       # Architecture decisions
@@ -365,10 +365,10 @@ Phase 3 (parallel, deps satisfied):
 
 ### Archive Structure
 
-**Complete run archived to `archive/<spec-name>-<timestamp>/`:**
+**Complete run archived to `ralph/archive/<spec-name>-<timestamp>/`:**
 
 ```
-archive/user-auth-20260223145023/
+ralph/archive/user-auth-20260223145023/
 ├── summary.md              # Human-readable summary
 ├── metadata.json           # Run metadata
 ├── spec/
@@ -446,8 +446,8 @@ archive/user-auth-20260223145023/
 ### Error Recovery
 
 **If Ralph run fails:**
-1. State preserved in `.ralph/`
-2. Error logged to `.ralph/logs/error.log`
+1. State preserved in `ralph/.ralph/`
+2. Error logged to `ralph/.ralph/logs/error.log`
 3. Status set to "failed"
 4. User can:
    - Fix issue and resume
@@ -481,7 +481,7 @@ archive/user-auth-20260223145023/
    - Stories will run when ready
 
 4. **Review archives** for learning
-   - Check `archive/*/summary.md`
+   - Check `ralph/archive/*/summary.md`
    - Review test outputs
    - Learn from iterations
 
@@ -500,7 +500,7 @@ archive/user-auth-20260223145023/
 **Tests keep failing**
 - Check iteration count: `/ralph-status`
 - If at limit: manual intervention needed
-- Review `.ralph/artifacts/*-tests.json`
+- Review `ralph/.ralph/artifacts/*-tests.json`
 
 **Story blocked**
 - Check dependencies: `/ralph-status`
@@ -513,7 +513,7 @@ archive/user-auth-20260223145023/
 - Or rebase Ralph branch
 
 **Archive fails**
-- Check error in `.ralph/logs/error.log`
+- Check error in `ralph/.ralph/logs/error.log`
 - Fix issue
 - Retry `/ralph-archive`
 - State preserved until successful archive
@@ -542,7 +542,7 @@ archive/user-auth-20260223145023/
 /ralph-create-prd <spec-name>
 
 # Start Ralph Loop
-/ralph-loop specs/prds/<spec-name>.prd.md
+/ralph-loop ralph/specs/prds/<spec-name>.prd.md
 
 # Check status (including quota)
 /ralph-status
@@ -590,7 +590,7 @@ See `examples/` for:
 - `docs/COMPLETE-WORKFLOW.md` - End-to-end workflow with all commands
 - `docs/QUOTA-MANAGEMENT.md` - Quota management guide
 - `docs/SPEC-MODIFICATIONS.md` - Modifying specs during run ⭐ NEW
-- `archive/*/summary.md` - Per-run summaries
+- `ralph/archive/*/summary.md` - Per-run summaries
 
 ### Quota Management
 
@@ -644,8 +644,8 @@ Resume: /ralph-resume (when quota replenished)
 ```
 
 **Configuration:**
-- Default: `.ralph-quota-config.json`
-- Override: `.ralph/quota-config.json`
+- Default: `ralph/.ralph-quota-config.json`
+- Override: `ralph/.ralph/quota-config.json`
 - Customize: thresholds, limits, behavior
 
 **See:** `docs/QUOTA-MANAGEMENT.md` for complete guide
@@ -654,7 +654,7 @@ Resume: /ralph-resume (when quota replenished)
 
 ## For Future Claude Instances
 
-When you see a Ralph run in progress (`.ralph/` exists):
+When you see a Ralph run in progress (`ralph/.ralph/` exists):
 1. Check status first: `/ralph-status`
 2. Understand current phase and progress
 3. Continue from current state

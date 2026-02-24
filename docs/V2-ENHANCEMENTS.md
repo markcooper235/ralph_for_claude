@@ -35,11 +35,11 @@ wait_all(subagents)
 
 **What Changed:**
 - v1: No state persistence between phases
-- v2: Complete state saved in `.ralph/` directory
+- v2: Complete state saved in `ralph/.ralph/` directory
 
 **State Files:**
 ```
-.ralph/
+ralph/.ralph/
 ├── state.json          # Run state, progress, test results
 ├── stories.json        # All stories with dependencies
 ├── architecture.json   # Design decisions
@@ -151,7 +151,7 @@ Phase 3 (parallel - deps satisfied):
 
 **Archive Contents:**
 ```
-archive/user-auth-20260223145023/
+ralph/archive/user-auth-20260223145023/
 ├── summary.md              # Human-readable summary
 ├── metadata.json           # Machine-readable metadata
 ├── spec/                   # Original specification
@@ -317,7 +317,7 @@ Total: ~44 minutes (33% faster)
 **None!** v2 is backward compatible with v1 PRDs.
 
 **New Requirements:**
-- `.ralph/` directory must not be in git
+- `ralph/.ralph/` directory must not be in git
 - Archive directory created automatically
 - Git branch created per run
 
@@ -335,17 +335,18 @@ Total: ~44 minutes (33% faster)
 
 **New .gitignore entries (already added):**
 ```
-.ralph/
-.ralph-*.json
+ralph/.ralph/
+ralph/.ralph-*.json
 ```
 
 **New directory structure:**
 ```
 ralph_for_claude/
-├── .ralph/              # Runtime state (not tracked)
-├── archive/            # Completed runs (not tracked)
-├── specs/              # PRD files (tracked)
-└── implementations/    # Code (tracked)
+├── ralph/
+│   ├── .ralph/          # Runtime state (not tracked)
+│   ├── archive/         # Completed runs (not tracked)
+│   └── specs/           # PRD files (tracked)
+└── src/                 # Code (tracked)
 ```
 
 ## Best Practices for v2

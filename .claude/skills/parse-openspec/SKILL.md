@@ -140,7 +140,7 @@ properties:
 ## Output Format
 
 ```
-[Parse OpenSpec] Reading: specs/openspecs/user-auth.openspec.yaml
+[Parse OpenSpec] Reading: ralph/specs/openspecs/user-auth.openspec.yaml
 [Parse OpenSpec]
 [Parse OpenSpec] Specification: UserAuthentication v1.0
 [Parse OpenSpec]
@@ -176,7 +176,7 @@ properties:
 [Parse OpenSpec] ✓ Task 4: Setup property-based testing framework
 [Parse OpenSpec] ✓ Task 5: Validate all contracts
 [Parse OpenSpec]
-[Parse OpenSpec] Structured data saved: specs/openspecs/user-auth.parsed.json
+[Parse OpenSpec] Structured data saved: ralph/specs/openspecs/user-auth.parsed.json
 [Parse OpenSpec]
 [Parse OpenSpec] Ready to start Ralph Loop? (y/n)
 ```
@@ -214,7 +214,7 @@ def test_login_contract():
 ## Examples
 
 ```
-/parse-openspec specs/openspecs/user-auth.openspec.yaml
+/parse-openspec ralph/specs/openspecs/user-auth.openspec.yaml
 ```
 
 ## Integration Points

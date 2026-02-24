@@ -288,8 +288,8 @@ testing:
 To use this OpenSpec with the Ralph Loop Framework:
 
 ```bash
-/parse-openspec specs/openspecs/[this-file].openspec.yaml
-/ralph-loop specs/openspecs/[this-file].openspec.yaml
+/parse-openspec ralph/specs/openspecs/[this-file].openspec.yaml
+/ralph-loop ralph/specs/openspecs/[this-file].openspec.yaml
 ```
 
 The framework will:

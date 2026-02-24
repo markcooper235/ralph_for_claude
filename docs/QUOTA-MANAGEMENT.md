@@ -152,7 +152,7 @@ When quota is available again:
 
 ### Default Configuration
 
-Located at `.ralph-quota-config.json` (template):
+Located at `ralph/.ralph-quota-config.json` (template):
 
 ```json
 {
@@ -197,7 +197,7 @@ Located at `.ralph-quota-config.json` (template):
 
 ### Custom Configuration
 
-Create `.ralph/quota-config.json` to override defaults:
+Create `ralph/.ralph/quota-config.json` to override defaults:
 
 ```json
 {
@@ -346,7 +346,7 @@ Next: Increase limit or fix issues, then /ralph-resume --force
 ### What's Saved on Pause
 
 ```
-.ralph/state.json:
+ralph/.ralph/state.json:
 ├── status: "paused_quota"
 ├── pausedAt: "2026-02-23T16:45:00Z"
 ├── pauseReason: "quota_safety_threshold"
@@ -496,7 +496,7 @@ A: Ralph monitors continuously and pauses BEFORE starting tasks that won't finis
 A: No - each completed story is committed. Pauses only happen between stories.
 
 **Q: Can I change quota config mid-run?**
-A: Yes, edit `.ralph/quota-config.json` anytime
+A: Yes, edit `ralph/.ralph/quota-config.json` anytime
 
 **Q: What happens to running subagents on pause?**
 A: Current task completes, then pause. Never interrupts mid-task.
@@ -518,7 +518,7 @@ Ralph's quota management ensures:
 **Start using quota management:**
 ```bash
 # All quota features enabled by default
-/ralph-loop specs/prds/my-feature.prd.md
+/ralph-loop ralph/specs/prds/my-feature.prd.md
 
 # Ralph will automatically:
 # - Monitor quota
