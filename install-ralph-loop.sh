@@ -1405,16 +1405,17 @@ EOF
 create_project_settings() {
     local project_dir="$1"
     local settings_file="${project_dir}/.claude/settings.json"
-
-    # Don't overwrite if file already exists with content beyond our template
-    if [ -f "${settings_file}" ]; then
-        print_info ".claude/settings.json already exists — skipping (review manually if needed)"
-        return
-    fi
+    local backup_dir="${project_dir}/.ralph-backups"
 
     mkdir -p "${project_dir}/.claude"
 
-    cat > "${settings_file}" << 'EOF'
+    # The full set of permissions Ralph Loop needs
+    # Passed as a JSON array via environment variable to avoid glob expansion issues
+    local RALPH_PERMS='["Bash(*)","Read(**)","Write(**)","Edit(**)","Read(/tmp/**)","Write(/tmp/**)","Edit(/tmp/**)","Read(~/.claude/**)","Write(~/.claude/skills/**)","Edit(~/.claude/skills/**)","Write(~/.claude/commands/**)","Edit(~/.claude/commands/**)"]'
+
+    if [ ! -f "${settings_file}" ]; then
+        # Fresh install — write the file directly
+        cat > "${settings_file}" << 'EOF'
 {
   "permissions": {
     "allow": [
@@ -1434,8 +1435,94 @@ create_project_settings() {
   }
 }
 EOF
+        print_success "Created .claude/settings.json with Ralph Loop permissions"
+        return
+    fi
 
-    print_success "Created .claude/settings.json with Ralph Loop permissions"
+    # Existing file — merge missing permissions in
+    print_info "Merging Ralph Loop permissions into existing .claude/settings.json..."
+    backup_file "${settings_file}" "${backup_dir}"
+
+    local merged=false
+
+    if command -v python3 &>/dev/null; then
+        local result
+        result=$(SETTINGS_FILE="${settings_file}" RALPH_PERMS="${RALPH_PERMS}" python3 -c "
+import json, os, sys
+
+sf = os.environ['SETTINGS_FILE']
+required = json.loads(os.environ['RALPH_PERMS'])
+
+with open(sf) as f:
+    s = json.load(f)
+
+if 'permissions' not in s:
+    s['permissions'] = {}
+if 'allow' not in s['permissions']:
+    s['permissions']['allow'] = []
+
+existing = s['permissions']['allow']
+added = [p for p in required if p not in existing]
+existing.extend(added)
+
+with open(sf, 'w') as f:
+    json.dump(s, f, indent=2)
+    f.write('\n')
+
+if added:
+    print('Added ' + str(len(added)) + ' permission(s): ' + ', '.join(added))
+else:
+    print('All Ralph permissions already present')
+" 2>&1) && merged=true
+        print_success "${result}"
+    fi
+
+    if [ "${merged}" = false ] && command -v node &>/dev/null; then
+        local result
+        result=$(SETTINGS_FILE="${settings_file}" RALPH_PERMS="${RALPH_PERMS}" node -e "
+const fs = require('fs');
+const sf = process.env.SETTINGS_FILE;
+const required = JSON.parse(process.env.RALPH_PERMS);
+const s = JSON.parse(fs.readFileSync(sf, 'utf8'));
+
+if (!s.permissions) s.permissions = {};
+if (!s.permissions.allow) s.permissions.allow = [];
+
+const added = required.filter(p => !s.permissions.allow.includes(p));
+s.permissions.allow.push(...added);
+fs.writeFileSync(sf, JSON.stringify(s, null, 2) + '\n');
+
+console.log(added.length
+    ? 'Added ' + added.length + ' permission(s): ' + added.join(', ')
+    : 'All Ralph permissions already present');
+" 2>&1) && merged=true
+        print_success "${result}"
+    fi
+
+    if [ "${merged}" = false ]; then
+        print_warning "python3 and node unavailable — overwriting .claude/settings.json (original backed up to ${backup_dir})"
+        cat > "${settings_file}" << 'EOF'
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "Read(/tmp/**)",
+      "Write(/tmp/**)",
+      "Edit(/tmp/**)",
+      "Read(~/.claude/**)",
+      "Write(~/.claude/skills/**)",
+      "Edit(~/.claude/skills/**)",
+      "Write(~/.claude/commands/**)",
+      "Edit(~/.claude/commands/**)"
+    ]
+  }
+}
+EOF
+        print_success "Wrote .claude/settings.json with Ralph Loop permissions"
+    fi
 }
 
 initialize_existing_project() {
