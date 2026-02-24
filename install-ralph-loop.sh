@@ -98,24 +98,46 @@ install_global_skills() {
     fi
 
     local installed_count=0
+    local updated_count=0
+    local skipped_count=0
+
     for skill_file in "${skills_source}"/*.md; do
         if [ -f "${skill_file}" ]; then
             local skill_name=$(basename "${skill_file}")
             local target="${CLAUDE_GLOBAL_SKILLS}/${skill_name}"
 
-            # Backup existing file if it exists
+            # Check if target exists and compare modification times
             if [ -f "${target}" ]; then
-                cp "${target}" "${target}${BACKUP_SUFFIX}"
-                print_warning "Backed up existing: ${skill_name}${BACKUP_SUFFIX}"
+                # Only update if source is newer
+                if [ "${skill_file}" -nt "${target}" ]; then
+                    cp "${skill_file}" "${target}"
+                    print_success "Updated: ${skill_name}"
+                    updated_count=$((updated_count + 1))
+                else
+                    # Target is up to date, skip
+                    skipped_count=$((skipped_count + 1))
+                fi
+            else
+                # Target doesn't exist, install new
+                cp "${skill_file}" "${target}"
+                print_success "Installed: ${skill_name}"
+                installed_count=$((installed_count + 1))
             fi
-
-            cp "${skill_file}" "${target}"
-            print_success "Installed: ${skill_name}"
-            installed_count=$((installed_count + 1))
         fi
     done
 
-    print_success "Installed ${installed_count} Ralph Loop skills globally"
+    # Print summary
+    local total=$((installed_count + updated_count + skipped_count))
+    if [ ${installed_count} -gt 0 ]; then
+        print_success "Installed ${installed_count} new skill(s)"
+    fi
+    if [ ${updated_count} -gt 0 ]; then
+        print_success "Updated ${updated_count} skill(s)"
+    fi
+    if [ ${skipped_count} -gt 0 ]; then
+        print_info "${skipped_count} skill(s) already up to date"
+    fi
+    print_success "Total: ${total} Ralph Loop skills in ${CLAUDE_GLOBAL_SKILLS}"
     echo
 }
 
