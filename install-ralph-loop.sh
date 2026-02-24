@@ -1402,6 +1402,42 @@ EOF
     print_success "Created README.md"
 }
 
+create_project_settings() {
+    local project_dir="$1"
+    local settings_file="${project_dir}/.claude/settings.json"
+
+    # Don't overwrite if file already exists with content beyond our template
+    if [ -f "${settings_file}" ]; then
+        print_info ".claude/settings.json already exists — skipping (review manually if needed)"
+        return
+    fi
+
+    mkdir -p "${project_dir}/.claude"
+
+    cat > "${settings_file}" << 'EOF'
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(**)",
+      "Write(**)",
+      "Edit(**)",
+      "Read(/tmp/**)",
+      "Write(/tmp/**)",
+      "Edit(/tmp/**)",
+      "Read(~/.claude/**)",
+      "Write(~/.claude/skills/**)",
+      "Edit(~/.claude/skills/**)",
+      "Write(~/.claude/commands/**)",
+      "Edit(~/.claude/commands/**)"
+    ]
+  }
+}
+EOF
+
+    print_success "Created .claude/settings.json with Ralph Loop permissions"
+}
+
 initialize_existing_project() {
     local project_dir="$1"
 
@@ -1446,6 +1482,7 @@ initialize_existing_project() {
     # Create/update configuration files
     create_claude_md "${project_dir}" "${project_type}"
     create_gitignore "${project_dir}"
+    create_project_settings "${project_dir}"
 
     echo
     print_success "Ralph Loop Framework initialized successfully!"
@@ -1501,6 +1538,7 @@ create_new_project() {
         create_ralph_structure "."
         create_claude_md "." "nx"
         create_gitignore "."
+        create_project_settings "."
         git add . && git commit -m "Add Ralph Loop Framework to NX workspace" || true
         echo
         print_success "Project created successfully: ${project_dir}"
@@ -1584,6 +1622,7 @@ create_new_project() {
     create_claude_md "." "${project_type}"
     create_gitignore "."
     create_readme "." "${project_name}" "${project_type}"
+    create_project_settings "."
 
     # Initial git commit
     git add .
