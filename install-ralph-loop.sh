@@ -56,7 +56,7 @@ Usage: $0 [OPTIONS]
 OPTIONS:
     --install-global            Install skills to ~/.claude/skills/ and commands to ~/.claude/commands/
     --new-project <name>        Create new project with Ralph framework
-    --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby)
+    --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -303,6 +303,12 @@ detect_project_type() {
         return
     fi
 
+    # NX monorepo
+    if [ -f "${project_dir}/nx.json" ]; then
+        echo "nx"
+        return
+    fi
+
     # Ruby
     if [ -f "${project_dir}/Gemfile" ]; then
         echo "ruby"
@@ -388,6 +394,25 @@ detect_tools() {
         rust)
             echo "test_framework=cargo-test"
             echo "package_manager=cargo"
+            ;;
+
+        nx)
+            # Package manager detected from lockfiles
+            if [ -f "${project_dir}/yarn.lock" ]; then
+                echo "package_manager=yarn"
+            elif [ -f "${project_dir}/pnpm-lock.yaml" ]; then
+                echo "package_manager=pnpm"
+            elif [ -f "${project_dir}/bun.lockb" ]; then
+                echo "package_manager=bun"
+            else
+                echo "package_manager=npm"
+            fi
+            # Nx Cloud detection
+            if grep -q '"nxCloudId"\|"nxCloudAccessToken"' "${project_dir}/nx.json" 2>/dev/null; then
+                echo "nx_cloud=true"
+            else
+                echo "nx_cloud=false"
+            fi
             ;;
     esac
 }
@@ -578,17 +603,77 @@ ask_project_questions() {
             PROJECT_CONFIG[workspace]="${workspace_choice:-no}"
             ;;
 
+        nx)
+            # Workspace type
+            echo "Workspace type? (integrated/package-based) [integrated]:"
+            read -r ws_type
+            PROJECT_CONFIG[nx_workspace_type]="${ws_type:-integrated}"
+
+            # Package manager
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="npm"
+            fi
+            echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            # Frontend apps
+            echo
+            print_info "Frontend applications to scaffold (space-separated, or 'none'):"
+            echo "  Options: react angular nextjs vue"
+            echo "  Example: react nextjs"
+            echo "  [none]:"
+            read -r frontend_choice
+            PROJECT_CONFIG[nx_frontends]="${frontend_choice:-none}"
+
+            # Backend apps
+            echo
+            print_info "Backend applications to scaffold (space-separated, or 'none'):"
+            echo "  Options: nest express node"
+            echo "  Example: nest express"
+            echo "  [none]:"
+            read -r backend_choice
+            PROJECT_CONFIG[nx_backends]="${backend_choice:-none}"
+
+            # E2E framework
+            echo
+            echo "E2E test framework? (playwright/cypress/none) [playwright]:"
+            read -r e2e_choice
+            PROJECT_CONFIG[nx_e2e]="${e2e_choice:-playwright}"
+
+            # Unit test runner (default; each app can override)
+            echo "Default unit test runner? (jest/vitest) [jest]:"
+            read -r unit_choice
+            PROJECT_CONFIG[nx_unit_test]="${unit_choice:-jest}"
+
+            # Nx Cloud
+            echo "Connect to Nx Cloud for remote caching? (yes/no) [no]:"
+            read -r cloud_choice
+            PROJECT_CONFIG[nx_cloud]="${cloud_choice:-no}"
+
+            # Community language plugins
+            echo
+            print_info "Community language plugins (space-separated, or 'none'):"
+            echo "  Options: python go"
+            echo "  [none]:"
+            read -r community_choice
+            PROJECT_CONFIG[nx_community]="${community_choice:-none}"
+            ;;
+
         *)
             print_warning "Unknown project type '${project_type}' — skipping type-specific configuration"
             print_info "You can manually configure build tools and test frameworks after project creation"
             ;;
     esac
 
-    # Common questions for all types
-    echo
-    echo "Include browser testing setup? (yes/no) [yes]:"
-    read -r browser_choice
-    PROJECT_CONFIG[browser_testing]="${browser_choice:-yes}"
+    # Common questions for all types (skip for nx — it manages its own browser testing)
+    if [ "${project_type}" != "nx" ]; then
+        echo
+        echo "Include browser testing setup? (yes/no) [yes]:"
+        read -r browser_choice
+        PROJECT_CONFIG[browser_testing]="${browser_choice:-yes}"
+    fi
 
     echo
 }
@@ -1112,6 +1197,79 @@ rubocop -a            # Auto-fix safe offenses
 
 EOF
             ;;
+
+        nx)
+            cat >> "${claude_md}" << 'EOF'
+
+## NX Monorepo Specific
+
+### Core NX Commands
+```bash
+nx graph                          # Visualize project dependency graph
+nx show projects                  # List all projects in the workspace
+nx show project <name>            # Show project targets and config
+nx reset                          # Clear local cache
+nx connect                        # Connect to Nx Cloud (remote cache)
+```
+
+### Running Tasks
+```bash
+nx run <project>:<target>         # Run a target for a specific project
+nx run <project>:build            # Build a project
+nx run <project>:test             # Test a project
+nx run <project>:lint             # Lint a project
+nx run <project>:serve            # Serve/start a project
+nx run-many -t build              # Build all projects
+nx run-many -t test               # Test all projects
+nx run-many -t build,test,lint    # Multiple targets at once
+```
+
+### Affected Commands (CI/CD — only run what changed)
+```bash
+nx affected -t build              # Build only affected projects
+nx affected -t test               # Test only affected projects
+nx affected -t lint               # Lint only affected projects
+nx affected -t build,test,lint    # All affected tasks at once
+```
+
+### Generating Code
+```bash
+nx generate @nx/react:application <name>    # Add a React app
+nx generate @nx/angular:application <name>  # Add an Angular app
+nx generate @nx/next:application <name>     # Add a Next.js app
+nx generate @nx/vue:application <name>      # Add a Vue app
+nx generate @nx/nest:application <name>     # Add a NestJS API
+nx generate @nx/express:application <name>  # Add an Express API
+nx generate @nx/node:application <name>     # Add a Node app
+nx generate @nx/js:library <name>           # Add a shared TypeScript library
+```
+
+### Adding Plugins
+```bash
+nx add @nx/react
+nx add @nx/nest
+nx add @nxlv/python
+nx add @nx-go/nx-go
+```
+
+### Migrations & Maintenance
+```bash
+nx migrate latest                 # Update Nx and plugins
+nx migrate --run-migrations       # Apply pending migrations
+nx format:write                   # Format all files with Prettier
+nx format:check                   # Check formatting
+```
+
+## NX + Ralph Loop Notes
+
+- Ralph tasks run per-project: `nx run <project>:test` not bare `npm test`
+- Use `nx affected` in CI to skip unaffected projects
+- Store `.nx/cache` in CI cache for faster runs
+- Project tags (`scope:`, `type:`) enforce architectural boundaries
+- Check `.ralph/nx-workspace.json` for workspace metadata used by Ralph
+
+EOF
+            ;;
     esac
 
     print_success "Created CLAUDE.md"
@@ -1259,10 +1417,10 @@ initialize_existing_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
                     ;;
             esac
         done
@@ -1308,6 +1466,58 @@ create_new_project() {
     print_info "Creating new project: ${project_name}"
     echo
 
+    # Detect project type if not specified (needed before dir creation for nx path)
+    if [ -z "${project_type}" ] || [ "${project_type}" = "unknown" ]; then
+        while true; do
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby/nx) [typescript]:"
+            read -r type_choice
+            project_type="${type_choice:-typescript}"
+            case "${project_type}" in
+                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) break ;;
+                *)
+                    print_error "Unknown project type: '${project_type}'"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
+                    ;;
+            esac
+        done
+    fi
+
+    print_info "Project type: ${project_type}"
+
+    # NX takes a completely different path: create-nx-workspace handles directory
+    # creation itself, so we must NOT pre-create the dir. Ask questions, then run
+    # from parent_dir and cd into the workspace afterward.
+    if [ "${project_type}" = "nx" ]; then
+        if [ -d "${project_dir}" ]; then
+            print_error "Directory already exists: ${project_dir}"
+            exit 1
+        fi
+        mkdir -p "${parent_dir}"
+        cd "${parent_dir}"
+        declare -A PROJECT_CONFIG
+        ask_project_questions "nx" ""
+        create_nx_project "${parent_dir}" "${project_name}"
+        cd "${project_dir}"
+        create_ralph_structure "."
+        create_claude_md "." "nx"
+        create_gitignore "."
+        git add . && git commit -m "Add Ralph Loop Framework to NX workspace" || true
+        echo
+        print_success "Project created successfully: ${project_dir}"
+        print_info "Project configured with:"
+        for key in "${!PROJECT_CONFIG[@]}"; do
+            echo "  - ${key}: ${PROJECT_CONFIG[$key]}"
+        done
+        echo
+        print_info "Next steps:"
+        echo "  1. cd ${project_name}"
+        echo "  2. /ralph-create-prd"
+        echo "  3. /ralph-loop"
+        echo
+        return
+    fi
+
+    # Non-NX path: pre-create directory and git init as before
     # Check if directory already exists
     if [ -d "${project_dir}" ]; then
         print_error "Directory already exists: ${project_dir}"
@@ -1320,29 +1530,10 @@ create_new_project() {
     cd "${project_dir}"
 
     # Initialize git if not already in a git repository
-    # Check both local .git and parent git repos (to avoid nested repos)
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         git init
         print_success "Initialized git repository in project"
     fi
-
-    # Detect project type if not specified
-    if [ -z "${project_type}" ] || [ "${project_type}" = "unknown" ]; then
-        while true; do
-            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby) [typescript]:"
-            read -r type_choice
-            project_type="${type_choice:-typescript}"
-            case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) break ;;
-                *)
-                    print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
-                    ;;
-            esac
-        done
-    fi
-
-    print_info "Project type: ${project_type}"
 
     # Ask configuration questions
     declare -A PROJECT_CONFIG
@@ -1380,7 +1571,6 @@ create_new_project() {
         rust)
             create_rust_project "." "${project_name}"
             ;;
-
         *)
             print_warning "No scaffold available for project type '${project_type}'"
             print_info "Ralph structure will be created — add your language files manually"
@@ -2050,6 +2240,208 @@ EOF
     print_success "Created Ruby project structure"
 }
 
+create_nx_project() {
+    local parent_dir="$1"
+    local project_name="$2"
+
+    # Read config set by ask_project_questions
+    local ws_type="${PROJECT_CONFIG[nx_workspace_type]:-integrated}"
+    local pm="${PROJECT_CONFIG[package_manager]:-npm}"
+    local frontends="${PROJECT_CONFIG[nx_frontends]:-none}"
+    local backends="${PROJECT_CONFIG[nx_backends]:-none}"
+    local e2e="${PROJECT_CONFIG[nx_e2e]:-playwright}"
+    local unit_test="${PROJECT_CONFIG[nx_unit_test]:-jest}"
+    local nx_cloud="${PROJECT_CONFIG[nx_cloud]:-no}"
+    local community="${PROJECT_CONFIG[nx_community]:-none}"
+
+    print_info "Creating NX workspace: ${project_name}"
+    print_info "  Workspace type : ${ws_type}"
+    print_info "  Package manager: ${pm}"
+    print_info "  Frontends      : ${frontends}"
+    print_info "  Backends       : ${backends}"
+    print_info "  E2E framework  : ${e2e}"
+    print_info "  Unit test      : ${unit_test}"
+    print_info "  Nx Cloud       : ${nx_cloud}"
+    print_info "  Community      : ${community}"
+    echo
+
+    # Determine preset — use 'apps' (empty integrated) or 'npm' (package-based)
+    # then add plugins and generate each app manually for full control.
+    local preset="apps"
+    if [ "${ws_type}" = "package-based" ]; then
+        preset="npm"
+    fi
+
+    # Run create-nx-workspace in the PARENT directory so it creates <project_name>/
+    # We're already CD'd into project_dir (which is "."), so we need to go up.
+    # Map yes/no cloud choice to the values create-nx-workspace expects
+    if [ "${nx_cloud}" = "yes" ]; then
+        cloud_flag="yes"
+    else
+        cloud_flag="skip"
+    fi
+
+    # create-nx-workspace must run from parent_dir to create the project subdir
+    print_info "Running: npx create-nx-workspace@latest ..."
+    (
+        cd "${parent_dir}"
+        npx create-nx-workspace@latest "${project_name}" \
+            --preset="${preset}" \
+            --workspaceType="${ws_type}" \
+            --pm="${pm}" \
+            --nxCloud="${cloud_flag}" \
+            --skipGit=false \
+            --interactive=false 2>&1 | grep -v "^$" || true
+    )
+
+    # cd into newly-created workspace for all subsequent nx commands
+    cd "${parent_dir}/${project_name}"
+
+    # After workspace creation, we're in the project dir — install plugins and generate apps
+    print_info "Installing Nx plugins..."
+
+    # Map of frontend framework -> @nx plugin
+    local -A FRONTEND_PLUGINS=(
+        ["react"]="@nx/react"
+        ["angular"]="@nx/angular"
+        ["nextjs"]="@nx/next"
+        ["vue"]="@nx/vue"
+    )
+
+    # Map of backend framework -> @nx plugin
+    local -A BACKEND_PLUGINS=(
+        ["nest"]="@nx/nest"
+        ["express"]="@nx/express"
+        ["node"]="@nx/node"
+    )
+
+    # Install and generate frontend apps
+    if [ "${frontends}" != "none" ]; then
+        for fw in ${frontends}; do
+            local plugin="${FRONTEND_PLUGINS[$fw]}"
+            if [ -n "${plugin}" ]; then
+                print_info "Adding plugin: ${plugin}"
+                npx nx add "${plugin}" --no-interactive 2>&1 | tail -3 || true
+
+                print_info "Generating ${fw} application..."
+                case "${fw}" in
+                    react)
+                        npx nx generate "${plugin}:application" "${fw}-app" \
+                            --bundler=vite \
+                            --unitTestRunner="${unit_test}" \
+                            --e2eTestRunner="${e2e}" \
+                            --style=css \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                    angular)
+                        npx nx generate "${plugin}:application" "${fw}-app" \
+                            --bundler=esbuild \
+                            --unitTestRunner="${unit_test}" \
+                            --e2eTestRunner="${e2e}" \
+                            --style=css \
+                            --standaloneApi=true \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                    nextjs)
+                        npx nx generate "${plugin}:application" "${fw}-app" \
+                            --unitTestRunner="${unit_test}" \
+                            --e2eTestRunner="${e2e}" \
+                            --nextAppDir=true \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                    vue)
+                        npx nx generate "${plugin}:application" "${fw}-app" \
+                            --unitTestRunner="${unit_test}" \
+                            --e2eTestRunner="${e2e}" \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                esac
+                print_success "Generated ${fw}-app"
+            else
+                print_warning "Unknown frontend framework: ${fw}, skipping"
+            fi
+        done
+    fi
+
+    # Install and generate backend apps
+    if [ "${backends}" != "none" ]; then
+        for fw in ${backends}; do
+            local plugin="${BACKEND_PLUGINS[$fw]}"
+            if [ -n "${plugin}" ]; then
+                print_info "Adding plugin: ${plugin}"
+                npx nx add "${plugin}" --no-interactive 2>&1 | tail -3 || true
+
+                print_info "Generating ${fw} application..."
+                case "${fw}" in
+                    nest)
+                        npx nx generate "${plugin}:application" "${fw}-api" \
+                            --unitTestRunner="${unit_test}" \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                    express)
+                        npx nx generate "${plugin}:application" "${fw}-api" \
+                            --unitTestRunner="${unit_test}" \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                    node)
+                        npx nx generate "${plugin}:application" "${fw}-api" \
+                            --framework=none \
+                            --unitTestRunner="${unit_test}" \
+                            --bundler=esbuild \
+                            --no-interactive 2>&1 | tail -5 || true
+                        ;;
+                esac
+                print_success "Generated ${fw}-api"
+            else
+                print_warning "Unknown backend framework: ${fw}, skipping"
+            fi
+        done
+    fi
+
+    # Community plugins
+    if [ "${community}" != "none" ]; then
+        for plugin in ${community}; do
+            case "${plugin}" in
+                python)
+                    print_info "Adding community plugin: @nxlv/python"
+                    npx nx add @nxlv/python --no-interactive 2>&1 | tail -3 || true
+                    print_success "Added @nxlv/python (use: nx generate @nxlv/python:poetry-project <name>)"
+                    ;;
+                go)
+                    print_info "Adding community plugin: @nx-go/nx-go"
+                    npx nx add @nx-go/nx-go --no-interactive 2>&1 | tail -3 || true
+                    print_success "Added @nx-go/nx-go (use: nx generate @nx-go/nx-go:app <name>)"
+                    ;;
+                *)
+                    print_warning "Unknown community plugin: ${plugin}, skipping"
+                    ;;
+            esac
+        done
+    fi
+
+    # Write Ralph workspace metadata so Ralph skills know this is an NX workspace
+    mkdir -p ".ralph"
+    cat > ".ralph/nx-workspace.json" << EOF
+{
+  "nx_workspace": true,
+  "workspace_type": "${ws_type}",
+  "package_manager": "${pm}",
+  "unit_test": "${unit_test}",
+  "e2e": "${e2e}",
+  "frontends": "${frontends}",
+  "backends": "${backends}",
+  "community_plugins": "${community}"
+}
+EOF
+
+    print_success "NX workspace created: ${project_name}"
+    echo
+    print_info "Installed apps (run with: nx run <app>:serve):"
+    for fw in ${frontends}; do [ "${fw}" != "none" ] && echo "  - ${fw}-app"; done
+    for fw in ${backends}; do [ "${fw}" != "none" ] && echo "  - ${fw}-api"; done
+    echo
+}
+
 #==============================================================================
 # Main Script
 #==============================================================================
@@ -2076,10 +2468,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
                         exit 1
                         ;;
                 esac
