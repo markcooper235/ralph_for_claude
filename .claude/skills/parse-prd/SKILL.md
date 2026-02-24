@@ -1,3 +1,10 @@
+---
+name: parse-prd
+description: Parse PRD (Product Requirements Document) files and extract structured requirements, user stories, acceptance criteria, and dependency graphs. Creates Claude tasks and test checklists for Ralph Loop execution.
+argument-hint: <prd-file-path>
+disable-model-invocation: true
+---
+
 # Parse PRD - Product Requirements Document Parser
 
 Parse PRD documents and extract structured requirements for task creation.

@@ -15,8 +15,9 @@ NC='\033[0m' # No Color
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Global Claude skills directory
+# Global Claude directories
 CLAUDE_GLOBAL_SKILLS="${HOME}/.claude/skills"
+CLAUDE_GLOBAL_COMMANDS="${HOME}/.claude/commands"
 
 # Configuration
 BACKUP_SUFFIX=".ralph-backup-$(date +%Y%m%d-%H%M%S)"
@@ -53,30 +54,36 @@ print_usage() {
 Usage: $0 [OPTIONS]
 
 OPTIONS:
-    --install-global            Install skills globally to ~/.claude/skills/
+    --install-global            Install skills to ~/.claude/skills/ and commands to ~/.claude/commands/
     --new-project <name>        Create new project with Ralph framework
-    --type <language>           Project type (typescript, python, go, rust, c, cpp)
+    --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
     --help                      Show this help message
 
+INSTALL SCOPE:
+    Skills and commands are installed in exactly ONE place:
+    - --install-global           → ~/.claude/ only  (available in ALL projects)
+    - --new-project / --init     → project .claude/ only  (this project only)
+    - --install-global + project → ~/.claude/ only  (project-level skipped to avoid duplicates)
+
 EXAMPLES:
-    # Install skills globally only
+    # Install skills globally (available in every project, no per-project install needed)
     $0 --install-global
 
-    # Create new TypeScript project in current directory
-    $0 --install-global --new-project my-app --type typescript
+    # Create new TypeScript project — skills installed at project level only
+    $0 --new-project my-app --type typescript
 
-    # Create project in specific directory
-    $0 --install-global --new-project my-app --type python --parent-dir ~/projects
+    # Create project in specific directory — skills installed at project level only
+    $0 --new-project my-app --type python --parent-dir ~/projects
 
-    # Initialize existing project
+    # Initialize existing project — skills installed at project level only
     cd /path/to/project
-    $0 --install-global --init
+    $0 --init
 
-    # Create project and auto-detect type
-    $0 --install-global --new-project my-app
+    # Install globally AND create project — skills go to ~/.claude/ only (no duplication)
+    $0 --install-global --new-project my-app --type typescript
 
 EOF
 }
@@ -86,62 +93,178 @@ EOF
 #==============================================================================
 
 install_global_skills() {
-    print_info "Installing Ralph Loop skills globally..."
+    print_info "Installing Ralph Loop skills and commands globally..."
 
-    # Create global skills directory if it doesn't exist
-    if [ ! -d "${CLAUDE_GLOBAL_SKILLS}" ]; then
-        mkdir -p "${CLAUDE_GLOBAL_SKILLS}"
-        print_success "Created global skills directory: ${CLAUDE_GLOBAL_SKILLS}"
-    fi
+    # Create global directories if they don't exist
+    mkdir -p "${CLAUDE_GLOBAL_SKILLS}"
+    mkdir -p "${CLAUDE_GLOBAL_COMMANDS}"
 
-    # Copy all Ralph skills
+    local installed_skills=0
+    local updated_skills=0
+    local skipped_skills=0
+    local installed_cmds=0
+    local updated_cmds=0
+    local skipped_cmds=0
+
+    # -------------------------------------------------------------------------
+    # Install SKILLS: .claude/skills/<name>/SKILL.md → ~/.claude/skills/<name>/SKILL.md
+    # Skills are identified by being a subdirectory containing SKILL.md
+    # -------------------------------------------------------------------------
     local skills_source="${SCRIPT_DIR}/.claude/skills"
-    if [ ! -d "${skills_source}" ]; then
-        print_error "Skills directory not found: ${skills_source}"
-        exit 1
+    if [ -d "${skills_source}" ]; then
+        for skill_dir in "${skills_source}"/*/; do
+            if [ -d "${skill_dir}" ] && [ -f "${skill_dir}/SKILL.md" ]; then
+                local skill_name=$(basename "${skill_dir}")
+                local target_dir="${CLAUDE_GLOBAL_SKILLS}/${skill_name}"
+                local source_file="${skill_dir}/SKILL.md"
+                local target_file="${target_dir}/SKILL.md"
+
+                mkdir -p "${target_dir}"
+
+                if [ -f "${target_file}" ]; then
+                    if [ "${source_file}" -nt "${target_file}" ]; then
+                        cp "${source_file}" "${target_file}"
+                        print_success "Updated skill: ${skill_name}"
+                        updated_skills=$((updated_skills + 1))
+                    else
+                        skipped_skills=$((skipped_skills + 1))
+                    fi
+                else
+                    cp "${source_file}" "${target_file}"
+                    print_success "Installed skill: ${skill_name}"
+                    installed_skills=$((installed_skills + 1))
+                fi
+            fi
+        done
+    else
+        print_warning "Skills source directory not found: ${skills_source}"
     fi
 
-    local installed_count=0
-    local updated_count=0
-    local skipped_count=0
+    # -------------------------------------------------------------------------
+    # Install COMMANDS: .claude/commands/<name>.md → ~/.claude/commands/<name>.md
+    # Commands are flat .md files (legacy format, still supported)
+    # -------------------------------------------------------------------------
+    local commands_source="${SCRIPT_DIR}/.claude/commands"
+    if [ -d "${commands_source}" ]; then
+        for cmd_file in "${commands_source}"/*.md; do
+            if [ -f "${cmd_file}" ]; then
+                local cmd_name=$(basename "${cmd_file}")
+                local target="${CLAUDE_GLOBAL_COMMANDS}/${cmd_name}"
 
-    for skill_file in "${skills_source}"/*.md; do
-        if [ -f "${skill_file}" ]; then
-            local skill_name=$(basename "${skill_file}")
-            local target="${CLAUDE_GLOBAL_SKILLS}/${skill_name}"
-
-            # Check if target exists and compare modification times
-            if [ -f "${target}" ]; then
-                # Only update if source is newer
-                if [ "${skill_file}" -nt "${target}" ]; then
-                    cp "${skill_file}" "${target}"
-                    print_success "Updated: ${skill_name}"
-                    updated_count=$((updated_count + 1))
+                if [ -f "${target}" ]; then
+                    if [ "${cmd_file}" -nt "${target}" ]; then
+                        cp "${cmd_file}" "${target}"
+                        print_success "Updated command: ${cmd_name}"
+                        updated_cmds=$((updated_cmds + 1))
+                    else
+                        skipped_cmds=$((skipped_cmds + 1))
+                    fi
                 else
-                    # Target is up to date, skip
-                    skipped_count=$((skipped_count + 1))
+                    cp "${cmd_file}" "${target}"
+                    print_success "Installed command: ${cmd_name}"
+                    installed_cmds=$((installed_cmds + 1))
                 fi
-            else
-                # Target doesn't exist, install new
-                cp "${skill_file}" "${target}"
-                print_success "Installed: ${skill_name}"
-                installed_count=$((installed_count + 1))
             fi
-        fi
-    done
+        done
+    else
+        print_warning "Commands source directory not found: ${commands_source}"
+    fi
 
     # Print summary
-    local total=$((installed_count + updated_count + skipped_count))
-    if [ ${installed_count} -gt 0 ]; then
-        print_success "Installed ${installed_count} new skill(s)"
+    local total_skills=$((installed_skills + updated_skills + skipped_skills))
+    local total_cmds=$((installed_cmds + updated_cmds + skipped_cmds))
+
+    echo
+    print_success "Skills  → ${CLAUDE_GLOBAL_SKILLS}"
+    print_info "  Installed: ${installed_skills}  Updated: ${updated_skills}  Up-to-date: ${skipped_skills}  Total: ${total_skills}"
+    print_success "Commands → ${CLAUDE_GLOBAL_COMMANDS}"
+    print_info "  Installed: ${installed_cmds}  Updated: ${updated_cmds}  Up-to-date: ${skipped_cmds}  Total: ${total_cmds}"
+    echo
+}
+
+install_project_skills() {
+    local project_dir="$1"
+
+    print_info "Installing Ralph Loop skills and commands into project..."
+
+    local installed_skills=0
+    local updated_skills=0
+    local skipped_skills=0
+    local installed_cmds=0
+    local updated_cmds=0
+    local skipped_cmds=0
+
+    # -------------------------------------------------------------------------
+    # Install SKILLS: .claude/skills/<name>/SKILL.md → <project>/.claude/skills/<name>/SKILL.md
+    # -------------------------------------------------------------------------
+    local skills_source="${SCRIPT_DIR}/.claude/skills"
+    if [ -d "${skills_source}" ]; then
+        for skill_dir in "${skills_source}"/*/; do
+            if [ -d "${skill_dir}" ] && [ -f "${skill_dir}/SKILL.md" ]; then
+                local skill_name=$(basename "${skill_dir}")
+                local target_dir="${project_dir}/.claude/skills/${skill_name}"
+                local source_file="${skill_dir}/SKILL.md"
+                local target_file="${target_dir}/SKILL.md"
+
+                mkdir -p "${target_dir}"
+
+                if [ -f "${target_file}" ]; then
+                    if [ "${source_file}" -nt "${target_file}" ]; then
+                        cp "${source_file}" "${target_file}"
+                        print_success "Updated skill: ${skill_name}"
+                        updated_skills=$((updated_skills + 1))
+                    else
+                        skipped_skills=$((skipped_skills + 1))
+                    fi
+                else
+                    cp "${source_file}" "${target_file}"
+                    print_success "Installed skill: ${skill_name}"
+                    installed_skills=$((installed_skills + 1))
+                fi
+            fi
+        done
+    else
+        print_warning "Skills source not found: ${skills_source}"
     fi
-    if [ ${updated_count} -gt 0 ]; then
-        print_success "Updated ${updated_count} skill(s)"
+
+    # -------------------------------------------------------------------------
+    # Install COMMANDS: .claude/commands/<name>.md → <project>/.claude/commands/<name>.md
+    # -------------------------------------------------------------------------
+    mkdir -p "${project_dir}/.claude/commands"
+    local commands_source="${SCRIPT_DIR}/.claude/commands"
+    if [ -d "${commands_source}" ]; then
+        for cmd_file in "${commands_source}"/*.md; do
+            if [ -f "${cmd_file}" ]; then
+                local cmd_name=$(basename "${cmd_file}")
+                local target="${project_dir}/.claude/commands/${cmd_name}"
+
+                if [ -f "${target}" ]; then
+                    if [ "${cmd_file}" -nt "${target}" ]; then
+                        cp "${cmd_file}" "${target}"
+                        print_success "Updated command: ${cmd_name}"
+                        updated_cmds=$((updated_cmds + 1))
+                    else
+                        skipped_cmds=$((skipped_cmds + 1))
+                    fi
+                else
+                    cp "${cmd_file}" "${target}"
+                    print_success "Installed command: ${cmd_name}"
+                    installed_cmds=$((installed_cmds + 1))
+                fi
+            fi
+        done
+    else
+        print_warning "Commands source not found: ${commands_source}"
     fi
-    if [ ${skipped_count} -gt 0 ]; then
-        print_info "${skipped_count} skill(s) already up to date"
-    fi
-    print_success "Total: ${total} Ralph Loop skills in ${CLAUDE_GLOBAL_SKILLS}"
+
+    local total_skills=$((installed_skills + updated_skills + skipped_skills))
+    local total_cmds=$((installed_cmds + updated_cmds + skipped_cmds))
+
+    echo
+    print_success "Skills  → ${project_dir}/.claude/skills/"
+    print_info "  Installed: ${installed_skills}  Updated: ${updated_skills}  Up-to-date: ${skipped_skills}  Total: ${total_skills}"
+    print_success "Commands → ${project_dir}/.claude/commands/"
+    print_info "  Installed: ${installed_cmds}  Updated: ${updated_cmds}  Up-to-date: ${skipped_cmds}  Total: ${total_cmds}"
     echo
 }
 
@@ -152,9 +275,17 @@ install_global_skills() {
 detect_project_type() {
     local project_dir="$1"
 
-    # TypeScript/JavaScript
+    # Framework-specific detection (check before generic JS/TS)
     if [ -f "${project_dir}/package.json" ]; then
-        if grep -q '"typescript"' "${project_dir}/package.json" 2>/dev/null; then
+        if grep -q '"@angular/core"' "${project_dir}/package.json" 2>/dev/null; then
+            echo "angular"
+        elif grep -q '"next"' "${project_dir}/package.json" 2>/dev/null; then
+            echo "nextjs"
+        elif grep -q '"react"' "${project_dir}/package.json" 2>/dev/null; then
+            echo "react"
+        elif grep -q '"express"' "${project_dir}/package.json" 2>/dev/null; then
+            echo "express"
+        elif grep -q '"typescript"' "${project_dir}/package.json" 2>/dev/null; then
             echo "typescript"
         else
             echo "javascript"
@@ -162,9 +293,19 @@ detect_project_type() {
         return
     fi
 
-    # Python
+    # Python / Flask
     if [ -f "${project_dir}/setup.py" ] || [ -f "${project_dir}/pyproject.toml" ] || [ -f "${project_dir}/requirements.txt" ]; then
-        echo "python"
+        if grep -qi "flask" "${project_dir}/requirements.txt" 2>/dev/null; then
+            echo "flask"
+        else
+            echo "python"
+        fi
+        return
+    fi
+
+    # Ruby
+    if [ -f "${project_dir}/Gemfile" ]; then
+        echo "ruby"
         return
     fi
 
@@ -180,16 +321,6 @@ detect_project_type() {
         return
     fi
 
-    # C/C++
-    if [ -f "${project_dir}/CMakeLists.txt" ] || [ -f "${project_dir}/Makefile" ]; then
-        if ls "${project_dir}"/*.cpp "${project_dir}"/*.hpp 2>/dev/null | grep -q .; then
-            echo "cpp"
-        else
-            echo "c"
-        fi
-        return
-    fi
-
     echo "unknown"
 }
 
@@ -198,7 +329,7 @@ detect_tools() {
     local project_dir="$2"
 
     case "${project_type}" in
-        typescript|javascript)
+        typescript|javascript|angular|react|nextjs|express)
             # Package manager
             if [ -f "${project_dir}/yarn.lock" ]; then
                 echo "package_manager=yarn"
@@ -222,7 +353,7 @@ detect_tools() {
             fi
             ;;
 
-        python)
+        python|flask)
             # Test framework
             if [ -f "${project_dir}/pytest.ini" ] || grep -q "pytest" "${project_dir}/requirements.txt" 2>/dev/null; then
                 echo "test_framework=pytest"
@@ -240,6 +371,15 @@ detect_tools() {
             fi
             ;;
 
+        ruby)
+            echo "package_manager=bundler"
+            if [ -f "${project_dir}/Gemfile" ] && grep -q "rspec" "${project_dir}/Gemfile" 2>/dev/null; then
+                echo "test_framework=rspec"
+            else
+                echo "test_framework=minitest"
+            fi
+            ;;
+
         go)
             echo "test_framework=testing"
             echo "package_manager=go"
@@ -248,23 +388,6 @@ detect_tools() {
         rust)
             echo "test_framework=cargo-test"
             echo "package_manager=cargo"
-            ;;
-
-        c|cpp)
-            if [ -f "${project_dir}/CMakeLists.txt" ]; then
-                echo "build_system=cmake"
-            else
-                echo "build_system=make"
-            fi
-
-            # Test framework
-            if grep -q "gtest" "${project_dir}/CMakeLists.txt" 2>/dev/null; then
-                echo "test_framework=gtest"
-            elif grep -q "catch2" "${project_dir}/CMakeLists.txt" 2>/dev/null; then
-                echo "test_framework=catch2"
-            else
-                echo "test_framework=unknown"
-            fi
             ;;
     esac
 }
@@ -282,7 +405,7 @@ ask_project_questions() {
     echo
 
     case "${project_type}" in
-        typescript)
+        typescript|javascript)
             # Package manager
             local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
             if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
@@ -307,6 +430,78 @@ ask_project_questions() {
             echo "Use build tool? (none/webpack/vite/esbuild) [vite]:"
             read -r build_choice
             PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
+            ;;
+
+        angular)
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="npm"
+            fi
+
+            echo "Package manager? (npm/yarn/pnpm) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            echo "Test framework? (karma/jest) [karma]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-karma}"
+            ;;
+
+        react)
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="npm"
+            fi
+
+            echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            echo "Test framework? (jest/vitest) [vitest]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-vitest}"
+
+            echo "Build tool? (vite/create-react-app) [vite]:"
+            read -r build_choice
+            PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
+            ;;
+
+        nextjs)
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="npm"
+            fi
+
+            echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            echo "Test framework? (jest/vitest) [jest]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-jest}"
+
+            echo "Use App Router? (yes/no) [yes]:"
+            read -r router_choice
+            PROJECT_CONFIG[app_router]="${router_choice:-yes}"
+            ;;
+
+        express)
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="npm"
+            fi
+
+            echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            echo "Test framework? (jest/mocha/supertest) [jest]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-jest}"
+
+            echo "Use TypeScript? (yes/no) [yes]:"
+            read -r ts_choice
+            PROJECT_CONFIG[typescript]="${ts_choice:-yes}"
             ;;
 
         python)
@@ -336,6 +531,35 @@ ask_project_questions() {
             PROJECT_CONFIG[type_checker]="${type_choice:-mypy}"
             ;;
 
+        flask)
+            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                default_pm="pip"
+            fi
+
+            echo "Package manager? (pip/poetry/pipenv) [${default_pm}]:"
+            read -r pm_choice
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+            echo "Test framework? (pytest/unittest) [pytest]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-pytest}"
+
+            echo "Use SQLAlchemy? (yes/no) [no]:"
+            read -r db_choice
+            PROJECT_CONFIG[sqlalchemy]="${db_choice:-no}"
+            ;;
+
+        ruby)
+            echo "Test framework? (rspec/minitest) [rspec]:"
+            read -r test_choice
+            PROJECT_CONFIG[test_framework]="${test_choice:-rspec}"
+
+            echo "Use Bundler? (yes/no) [yes]:"
+            read -r bundler_choice
+            PROJECT_CONFIG[package_manager]="bundler"
+            ;;
+
         go)
             PROJECT_CONFIG[package_manager]="go"
             PROJECT_CONFIG[test_framework]="testing"
@@ -354,26 +578,9 @@ ask_project_questions() {
             PROJECT_CONFIG[workspace]="${workspace_choice:-no}"
             ;;
 
-        c|cpp)
-            # Build system
-            local default_build=$(echo "${detected_tools}" | grep "build_system=" | cut -d= -f2)
-            if [ -z "${default_build}" ] || [ "${default_build}" = "unknown" ]; then
-                default_build="cmake"
-            fi
-
-            echo "Build system? (cmake/make/meson) [${default_build}]:"
-            read -r build_choice
-            PROJECT_CONFIG[build_system]="${build_choice:-$default_build}"
-
-            # Test framework
-            local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
-            if [ -z "${default_test}" ] || [ "${default_test}" = "unknown" ]; then
-                default_test="gtest"
-            fi
-
-            echo "Test framework? (gtest/catch2/doctest) [${default_test}]:"
-            read -r test_choice
-            PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
+        *)
+            print_warning "Unknown project type '${project_type}' — skipping type-specific configuration"
+            print_info "You can manually configure build tools and test frameworks after project creation"
             ;;
     esac
 
@@ -719,6 +926,192 @@ cargo check           # Quick check
 
 EOF
             ;;
+
+        angular)
+            cat >> "${claude_md}" << 'EOF'
+
+## Angular Specific
+
+### Development Commands
+```bash
+ng serve              # Dev server (localhost:4200)
+ng build              # Production build
+ng build --watch      # Watch mode
+```
+
+### Test Commands
+```bash
+ng test               # Run unit tests (Karma)
+ng e2e                # Run end-to-end tests
+ng test --code-coverage # Coverage report
+```
+
+### Lint Commands
+```bash
+ng lint               # ESLint check
+```
+
+### Generate Commands
+```bash
+ng generate component <name>   # New component
+ng generate service <name>     # New service
+ng generate module <name>      # New module
+```
+
+EOF
+            ;;
+
+        react)
+            cat >> "${claude_md}" << 'EOF'
+
+## React Specific
+
+### Development Commands
+```bash
+npm run dev           # Dev server (Vite)
+npm run build         # Production build
+npm run preview       # Preview production build
+```
+
+### Test Commands
+```bash
+npm test              # Run tests
+npm run test:coverage # Coverage report
+```
+
+### Lint Commands
+```bash
+npm run lint          # ESLint check
+npm run lint:fix      # Auto-fix issues
+```
+
+EOF
+            ;;
+
+        nextjs)
+            cat >> "${claude_md}" << 'EOF'
+
+## Next.js Specific
+
+### Development Commands
+```bash
+npm run dev           # Dev server (localhost:3000)
+npm run build         # Production build
+npm start             # Start production server
+```
+
+### Test Commands
+```bash
+npm test              # Run tests
+npm run test:coverage # Coverage report
+```
+
+### Lint Commands
+```bash
+npm run lint          # Next.js ESLint check
+```
+
+### Key Conventions
+- App Router: `src/app/` directory
+- API Routes: `src/app/api/` directory
+- Server Components by default; add `'use client'` for client components
+
+EOF
+            ;;
+
+        express)
+            cat >> "${claude_md}" << 'EOF'
+
+## Express Specific
+
+### Development Commands
+```bash
+npm run dev           # Dev server with hot reload (nodemon)
+npm start             # Production start
+npm run build         # TypeScript compile (if applicable)
+```
+
+### Test Commands
+```bash
+npm test              # Run tests
+npm run test:coverage # Coverage report
+```
+
+### Lint Commands
+```bash
+npm run lint          # ESLint check
+npm run lint:fix      # Auto-fix issues
+```
+
+EOF
+            ;;
+
+        flask)
+            cat >> "${claude_md}" << 'EOF'
+
+## Flask Specific
+
+### Setup Commands
+```bash
+python -m venv venv            # Create virtual environment
+source venv/bin/activate       # Activate (Linux/Mac)
+pip install -r requirements.txt # Install dependencies
+```
+
+### Development Commands
+```bash
+flask run             # Dev server (localhost:5000)
+flask run --debug     # Debug mode with reload
+```
+
+### Test Commands
+```bash
+pytest                # Run all tests
+pytest -v             # Verbose output
+pytest --cov          # Coverage report
+```
+
+### Lint Commands
+```bash
+flake8 .              # Style checking
+black .               # Code formatting
+mypy .                # Type checking (if configured)
+```
+
+EOF
+            ;;
+
+        ruby)
+            cat >> "${claude_md}" << 'EOF'
+
+## Ruby Specific
+
+### Setup Commands
+```bash
+bundle install        # Install dependencies
+```
+
+### Development Commands
+```bash
+ruby run.rb           # Run the application
+ruby -e "require './lib/app'"  # Quick REPL test
+```
+
+### Test Commands
+```bash
+rspec                 # Run all tests (RSpec)
+rspec --format documentation  # Verbose output
+bundle exec rake test # Run Minitest suite
+```
+
+### Lint Commands
+```bash
+rubocop               # Style and lint check
+rubocop -a            # Auto-fix safe offenses
+```
+
+EOF
+            ;;
     esac
 
     print_success "Created CLAUDE.md"
@@ -859,7 +1252,22 @@ initialize_existing_project() {
 
     # Detect project type
     local project_type=$(detect_project_type "${project_dir}")
-    print_info "Detected project type: ${project_type}"
+    if [ "${project_type}" = "unknown" ]; then
+        print_warning "Could not auto-detect project type from existing files"
+        while true; do
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby) [typescript]:"
+            read -r type_choice
+            project_type="${type_choice:-typescript}"
+            case "${project_type}" in
+                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) break ;;
+                *)
+                    print_error "Unknown project type: '${project_type}'"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
+                    ;;
+            esac
+        done
+    fi
+    print_info "Project type: ${project_type}"
 
     # Detect existing tools
     local detected_tools=$(detect_tools "${project_type}" "${project_dir}")
@@ -920,9 +1328,18 @@ create_new_project() {
 
     # Detect project type if not specified
     if [ -z "${project_type}" ] || [ "${project_type}" = "unknown" ]; then
-        echo "Project type? (typescript/python/go/rust/c/cpp):"
-        read -r type_choice
-        project_type="${type_choice:-typescript}"
+        while true; do
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby) [typescript]:"
+            read -r type_choice
+            project_type="${type_choice:-typescript}"
+            case "${project_type}" in
+                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) break ;;
+                *)
+                    print_error "Unknown project type: '${project_type}'"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
+                    ;;
+            esac
+        done
     fi
 
     print_info "Project type: ${project_type}"
@@ -933,11 +1350,29 @@ create_new_project() {
 
     # Create basic project structure based on type
     case "${project_type}" in
-        typescript)
+        typescript|javascript)
             create_typescript_project "."
+            ;;
+        angular)
+            create_angular_project "." "${project_name}"
+            ;;
+        react)
+            create_react_project "." "${project_name}"
+            ;;
+        nextjs)
+            create_nextjs_project "." "${project_name}"
+            ;;
+        express)
+            create_express_project "." "${project_name}"
             ;;
         python)
             create_python_project "."
+            ;;
+        flask)
+            create_flask_project "." "${project_name}"
+            ;;
+        ruby)
+            create_ruby_project "." "${project_name}"
             ;;
         go)
             create_go_project "." "${project_name}"
@@ -945,8 +1380,10 @@ create_new_project() {
         rust)
             create_rust_project "." "${project_name}"
             ;;
-        c|cpp)
-            create_c_project "." "${project_type}"
+
+        *)
+            print_warning "No scaffold available for project type '${project_type}'"
+            print_info "Ralph structure will be created — add your language files manually"
             ;;
     esac
 
@@ -1145,55 +1582,472 @@ EOF
     print_success "Created Rust project structure"
 }
 
-create_c_project() {
+create_angular_project() {
     local project_dir="$1"
-    local project_type="$2"
+    local project_name="$2"
 
-    # Create directories
+    mkdir -p "${project_dir}/src/app"
+
+    cat > "${project_dir}/package.json" << EOF
+{
+  "name": "${project_name}",
+  "version": "1.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "test": "ng test",
+    "lint": "ng lint"
+  },
+  "dependencies": {
+    "@angular/animations": "^17.0.0",
+    "@angular/common": "^17.0.0",
+    "@angular/compiler": "^17.0.0",
+    "@angular/core": "^17.0.0",
+    "@angular/forms": "^17.0.0",
+    "@angular/platform-browser": "^17.0.0",
+    "@angular/router": "^17.0.0",
+    "rxjs": "^7.8.0",
+    "tslib": "^2.6.0",
+    "zone.js": "^0.14.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^17.0.0",
+    "@angular/cli": "^17.0.0",
+    "@types/jasmine": "^5.1.0",
+    "karma": "^6.4.0",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-jasmine": "^5.1.0",
+    "typescript": "^5.2.0"
+  }
+}
+EOF
+
+    cat > "${project_dir}/tsconfig.json" << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "dom"],
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler"
+  }
+}
+EOF
+
+    cat > "${project_dir}/src/app/app.component.ts" << 'EOF'
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  template: '<h1>Hello from Ralph Loop!</h1>',
+  standalone: true
+})
+export class AppComponent {
+  title = 'app';
+}
+EOF
+
+    cat > "${project_dir}/src/main.ts" << 'EOF'
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+
+bootstrapApplication(AppComponent);
+EOF
+
+    print_success "Created Angular project structure"
+}
+
+create_react_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
     mkdir -p "${project_dir}/src"
-    mkdir -p "${project_dir}/include"
+    mkdir -p "${project_dir}/public"
+
+    cat > "${project_dir}/package.json" << EOF
+{
+  "name": "${project_name}",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "lint": "eslint src --ext ts,tsx"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "typescript": "^5.2.0",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
+EOF
+
+    cat > "${project_dir}/tsconfig.json" << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
+EOF
+
+    cat > "${project_dir}/vite.config.ts" << 'EOF'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+});
+EOF
+
+    cat > "${project_dir}/src/App.tsx" << 'EOF'
+function App() {
+  return <h1>Hello from Ralph Loop!</h1>;
+}
+
+export default App;
+EOF
+
+    cat > "${project_dir}/src/main.tsx" << 'EOF'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+EOF
+
+    cat > "${project_dir}/public/index.html" << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>Ralph Loop App</title></head>
+<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+</html>
+EOF
+
+    print_success "Created React project structure"
+}
+
+create_nextjs_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    mkdir -p "${project_dir}/src/app"
+    mkdir -p "${project_dir}/src/app/api"
+    mkdir -p "${project_dir}/public"
+
+    cat > "${project_dir}/package.json" << EOF
+{
+  "name": "${project_name}",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "jest"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.2.0",
+    "jest": "^29.0.0"
+  }
+}
+EOF
+
+    cat > "${project_dir}/next.config.js" << 'EOF'
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+module.exports = nextConfig;
+EOF
+
+    cat > "${project_dir}/tsconfig.json" << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "preserve",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "next.config.js"],
+  "exclude": ["node_modules"]
+}
+EOF
+
+    cat > "${project_dir}/src/app/layout.tsx" << 'EOF'
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+EOF
+
+    cat > "${project_dir}/src/app/page.tsx" << 'EOF'
+export default function Home() {
+  return <main><h1>Hello from Ralph Loop!</h1></main>;
+}
+EOF
+
+    print_success "Created Next.js project structure"
+}
+
+create_express_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    mkdir -p "${project_dir}/src/routes"
+    mkdir -p "${project_dir}/src/middleware"
     mkdir -p "${project_dir}/tests"
 
-    # CMakeLists.txt
-    cat > "${project_dir}/CMakeLists.txt" << 'EOF'
-cmake_minimum_required(VERSION 3.15)
-project(RalphLoopProject)
-
-set(CMAKE_CXX_STANDARD 17)
-
-add_subdirectory(src)
-add_subdirectory(tests)
-EOF
-
-    # src/CMakeLists.txt
-    mkdir -p "${project_dir}/src"
-    cat > "${project_dir}/src/CMakeLists.txt" << 'EOF'
-add_executable(main main.cpp)
-target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR}/include)
-EOF
-
-    # src/main.cpp or main.c
-    if [ "${project_type}" = "cpp" ]; then
-        cat > "${project_dir}/src/main.cpp" << 'EOF'
-#include <iostream>
-
-int main() {
-    std::cout << "Hello from Ralph Loop!" << std::endl;
-    return 0;
+    cat > "${project_dir}/package.json" << EOF
+{
+  "name": "${project_name}",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "nodemon src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.2.0",
+    "nodemon": "^3.0.0",
+    "ts-node": "^10.9.0",
+    "jest": "^29.0.0",
+    "supertest": "^6.3.0",
+    "@types/supertest": "^6.0.0"
+  }
 }
 EOF
-    else
-        cat > "${project_dir}/src/main.c" << 'EOF'
-#include <stdio.h>
 
-int main() {
-    printf("Hello from Ralph Loop!\n");
-    return 0;
+    cat > "${project_dir}/tsconfig.json" << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
 EOF
-    fi
 
-    print_success "Created C/C++ project structure"
+    cat > "${project_dir}/src/index.ts" << 'EOF'
+import express from 'express';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+app.get('/', (_req, res) => {
+  res.json({ message: 'Hello from Ralph Loop!' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+export default app;
+EOF
+
+    cat > "${project_dir}/src/routes/index.ts" << 'EOF'
+import { Router } from 'express';
+
+const router = Router();
+
+router.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
+export default router;
+EOF
+
+    print_success "Created Express project structure"
+}
+
+create_flask_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    mkdir -p "${project_dir}/app"
+    mkdir -p "${project_dir}/tests"
+
+    cat > "${project_dir}/requirements.txt" << 'EOF'
+flask>=3.0.0
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
+EOF
+
+    cat > "${project_dir}/app/__init__.py" << 'EOF'
+from flask import Flask
+
+def create_app():
+    app = Flask(__name__)
+
+    from .routes import main
+    app.register_blueprint(main)
+
+    return app
+EOF
+
+    cat > "${project_dir}/app/routes.py" << 'EOF'
+from flask import Blueprint, jsonify
+
+main = Blueprint('main', __name__)
+
+@main.route('/')
+def index():
+    return jsonify({"message": "Hello from Ralph Loop!"})
+
+@main.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+EOF
+
+    cat > "${project_dir}/run.py" << 'EOF'
+from app import create_app
+
+app = create_app()
+
+if __name__ == '__main__':
+    app.run(debug=True)
+EOF
+
+    cat > "${project_dir}/pytest.ini" << 'EOF'
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+EOF
+
+    cat > "${project_dir}/tests/test_app.py" << 'EOF'
+import pytest
+from app import create_app
+
+@pytest.fixture
+def client():
+    app = create_app()
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
+
+def test_index(client):
+    response = client.get('/')
+    assert response.status_code == 200
+
+def test_health(client):
+    response = client.get('/health')
+    assert response.status_code == 200
+EOF
+
+    print_success "Created Flask project structure"
+}
+
+create_ruby_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    mkdir -p "${project_dir}/lib"
+    mkdir -p "${project_dir}/spec"
+
+    cat > "${project_dir}/Gemfile" << EOF
+source 'https://rubygems.org'
+
+gem 'rspec', '~> 3.12'
+gem 'rubocop', '~> 1.57', require: false
+EOF
+
+    cat > "${project_dir}/lib/${project_name}.rb" << EOF
+# Ralph Loop Framework - Ruby Project
+module ${project_name^}
+  def self.hello
+    "Hello from Ralph Loop!"
+  end
+end
+EOF
+
+    cat > "${project_dir}/run.rb" << EOF
+require_relative 'lib/${project_name}'
+
+puts ${project_name^}.hello
+EOF
+
+    cat > "${project_dir}/spec/spec_helper.rb" << 'EOF'
+require 'rspec'
+
+RSpec.configure do |config|
+  config.expect_with :rspec do |c|
+    c.syntax = :expect
+  end
+end
+EOF
+
+    cat > "${project_dir}/spec/${project_name}_spec.rb" << EOF
+require_relative '../lib/${project_name}'
+
+RSpec.describe ${project_name^} do
+  it 'returns a greeting' do
+    expect(${project_name^}.hello).to eq('Hello from Ralph Loop!')
+  end
+end
+EOF
+
+    cat > "${project_dir}/.rubocop.yml" << 'EOF'
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.2
+
+Style/Documentation:
+  Enabled: false
+EOF
+
+    print_success "Created Ruby project structure"
 }
 
 #==============================================================================
@@ -1221,6 +2075,14 @@ main() {
                 ;;
             --type)
                 project_type="$2"
+                case "${project_type}" in
+                    typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby) ;;
+                    *)
+                        print_error "Unknown project type: '${project_type}'"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby"
+                        exit 1
+                        ;;
+                esac
                 shift 2
                 ;;
             --parent-dir)
@@ -1250,7 +2112,7 @@ main() {
     # Show header
     print_header
 
-    # Install global skills if requested
+    # Install global skills/commands if requested (global only - never touches projects)
     if [ "${install_global}" = true ]; then
         install_global_skills
     fi
@@ -1263,13 +2125,15 @@ main() {
             print_success "Created parent directory: ${parent_dir}"
         fi
 
-        # Initialize git in parent directory if not already a git repo
-        if [ ! -d "${parent_dir}/.git" ]; then
-            (cd "${parent_dir}" && git init)
-            print_success "Initialized git repository in: ${parent_dir}"
-        fi
-
         create_new_project "${new_project}" "${project_type}" "${parent_dir}"
+
+        # Install skills/commands at project level only when NOT installing globally.
+        # If global install was done, ~/.claude/ already covers all projects — no duplication.
+        if [ "${install_global}" = false ]; then
+            install_project_skills "${parent_dir}/${new_project}"
+        else
+            print_info "Skipping project-level skills (already installed globally — no duplicates)"
+        fi
     fi
 
     # Initialize existing project if requested
@@ -1279,6 +2143,13 @@ main() {
             exit 1
         fi
         initialize_existing_project "$(pwd)"
+
+        # Install skills/commands at project level only when NOT installing globally.
+        if [ "${install_global}" = false ]; then
+            install_project_skills "$(pwd)"
+        else
+            print_info "Skipping project-level skills (already installed globally — no duplicates)"
+        fi
     fi
 
     # If no action specified, show usage

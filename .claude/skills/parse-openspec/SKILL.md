@@ -1,3 +1,10 @@
+---
+name: parse-openspec
+description: Parse OpenSpec declarative specification files and extract behavioral contracts, type declarations, property-based specifications, and examples. Generates test strategies and Claude tasks for Ralph Loop execution.
+argument-hint: <openspec-file-path>
+disable-model-invocation: true
+---
+
 # Parse OpenSpec - OpenSpec Format Parser
 
 Parse OpenSpec declarative specifications and extract behavioral contracts.

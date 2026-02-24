@@ -1,3 +1,10 @@
+---
+name: test-spec
+description: Test implementation against specification requirements. Validates acceptance criteria, runs appropriate test suites (pytest, Jest, go test, cargo test), updates task status, and generates detailed feedback reports.
+argument-hint: [requirement-id] [--all] [--verbose]
+disable-model-invocation: true
+---
+
 # Test Spec - Requirement Validation Skill
 
 Test implementation against specification requirements with detailed feedback.

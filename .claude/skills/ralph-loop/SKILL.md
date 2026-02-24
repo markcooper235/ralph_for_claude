@@ -1,3 +1,10 @@
+---
+name: ralph-loop
+description: Execute the complete Ralph Loop development cycle - Requirement, Architecture, Loop, Prove, Harvest. Use when starting a new Ralph Loop run from a PRD or OpenSpec specification file.
+argument-hint: <spec-file> [--phase=<phase>] [--resume=<checkpoint>]
+disable-model-invocation: true
+---
+
 # Ralph Loop - Main Orchestration Skill
 
 Execute the complete Ralph Loop development cycle: Requirement → Architecture → Loop → Prove → Harvest.

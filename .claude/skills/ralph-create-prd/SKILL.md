@@ -1,3 +1,10 @@
+---
+name: ralph-create-prd
+description: Interactive PRD creation helper. Guides through creating a complete, structured PRD with problem statement, user stories, requirements, acceptance criteria, dependency analysis, and story breakdown for Ralph Loop execution.
+argument-hint: [spec-name]
+disable-model-invocation: true
+---
+
 # Ralph Create PRD - Interactive PRD Creation Helper
 
 Guide users through creating a complete, well-structured PRD for Ralph Loop execution.
@@ -244,8 +251,6 @@ Display:
 [Ralph Create PRD] - 3 execution phases
 [Ralph Create PRD] - Max 3 parallel stories
 [Ralph Create PRD] - UI tests required: Yes
-[Ralph Create PRD]
-[Ralph Create PRD] Estimated completion: 3-5 hours
 [Ralph Create PRD]
 [Ralph Create PRD] Ready to start Ralph Loop!
 [Ralph Create PRD]

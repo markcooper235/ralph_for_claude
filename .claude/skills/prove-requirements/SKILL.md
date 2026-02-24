@@ -1,3 +1,10 @@
+---
+name: prove-requirements
+description: Comprehensive validation that all requirements from a specification are fully implemented and tested. Locates implementations, verifies test coverage for each acceptance criterion, runs the full test suite, and generates a proof report.
+argument-hint: [spec-file] [--report]
+disable-model-invocation: true
+---
+
 # Prove Requirements - Comprehensive Requirement Validation
 
 Validate that all requirements from a specification are fully implemented and tested.
@@ -102,12 +109,6 @@ When this skill is invoked:
 [Prove Requirements]   Status: PROVEN (3/3 criteria met)
 [Prove Requirements]   Coverage: 95%
 [Prove Requirements]
-[Prove Requirements] ✓ REQ-002: Session management
-[Prove Requirements]   Implementation: src/auth/session.py:22
-[Prove Requirements]   Tests: tests/test_req_002_session.py
-[Prove Requirements]   Status: PROVEN (4/4 criteria met)
-[Prove Requirements]   Coverage: 100%
-[Prove Requirements]
 [Prove Requirements] ⚠ REQ-003: Password reset flow
 [Prove Requirements]   Implementation: src/auth/reset.py:10
 [Prove Requirements]   Tests: tests/test_req_003_reset.py
@@ -120,8 +121,6 @@ When this skill is invoked:
 [Prove Requirements]   Implementation: MISSING
 [Prove Requirements]   Tests: MISSING
 [Prove Requirements]   Status: NOT IMPLEMENTED (0/5 criteria met)
-[Prove Requirements]
-[Prove Requirements] ... (4 more requirements)
 [Prove Requirements]
 [Prove Requirements] Summary:
 [Prove Requirements] - Fully Proven: 6/8 (75%)
@@ -141,118 +140,6 @@ When this skill is invoked:
 [Prove Requirements] Full report: feedback/user-auth/proof-report-20260223.md
 [Prove Requirements]
 [Prove Requirements] Create tasks for blockers? (y/n)
-```
-
-## Proof Report Format
-
-Generated markdown report:
-
-```markdown
-# Proof Report: [Specification Name]
-
-**Date:** 2026-02-23
-**Status:** Partial
-**Overall Progress:** 75% (6/8 requirements)
-
-## Executive Summary
-
-- 6 requirements fully proven
-- 1 requirement partially proven
-- 1 requirement not implemented
-- Average test coverage: 87%
-
-## Detailed Results
-
-### ✓ REQ-001: User login with email/password
-
-**Status:** PROVEN
-**Implementation:** `src/auth/login.py:15-82`
-**Tests:** `tests/test_req_001_login.py`
-**Coverage:** 95%
-
-**Acceptance Criteria:**
-- ✓ User can log in with email and password
-- ✓ Invalid credentials return appropriate error
-- ✓ Successful login creates session
-
-**Test Results:**
-- test_login_success: PASSED (45ms)
-- test_login_invalid_credentials: PASSED (32ms)
-- test_login_creates_session: PASSED (38ms)
-
-### ⚠ REQ-003: Password reset flow
-
-**Status:** PARTIAL (2/3 criteria met)
-**Implementation:** `src/auth/reset.py:10-65`
-**Tests:** `tests/test_req_003_reset.py`
-**Coverage:** 78%
-
-**Acceptance Criteria:**
-- ✓ User can request password reset
-- ✗ Email with reset link is sent
-- ✓ Reset link expires after 1 hour
-
-**Test Results:**
-- test_request_reset: PASSED (51ms)
-- test_email_notification: FAILED (Error: SMTP connection refused)
-- test_link_expiry: PASSED (42ms)
-
-**Failure Analysis:**
-Email service not properly configured in test environment.
-
-**Recommended Fix:**
-Mock email service in tests or configure test SMTP server.
-
-### ✗ REQ-004: Two-factor authentication
-
-**Status:** NOT IMPLEMENTED
-**Implementation:** MISSING
-**Tests:** MISSING
-
-**Acceptance Criteria:**
-- ✗ User can enable 2FA
-- ✗ TOTP codes are validated
-- ✗ Backup codes are generated
-- ✗ 2FA is required after login
-- ✗ Recovery flow exists
-
-**Recommendations:**
-1. Create implementation tasks for 2FA
-2. Set up TOTP library (pyotp or similar)
-3. Design database schema for 2FA secrets
-4. Implement UI for 2FA setup
-
-## Dependency Graph
-
-```
-REQ-001 (User login) ← REQ-002 (Session management)
-REQ-001 (User login) ← REQ-004 (2FA) [BLOCKED]
-REQ-003 (Password reset) [No dependencies]
-...
-```
-
-## Test Coverage by Module
-
-| Module | Coverage | Status |
-|--------|----------|--------|
-| auth/login.py | 95% | ✓ |
-| auth/session.py | 100% | ✓ |
-| auth/reset.py | 78% | ⚠ |
-| auth/2fa.py | 0% | ✗ |
-
-## Next Steps
-
-1. **High Priority:**
-   - Fix email notification in REQ-003
-   - Begin implementation of REQ-004
-
-2. **Medium Priority:**
-   - Increase coverage for auth/reset.py
-   - Add integration tests for complete flows
-
-3. **Low Priority:**
-   - Performance testing
-   - Security audit
 ```
 
 ## Integration Points
