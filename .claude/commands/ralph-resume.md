@@ -46,7 +46,7 @@ PAUSE_REASON=$(jq -r '.pauseReason // "unknown"' ralph/.ralph/state.json)
 
 ```bash
 case "$STATUS" in
-  "paused_quota"|"paused_user"|"paused_error")
+  "paused_quota"|"paused_user"|"paused_error"|"paused_cycle")
     echo "[Ralph Resume] Run is resumable"
     ;;
   "complete"|"ready_for_archive")
@@ -144,6 +144,22 @@ echo "[Ralph Resume] State updated, resuming execution..."
 
 ### 7. Display Resume Info
 
+**If pause type is `cycle` (context cycling):**
+```
+[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Resume] Context Cycle Resume — Fresh Context
+[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Resume]
+[Ralph Resume] Run ID: ${RUN_ID}
+[Ralph Resume] All prior work committed and preserved
+[Ralph Resume] Resuming from: ${RESUME_PHASE} / ${CURRENT_STORY}
+[Ralph Resume] Stories completed so far: ${COMPLETED}/${TOTAL}
+[Ralph Resume]
+[Ralph Resume] Continuing with fresh context...
+[Ralph Resume] Use /ralph-status to monitor progress
+```
+
+**Otherwise (quota/user/error pause):**
 ```
 [Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Resume] Ralph Run Resumed
@@ -213,6 +229,15 @@ Resume: Can resume anytime with /ralph-resume
 Status: paused_error
 Reason: test_failure (exceeded max iterations)
 Resume: Fix issue, then /ralph-resume
+```
+
+### Scenario 5: Context Cycling (automatic at phase boundary)
+
+```
+Status: paused_cycle
+Reason: context usage exceeded 60% threshold at phase boundary
+Resume: /ralph-resume immediately — no waiting required
+Note: All work committed, fresh context starts from next story
 ```
 
 ## State Preservation
