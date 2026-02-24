@@ -16,14 +16,14 @@ This skill completes a Ralph run by archiving artifacts and merging to origin br
 
 **Check if Ralph run exists:**
 ```bash
-if [ ! -f .ralph/state.json ]; then
+if [ ! -f ralph/.ralph/state.json ]; then
   echo "Error: No Ralph run in progress"
   exit 1
 fi
 ```
 
 **Load state:**
-- Read `.ralph/state.json`
+- Read `ralph/.ralph/state.json`
 - Check status field
 
 **Verify ready for archive:**
@@ -79,8 +79,8 @@ If normal archive (no flag):
 
 3. **Verify all stories completed:**
    ```bash
-   # Check .ralph/stories.json
-   INCOMPLETE=$(jq -r '[.stories[] | select(.status != "completed")] | length' .ralph/stories.json)
+   # Check ralph/.ralph/stories.json
+   INCOMPLETE=$(jq -r '[.stories[] | select(.status != "completed")] | length' ralph/.ralph/stories.json)
    if [ "$INCOMPLETE" -gt 0 ]; then
      echo "Error: $INCOMPLETE stories not completed"
      exit 1
@@ -89,7 +89,7 @@ If normal archive (no flag):
 
 4. **Check for conflicts with origin:**
    ```bash
-   ORIGIN_BRANCH=$(jq -r '.git.originBranch' .ralph/state.json)
+   ORIGIN_BRANCH=$(jq -r '.git.originBranch' ralph/.ralph/state.json)
    git fetch origin
 
    # Check if origin branch has moved
@@ -114,8 +114,8 @@ If normal archive (no flag):
 
 **Generate archive path:**
 ```bash
-RUN_ID=$(jq -r '.runId' .ralph/state.json)
-ARCHIVE_DIR="archive/${RUN_ID}"
+RUN_ID=$(jq -r '.runId' ralph/.ralph/state.json)
+ARCHIVE_DIR="ralph/archive/${RUN_ID}"
 
 mkdir -p "${ARCHIVE_DIR}"/{spec,state,logs,artifacts,feedback,tests,git-info}
 ```
@@ -126,23 +126,23 @@ mkdir -p "${ARCHIVE_DIR}"/{spec,state,logs,artifacts,feedback,tests,git-info}
 
 ```bash
 # 1. Original specification
-SPEC_FILE=$(jq -r '.specFile' .ralph/state.json)
+SPEC_FILE=$(jq -r '.specFile' ralph/.ralph/state.json)
 cp "$SPEC_FILE" "${ARCHIVE_DIR}/spec/"
 
 # 2. State files
-cp -r .ralph/state/*.json "${ARCHIVE_DIR}/state/" 2>/dev/null || true
-cp .ralph/state.json "${ARCHIVE_DIR}/state/"
-cp .ralph/stories.json "${ARCHIVE_DIR}/state/"
-cp .ralph/architecture.json "${ARCHIVE_DIR}/state/" 2>/dev/null || true
+cp -r ralph/.ralph/state/*.json "${ARCHIVE_DIR}/state/" 2>/dev/null || true
+cp ralph/.ralph/state.json "${ARCHIVE_DIR}/state/"
+cp ralph/.ralph/stories.json "${ARCHIVE_DIR}/state/"
+cp ralph/.ralph/architecture.json "${ARCHIVE_DIR}/state/" 2>/dev/null || true
 
 # 3. Logs
-cp -r .ralph/logs/* "${ARCHIVE_DIR}/logs/" 2>/dev/null || true
+cp -r ralph/.ralph/logs/* "${ARCHIVE_DIR}/logs/" 2>/dev/null || true
 
 # 4. Artifacts
-cp -r .ralph/artifacts/* "${ARCHIVE_DIR}/artifacts/" 2>/dev/null || true
+cp -r ralph/.ralph/artifacts/* "${ARCHIVE_DIR}/artifacts/" 2>/dev/null || true
 
 # 5. Feedback/test results
-cp -r feedback/* "${ARCHIVE_DIR}/feedback/" 2>/dev/null || true
+cp -r ralph/feedback/* "${ARCHIVE_DIR}/feedback/" 2>/dev/null || true
 
 # 6. Test outputs (if any)
 find . -name "*.test.log" -o -name "test-results*.json" | while read f; do
@@ -182,8 +182,8 @@ fi
 **Capture git information:**
 
 ```bash
-RALPH_BRANCH=$(jq -r '.git.ralphBranch' .ralph/state.json)
-ORIGIN_BRANCH=$(jq -r '.git.originBranch' .ralph/state.json)
+RALPH_BRANCH=$(jq -r '.git.ralphBranch' ralph/.ralph/state.json)
+ORIGIN_BRANCH=$(jq -r '.git.originBranch' ralph/.ralph/state.json)
 
 cat > "${ARCHIVE_DIR}/git-info/branch-info.txt" <<EOF
 Ralph Branch: ${RALPH_BRANCH}
@@ -216,9 +216,9 @@ cat > "${ARCHIVE_DIR}/summary.md" <<EOF
 ## Run Information
 - **Run ID:** ${RUN_ID}
 - **Specification:** ${SPEC_FILE}
-- **Started:** $(jq -r '.createdAt' .ralph/state.json)
+- **Started:** $(jq -r '.createdAt' ralph/.ralph/state.json)
 - **Completed:** $(date -Iseconds)
-- **Status:** $(jq -r '.status' .ralph/state.json)
+- **Status:** $(jq -r '.status' ralph/.ralph/state.json)
 
 ## Git Information
 - **Origin Branch:** ${ORIGIN_BRANCH}
@@ -230,12 +230,12 @@ $(jq -r '
 "- **Total Stories:** \(.stories | length)
 - **Completed:** \([.stories[] | select(.status == "completed")] | length)
 - **Failed:** \([.stories[] | select(.status == "failed")] | length)"
-' .ralph/stories.json)
+' ralph/.ralph/stories.json)
 
 ## Test Results
 $(jq -r '
 .testResults | to_entries | map("- **\(.key | ascii_upcase):** \(.value.status) (iterations: \(.value.iterations))") | join("\n")
-' .ralph/state.json)
+' ralph/.ralph/state.json)
 
 ## Story Details
 
@@ -253,7 +253,7 @@ $(jq -r '
 \(.acceptanceCriteria | map("- \(.)") | join("\n"))
 
 "
-' .ralph/stories.json)
+' ralph/.ralph/stories.json)
 
 ## Files Changed
 
@@ -264,12 +264,12 @@ $([ $(cat /tmp/total_files) -gt 50 ] && echo "... and $(expr $(cat /tmp/total_fi
 
 ## Test Coverage
 
-$(if [ -f .ralph/artifacts/proof-report.json ]; then
+$(if [ -f ralph/.ralph/artifacts/proof-report.json ]; then
   jq -r '
   "- **Overall Coverage:** \(.overallCoverage)%
 - **Requirements Proven:** \(.requirementsProven)/\(.totalRequirements)
 - **Test Pass Rate:** \(.testPassRate)%"
-  ' .ralph/artifacts/proof-report.json
+  ' ralph/.ralph/artifacts/proof-report.json
 fi)
 
 ## Artifacts Archived
@@ -299,7 +299,7 @@ jq -n \
   --arg specFile "$SPEC_FILE" \
   --arg originBranch "$ORIGIN_BRANCH" \
   --arg ralphBranch "$RALPH_BRANCH" \
-  --arg status "$(jq -r '.status' .ralph/state.json)" \
+  --arg status "$(jq -r '.status' ralph/.ralph/state.json)" \
   --arg archived "$(date -Iseconds)" \
   --argjson abandoned "$([ '$ABANDON' = 'true' ] && echo true || echo false)" \
   '{
@@ -328,14 +328,14 @@ Merge Ralph Loop: ${RUN_ID}
 
 Completed all requirements from ${SPEC_FILE}
 
-Stories completed: $(jq -r '[.stories[] | select(.status == "completed")] | length' .ralph/stories.json)
-Test coverage: $(jq -r '.testResults.unit.coverage // "N/A"' .ralph/state.json)%
+Stories completed: $(jq -r '[.stories[] | select(.status == "completed")] | length' ralph/.ralph/stories.json)
+Test coverage: $(jq -r '.testResults.unit.coverage // "N/A"' ralph/.ralph/state.json)%
 
 All tests passing:
 - Lint: passed
 - Unit tests: passed
 - Code quality: passed
-$(jq -r 'if .testResults.ui.status == "passed" then "- UI tests: passed" else "" end' .ralph/state.json)
+$(jq -r 'if .testResults.ui.status == "passed" then "- UI tests: passed" else "" end' ralph/.ralph/state.json)
 
 Archive: ${ARCHIVE_DIR}
 
@@ -363,7 +363,7 @@ echo "Merge commit: ${MERGE_COMMIT}" >> "${ARCHIVE_DIR}/git-info/branch-info.txt
 
 **Remove Ralph working directory:**
 ```bash
-rm -rf .ralph
+rm -rf ralph/.ralph
 ```
 
 **Delete Ralph branch (optional - keep for reference):**
@@ -377,7 +377,7 @@ echo "Ralph branch preserved: ${RALPH_BRANCH}"
 
 **Clear any temporary Ralph files:**
 ```bash
-rm -f .ralph-*.json
+rm -f ralph/.ralph-*.json
 ```
 
 ### Phase 8: Verify Clean State
@@ -385,8 +385,8 @@ rm -f .ralph-*.json
 **Check workspace is clean:**
 ```bash
 # Should have no Ralph state
-if [ -d .ralph ]; then
-  echo "Warning: .ralph directory still exists"
+if [ -d ralph/.ralph ]; then
+  echo "Warning: ralph/.ralph directory still exists"
 fi
 
 # Should be on origin branch
@@ -435,7 +435,7 @@ fi
 [Ralph Archive]
 [Ralph Archive] To start next run:
 [Ralph Archive]   /ralph-create-prd <new-spec-name>
-[Ralph Archive]   /ralph-loop specs/prds/<new-spec>.prd.md
+[Ralph Archive]   /ralph-loop ralph/specs/prds/<new-spec>.prd.md
 ```
 
 **Abandoned run:**
@@ -453,8 +453,8 @@ fi
 ## Error Handling
 
 **If archive fails at any step:**
-1. Log error to `.ralph/logs/archive-error.log`
-2. Do NOT delete `.ralph/` directory
+1. Log error to `ralph/.ralph/logs/archive-error.log`
+2. Do NOT delete `ralph/.ralph/` directory
 3. Do NOT merge branch
 4. Display error with recovery instructions
 5. Exit with error code
@@ -494,6 +494,6 @@ fi
 
 - Archive directory never committed to git (in .gitignore)
 - Archive preserves complete run history
-- Can review past runs anytime from archive/
+- Can review past runs anytime from ralph/archive/
 - Each run gets unique timestamped directory
 - Merge preserves all individual story commits

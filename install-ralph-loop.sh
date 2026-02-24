@@ -703,28 +703,28 @@ create_ralph_structure() {
     backup_file "${project_dir}/CLAUDE.md" "${backup_dir}"
     backup_file "${project_dir}/.gitignore" "${backup_dir}"
 
-    # Create directories
+    # Create directories — all Ralph content lives under ralph/ except .claude/ (root)
     mkdir -p "${project_dir}/.claude/templates"
     mkdir -p "${project_dir}/.claude/feedback-configs"
-    mkdir -p "${project_dir}/specs/prds"
-    mkdir -p "${project_dir}/archive"
-    mkdir -p "${project_dir}/docs"
-    mkdir -p "${project_dir}/tests/browser"
-    mkdir -p "${project_dir}/feedback"
+    mkdir -p "${project_dir}/ralph/specs/prds"
+    mkdir -p "${project_dir}/ralph/archive"
+    mkdir -p "${project_dir}/ralph/docs"
+    mkdir -p "${project_dir}/ralph/tests/browser"
+    mkdir -p "${project_dir}/ralph/feedback"
 
-    # Copy template files
-    cp "${SCRIPT_DIR}/.ralph-state-template.json" "${project_dir}/"
-    cp "${SCRIPT_DIR}/.ralph-story-template.json" "${project_dir}/"
-    cp "${SCRIPT_DIR}/.ralph-quota-config.json" "${project_dir}/"
+    # Copy template/config files into ralph/
+    cp "${SCRIPT_DIR}/.ralph-state-template.json" "${project_dir}/ralph/"
+    cp "${SCRIPT_DIR}/.ralph-story-template.json" "${project_dir}/ralph/"
+    cp "${SCRIPT_DIR}/.ralph-quota-config.json" "${project_dir}/ralph/"
 
-    # Copy templates
+    # Copy Claude templates (stay in .claude/ at root)
     cp "${SCRIPT_DIR}/.claude/templates/prd-template.md" "${project_dir}/.claude/templates/"
     cp "${SCRIPT_DIR}/.claude/templates/openspec-template.yaml" "${project_dir}/.claude/templates/"
 
-    # Copy documentation
+    # Copy documentation into ralph/docs/
     for doc in "${SCRIPT_DIR}"/docs/*.md; do
         if [ -f "${doc}" ]; then
-            cp "${doc}" "${project_dir}/docs/"
+            cp "${doc}" "${project_dir}/ralph/docs/"
         fi
     done
 
@@ -784,7 +784,7 @@ This project uses the **Ralph Loop Framework** for specification-driven developm
 ## Workflow
 
 1. **Create PRD**: `/ralph-create-prd` - Interactive requirement gathering
-2. **Review Spec**: Check `specs/prds/` for generated specification
+2. **Review Spec**: Check `ralph/specs/prds/` for generated specification
 3. **Run Loop**: `/ralph-loop` - Automated implementation
 4. **Monitor**: `/ralph-status` - Track progress and quota
 5. **Resume if needed**: `/ralph-resume` - Continue after pause
@@ -825,7 +825,7 @@ This project uses the **Ralph Loop Framework** for specification-driven developm
 
 ## State Management
 
-Ralph Loop maintains state in `.ralph/` directory:
+Ralph Loop maintains state in `ralph/.ralph/` directory:
 - `state.json` - Current run state and quota
 - `stories.json` - All stories with dependencies
 - `tasks.json` - Claude Task mappings
@@ -835,7 +835,7 @@ Ralph Loop maintains state in `.ralph/` directory:
 
 ## Archive Structure
 
-After completion, find archives in `archive/<run-id>/`:
+After completion, find archives in `ralph/archive/<run-id>/`:
 - `summary.md` - Run overview and results
 - `spec/` - All spec versions
 - `code/` - Final implementation
@@ -847,7 +847,7 @@ After completion, find archives in `archive/<run-id>/`:
 ## Configuration
 
 ### Quota Limits
-Edit `.ralph-quota-config.json`:
+Edit `ralph/.ralph-quota-config.json`:
 ```json
 {
   "limits": {
@@ -888,10 +888,10 @@ Edit `.ralph-quota-config.json`:
 
 ## Additional Resources
 
-- `docs/QUICKSTART.md` - Getting started guide
-- `docs/COMPLETE-WORKFLOW.md` - Detailed workflow with examples
-- `docs/QUOTA-MANAGEMENT.md` - Quota strategies
-- `docs/SPEC-MODIFICATIONS.md` - Modifying specs during runs
+- `ralph/docs/QUICKSTART.md` - Getting started guide
+- `ralph/docs/COMPLETE-WORKFLOW.md` - Detailed workflow with examples
+- `ralph/docs/QUOTA-MANAGEMENT.md` - Quota strategies
+- `ralph/docs/SPEC-MODIFICATIONS.md` - Modifying specs during runs
 
 EOF
 
@@ -1266,7 +1266,7 @@ nx format:check                   # Check formatting
 - Use `nx affected` in CI to skip unaffected projects
 - Store `.nx/cache` in CI cache for faster runs
 - Project tags (`scope:`, `type:`) enforce architectural boundaries
-- Check `.ralph/nx-workspace.json` for workspace metadata used by Ralph
+- Check `ralph/.ralph/nx-workspace.json` for workspace metadata used by Ralph
 
 EOF
             ;;
@@ -1295,19 +1295,19 @@ create_gitignore() {
     cat >> "${gitignore}" << 'EOF'
 
 # Ralph Loop Framework - Runtime State (never tracked)
-.ralph/
+ralph/.ralph/
 
-# Ralph templates are tracked (they're templates, not runtime state)
-!.ralph-state-template.json
-!.ralph-story-template.json
-!.ralph-quota-config.json
+# Ralph templates/configs are tracked (checked-in defaults)
+!ralph/.ralph-state-template.json
+!ralph/.ralph-story-template.json
+!ralph/.ralph-quota-config.json
 
 # Checkpoints (can be regenerated)
 .claude/checkpoints/
 
 # Feedback results (can be regenerated)
-feedback/
-!feedback/.gitkeep
+ralph/feedback/
+!ralph/feedback/.gitkeep
 
 # Auto-generated feedback configs
 .claude/feedback-configs/*.json
@@ -1378,20 +1378,21 @@ A ${project_type} project built with the Ralph Loop Framework.
 ## Documentation
 
 - \`CLAUDE.md\` - Claude Code guidance
-- \`docs/QUICKSTART.md\` - Quick start guide
-- \`docs/COMPLETE-WORKFLOW.md\` - Complete workflow examples
-- \`docs/QUOTA-MANAGEMENT.md\` - Quota management strategies
+- \`ralph/docs/QUICKSTART.md\` - Quick start guide
+- \`ralph/docs/COMPLETE-WORKFLOW.md\` - Complete workflow examples
+- \`ralph/docs/QUOTA-MANAGEMENT.md\` - Quota management strategies
 
 ## Project Structure
 
 \`\`\`
 ${project_name}/
-├── specs/prds/          # Product requirement documents
-├── archive/             # Completed runs
-├── .ralph/              # Runtime state (not tracked)
-├── .claude/             # Claude Code configuration
-├── docs/                # Ralph Loop documentation
-└── tests/               # Test files
+├── .claude/             # Claude Code configuration (root — required)
+├── ralph/
+│   ├── specs/prds/      # Product requirement documents
+│   ├── archive/         # Completed runs
+│   ├── .ralph/          # Runtime state (not tracked)
+│   ├── docs/            # Ralph Loop documentation
+│   └── tests/           # Test files
 \`\`\`
 
 ## License
@@ -2543,8 +2544,8 @@ create_nx_project() {
     fi
 
     # Write Ralph workspace metadata so Ralph skills know this is an NX workspace
-    mkdir -p ".ralph"
-    cat > ".ralph/nx-workspace.json" << EOF
+    mkdir -p "ralph/.ralph"
+    cat > "ralph/.ralph/nx-workspace.json" << EOF
 {
   "nx_workspace": true,
   "workspace_type": "${ws_type}",

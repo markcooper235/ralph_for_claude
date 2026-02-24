@@ -54,7 +54,7 @@ When this skill is invoked:
 
 4. **Generate Test Code**
    - Create Playwright test file if it doesn't exist
-   - Structure: `tests/browser/test_<component>.spec.js`
+   - Structure: `ralph/tests/browser/test_<component>.spec.js`
    - Include:
      - Setup and teardown
      - Navigation to component
@@ -76,8 +76,8 @@ When this skill is invoked:
    - Take screenshots of component in various states
    - Compare against baseline images
    - Highlight visual differences
-   - Store baselines in `tests/browser/screenshots/baseline/`
-   - Store comparison results in `feedback/visual-regression/`
+   - Store baselines in `ralph/tests/browser/screenshots/baseline/`
+   - Store comparison results in `ralph/feedback/visual-regression/`
 
 7. **Accessibility Audit**
    - Run axe-core or Lighthouse accessibility tests
@@ -94,7 +94,7 @@ When this skill is invoked:
      - Performance metrics
      - Console errors/warnings
      - Network issues
-   - Save to `feedback/<spec-id>/browser-tests/`
+   - Save to `ralph/feedback/<spec-id>/browser-tests/`
 
 9. **Interactive Mode** (--interactive)
    - Launch browser with Playwright Inspector
@@ -156,7 +156,7 @@ test.describe('ComponentName', () => {
 [Browser Test] Running visual regression tests...
 [Browser Test] ✓ Login form baseline matches
 [Browser Test] ✗ Error state has visual differences (2.3% diff)
-[Browser Test]   - Screenshot saved: feedback/visual-regression/error-state-diff.png
+[Browser Test]   - Screenshot saved: ralph/feedback/visual-regression/error-state-diff.png
 [Browser Test]
 [Browser Test] Running accessibility tests...
 [Browser Test] ✗ 3 accessibility violations found:
@@ -165,7 +165,7 @@ test.describe('ComponentName', () => {
 [Browser Test]   - Moderate: Missing landmark regions (WCAG 1.3.1)
 [Browser Test]
 [Browser Test] Results: 5/7 tests passed (71.4%)
-[Browser Test] Report: feedback/login-form/browser-test-20260223.html
+[Browser Test] Report: ralph/feedback/login-form/browser-test-20260223.html
 [Browser Test]
 [Browser Test] Create tasks for accessibility fixes? (y/n)
 ```

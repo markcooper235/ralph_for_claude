@@ -15,13 +15,13 @@ Display detailed status of current Ralph run or confirm clean state.
 ### Check for Ralph Run
 
 ```bash
-if [ ! -f .ralph/state.json ]; then
+if [ ! -f ralph/.ralph/state.json ]; then
   echo "No Ralph run in progress"
   echo "Workspace is clean and ready for new run"
   echo ""
   echo "To start new run:"
   echo "  /ralph-create-prd <spec-name>"
-  echo "  /ralph-loop specs/prds/<spec>.prd.md"
+  echo "  /ralph-loop ralph/specs/prds/<spec>.prd.md"
   exit 0
 fi
 ```
@@ -29,8 +29,8 @@ fi
 ### Load State
 
 ```bash
-STATE=$(cat .ralph/state.json)
-STORIES=$(cat .ralph/stories.json)
+STATE=$(cat ralph/.ralph/state.json)
+STORIES=$(cat ralph/.ralph/stories.json)
 ```
 
 ### Display Status
@@ -39,29 +39,29 @@ STORIES=$(cat .ralph/stories.json)
 [Ralph Status] Current Ralph Run
 [Ralph Status] ==================
 [Ralph Status]
-[Ralph Status] Run ID: $(jq -r '.runId' .ralph/state.json)
-[Ralph Status] Specification: $(jq -r '.specFile' .ralph/state.json)
-[Ralph Status] Status: $(jq -r '.status' .ralph/state.json | tr '[:lower:]' '[:upper:]')
-[Ralph Status] Started: $(jq -r '.createdAt' .ralph/state.json)
-[Ralph Status] Updated: $(jq -r '.updatedAt' .ralph/state.json)
+[Ralph Status] Run ID: $(jq -r '.runId' ralph/.ralph/state.json)
+[Ralph Status] Specification: $(jq -r '.specFile' ralph/.ralph/state.json)
+[Ralph Status] Status: $(jq -r '.status' ralph/.ralph/state.json | tr '[:lower:]' '[:upper:]')
+[Ralph Status] Started: $(jq -r '.createdAt' ralph/.ralph/state.json)
+[Ralph Status] Updated: $(jq -r '.updatedAt' ralph/.ralph/state.json)
 [Ralph Status]
 [Ralph Status] Git Information:
-[Ralph Status] - Origin Branch: $(jq -r '.git.originBranch' .ralph/state.json)
-[Ralph Status] - Ralph Branch: $(jq -r '.git.ralphBranch' .ralph/state.json)
-[Ralph Status] - Commits: $(jq -r '.git.commits | length' .ralph/state.json)
+[Ralph Status] - Origin Branch: $(jq -r '.git.originBranch' ralph/.ralph/state.json)
+[Ralph Status] - Ralph Branch: $(jq -r '.git.ralphBranch' ralph/.ralph/state.json)
+[Ralph Status] - Commits: $(jq -r '.git.commits | length' ralph/.ralph/state.json)
 [Ralph Status]
 [Ralph Status] Progress:
-[Ralph Status] - Total Stories: $(jq -r '.progress.totalStories' .ralph/state.json)
-[Ralph Status] - Completed: $(jq -r '.progress.completedStories' .ralph/state.json)
-[Ralph Status] - In Progress: $(jq -r '.progress.inProgressStories' .ralph/state.json)
-[Ralph Status] - Failed: $(jq -r '.progress.failedStories' .ralph/state.json)
-[Ralph Status] - Pending: $(jq -r '.progress.totalStories - .progress.completedStories - .progress.inProgressStories - .progress.failedStories' .ralph/state.json)
+[Ralph Status] - Total Stories: $(jq -r '.progress.totalStories' ralph/.ralph/state.json)
+[Ralph Status] - Completed: $(jq -r '.progress.completedStories' ralph/.ralph/state.json)
+[Ralph Status] - In Progress: $(jq -r '.progress.inProgressStories' ralph/.ralph/state.json)
+[Ralph Status] - Failed: $(jq -r '.progress.failedStories' ralph/.ralph/state.json)
+[Ralph Status] - Pending: $(jq -r '.progress.totalStories - .progress.completedStories - .progress.inProgressStories - .progress.failedStories' ralph/.ralph/state.json)
 [Ralph Status]
 [Ralph Status] Test Results:
-$(jq -r '.testResults | to_entries | map("  - \(.key | ascii_upcase): \(.value.status) (iterations: \(.value.iterations)/\(if .key == "lint" or .key == "codeQuality" then 3 else 5 end))") | join("\n")' .ralph/state.json)
+$(jq -r '.testResults | to_entries | map("  - \(.key | ascii_upcase): \(.value.status) (iterations: \(.value.iterations)/\(if .key == "lint" or .key == "codeQuality" then 3 else 5 end))") | join("\n")' ralph/.ralph/state.json)
 [Ralph Status]
 [Ralph Status] Stories:
-$(jq -r '.stories[] | "  [\(.status | ascii_upcase)] \(.id): \(.title) (priority: \(.priority))"' .ralph/stories.json)
+$(jq -r '.stories[] | "  [\(.status | ascii_upcase)] \(.id): \(.title) (priority: \(.priority))"' ralph/.ralph/stories.json)
 ```
 
 ### Display Next Steps
@@ -69,7 +69,7 @@ $(jq -r '.stories[] | "  [\(.status | ascii_upcase)] \(.id): \(.title) (priority
 **Based on current status:**
 
 ```bash
-STATUS=$(jq -r '.status' .ralph/state.json)
+STATUS=$(jq -r '.status' ralph/.ralph/state.json)
 
 case "$STATUS" in
   "parsing")
@@ -80,8 +80,8 @@ case "$STATUS" in
     ;;
   "implementing")
     echo "[Ralph Status] Next: Stories being implemented in parallel"
-    READY=$(jq -r '[.stories[] | select(.status == "ready")] | length' .ralph/stories.json)
-    IN_PROG=$(jq -r '[.stories[] | select(.status == "in_progress")] | length' .ralph/stories.json)
+    READY=$(jq -r '[.stories[] | select(.status == "ready")] | length' ralph/.ralph/stories.json)
+    IN_PROG=$(jq -r '[.stories[] | select(.status == "in_progress")] | length' ralph/.ralph/stories.json)
     echo "[Ralph Status]   - Ready: $READY stories"
     echo "[Ralph Status]   - In progress: $IN_PROG stories"
     ;;
@@ -113,22 +113,22 @@ esac
 
 ```bash
 # Failed stories
-FAILED=$(jq -r '[.stories[] | select(.status == "failed")] | length' .ralph/stories.json)
+FAILED=$(jq -r '[.stories[] | select(.status == "failed")] | length' ralph/.ralph/stories.json)
 if [ "$FAILED" -gt 0 ]; then
   echo ""
   echo "[Ralph Status] ⚠ WARNING: $FAILED failed stories"
-  jq -r '.stories[] | select(.status == "failed") | "  - \(.id): \(.title)"' .ralph/stories.json
+  jq -r '.stories[] | select(.status == "failed") | "  - \(.id): \(.title)"' ralph/.ralph/stories.json
 fi
 
 # Iteration limits
-jq -r '.stories[] | select(.iterations.logic >= 5 or .iterations.formatting >= 3) | "[Ralph Status] ⚠ WARNING: \(.id) at iteration limit (logic: \(.iterations.logic)/5, format: \(.iterations.formatting)/3)"' .ralph/stories.json
+jq -r '.stories[] | select(.iterations.logic >= 5 or .iterations.formatting >= 3) | "[Ralph Status] ⚠ WARNING: \(.id) at iteration limit (logic: \(.iterations.logic)/5, format: \(.iterations.formatting)/3)"' ralph/.ralph/stories.json
 
 # Blocked stories
-BLOCKED=$(jq -r '[.stories[] | select(.status == "blocked")] | length' .ralph/stories.json)
+BLOCKED=$(jq -r '[.stories[] | select(.status == "blocked")] | length' ralph/.ralph/stories.json)
 if [ "$BLOCKED" -gt 0 ]; then
   echo ""
   echo "[Ralph Status] ⚠ WARNING: $BLOCKED blocked stories"
-  jq -r '.stories[] | select(.status == "blocked") | "  - \(.id): \(.title) (blocked by: \(.blockedBy | join(", ")))"' .ralph/stories.json
+  jq -r '.stories[] | select(.status == "blocked") | "  - \(.id): \(.title) (blocked by: \(.blockedBy | join(", ")))"' ralph/.ralph/stories.json
 fi
 ```
 
@@ -137,11 +137,11 @@ fi
 ```
 [Ralph Status]
 [Ralph Status] State Files:
-[Ralph Status] - Main state: .ralph/state.json
-[Ralph Status] - Stories: .ralph/stories.json
-[Ralph Status] - Architecture: .ralph/architecture.json
-[Ralph Status] - Logs: .ralph/logs/
-[Ralph Status] - Artifacts: .ralph/artifacts/
+[Ralph Status] - Main state: ralph/.ralph/state.json
+[Ralph Status] - Stories: ralph/.ralph/stories.json
+[Ralph Status] - Architecture: ralph/.ralph/architecture.json
+[Ralph Status] - Logs: ralph/.ralph/logs/
+[Ralph Status] - Artifacts: ralph/.ralph/artifacts/
 ```
 
 ## Examples
@@ -153,7 +153,7 @@ fi
 [Ralph Status]
 [Ralph Status] To start new run:
 [Ralph Status]   /ralph-create-prd <spec-name>
-[Ralph Status]   /ralph-loop specs/prds/<spec>.prd.md
+[Ralph Status]   /ralph-loop ralph/specs/prds/<spec>.prd.md
 ```
 
 **Run in progress:**
@@ -162,7 +162,7 @@ fi
 [Ralph Status] ==================
 [Ralph Status]
 [Ralph Status] Run ID: user-auth-20260223145023
-[Ralph Status] Specification: specs/prds/user-auth.prd.md
+[Ralph Status] Specification: ralph/specs/prds/user-auth.prd.md
 [Ralph Status] Status: IMPLEMENTING
 [Ralph Status] Started: 2026-02-23T14:50:23Z
 [Ralph Status] Updated: 2026-02-23T15:05:41Z

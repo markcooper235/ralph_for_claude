@@ -18,12 +18,12 @@ Test implementation against specification requirements with detailed feedback.
 ## NX Workspace Detection
 
 Before executing any tests, check for an NX workspace:
-- Check `.ralph/nx-workspace.json` — exists if project was created with `--type nx`
+- Check `ralph/.ralph/nx-workspace.json` — exists if project was created with `--type nx`
 - Or check `nx.json` in project root
 
 If NX workspace, determine which project(s) to scope tests to:
 1. Read the requirement's `nx_projects` field from the PRD metadata (if present)
-2. If not specified, check `.ralph/nx-workspace.json` for all project names and ask user which applies
+2. If not specified, check `ralph/.ralph/nx-workspace.json` for all project names and ask user which applies
 3. Use `nx run <project>:test` instead of bare test commands
 
 ## Instructions
@@ -68,7 +68,7 @@ When this skill is invoked:
    - Create new tasks for failing test cases if needed
 
 6. **Generate Report**
-   - Create test report in `feedback/<spec-id>/test-results/`
+   - Create test report in `ralph/feedback/<spec-id>/test-results/`
    - Include:
      - Timestamp
      - Requirements tested

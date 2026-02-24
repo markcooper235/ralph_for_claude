@@ -16,16 +16,16 @@ This is a utility skill used internally by other Ralph skills to:
 
 ```bash
 # Load or create quota config
-if [ -f .ralph/quota-config.json ]; then
-  QUOTA_CONFIG=$(cat .ralph/quota-config.json)
+if [ -f ralph/.ralph/quota-config.json ]; then
+  QUOTA_CONFIG=$(cat ralph/.ralph/quota-config.json)
 else
-  cp .ralph-quota-config.json .ralph/quota-config.json
-  QUOTA_CONFIG=$(cat .ralph/quota-config.json)
+  cp ralph/.ralph-quota-config.json ralph/.ralph/quota-config.json
+  QUOTA_CONFIG=$(cat ralph/.ralph/quota-config.json)
 fi
 
-QUOTA_LIMIT=$(jq -r '.limits.contextWindow' .ralph/quota-config.json)
-SAFETY_THRESHOLD=$(jq -r '.limits.safetyThreshold' .ralph/quota-config.json)
-WARNING_THRESHOLD=$(jq -r '.limits.warningThreshold' .ralph/quota-config.json)
+QUOTA_LIMIT=$(jq -r '.limits.contextWindow' ralph/.ralph/quota-config.json)
+SAFETY_THRESHOLD=$(jq -r '.limits.safetyThreshold' ralph/.ralph/quota-config.json)
+WARNING_THRESHOLD=$(jq -r '.limits.warningThreshold' ralph/.ralph/quota-config.json)
 ```
 
 ## Cost Estimation
@@ -120,13 +120,13 @@ check_quota_before_task() {
     local estimated_cost=$2
 
     # Get current quota usage
-    local used=$(jq -r '.quota.totalUsed' .ralph/state.json)
-    local limit=$(jq -r '.quota.limit' .ralph/state.json)
+    local used=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
+    local limit=$(jq -r '.quota.limit' ralph/.ralph/state.json)
     local available=$((limit - used))
     local safety=$((limit * 85 / 100))  # 85% safety threshold
 
     # Reserve for exit operations
-    local reserve=$(jq -r '.limits.reserveForExit' .ralph/quota-config.json)
+    local reserve=$(jq -r '.limits.reserveForExit' ralph/.ralph/quota-config.json)
     local effective_available=$((available - reserve))
 
     echo "[Quota Check] Task: ${task_type}"
@@ -171,14 +171,14 @@ update_quota_usage() {
         .quota.currentSessionUsed += ($cost | tonumber) |
         .quota.phaseUsage[$phase] += ($cost | tonumber) |
         .quota.lastCheck = $now' \
-       .ralph/state.json > .ralph/state.json.tmp
-    mv .ralph/state.json.tmp .ralph/state.json
+       ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+    mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
     # Check thresholds
-    local total_used=$(jq -r '.quota.totalUsed' .ralph/state.json)
-    local limit=$(jq -r '.quota.limit' .ralph/state.json)
-    local warning=$(jq -r '.quota.warningThreshold' .ralph/state.json)
-    local safety=$(jq -r '.quota.safetyThreshold' .ralph/state.json)
+    local total_used=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
+    local limit=$(jq -r '.quota.limit' ralph/.ralph/state.json)
+    local warning=$(jq -r '.quota.warningThreshold' ralph/.ralph/state.json)
+    local safety=$(jq -r '.quota.safetyThreshold' ralph/.ralph/state.json)
 
     if [ $total_used -gt $safety ]; then
         echo "[Quota Monitor] 🚨 SAFETY THRESHOLD EXCEEDED"
@@ -201,9 +201,9 @@ should_pause_for_quota() {
     local next_task_cost=$1
 
     # Get quota state
-    local used=$(jq -r '.quota.totalUsed' .ralph/state.json)
-    local limit=$(jq -r '.quota.limit' .ralph/state.json)
-    local safety=$(jq -r '.quota.safetyThreshold' .ralph/state.json)
+    local used=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
+    local limit=$(jq -r '.quota.limit' ralph/.ralph/state.json)
+    local safety=$(jq -r '.quota.safetyThreshold' ralph/.ralph/state.json)
 
     local available=$((limit - used))
     local percent_used=$((used * 100 / limit))
@@ -223,8 +223,8 @@ should_pause_for_quota() {
     fi
 
     # Check if behavior config says to pause on warning
-    local pause_on_warning=$(jq -r '.behavior.pauseOnQuotaWarning' .ralph/quota-config.json)
-    local warning=$(jq -r '.quota.warningThreshold' .ralph/state.json)
+    local pause_on_warning=$(jq -r '.behavior.pauseOnQuotaWarning' ralph/.ralph/quota-config.json)
+    local warning=$(jq -r '.quota.warningThreshold' ralph/.ralph/state.json)
 
     if [ "$pause_on_warning" = "true" ] && [ $used -gt $warning ]; then
         echo "[Pause Decision] ✓ Pause: Warning threshold + pauseOnQuotaWarning enabled"
@@ -261,18 +261,18 @@ pause_ralph_run() {
         .pauseReason = $reason |
         .resumePhase = $phase |
         .currentStory = $story' \
-       .ralph/state.json > .ralph/state.json.tmp
-    mv .ralph/state.json.tmp .ralph/state.json
+       ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+    mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
     # Calculate estimated quota needed to complete
-    local remaining_stories=$(jq -r '[.stories[] | select(.status != "completed")] | length' .ralph/stories.json)
+    local remaining_stories=$(jq -r '[.stories[] | select(.status != "completed")] | length' ralph/.ralph/stories.json)
     local avg_story_cost=15000  # rough average
     local estimated_remaining=$((remaining_stories * avg_story_cost))
 
     jq --arg est "$estimated_remaining" \
        '.quota.estimatedRemaining = ($est | tonumber)' \
-       .ralph/state.json > .ralph/state.json.tmp
-    mv .ralph/state.json.tmp .ralph/state.json
+       ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+    mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
     # Display pause information
     echo ""
@@ -287,8 +287,8 @@ pause_ralph_run() {
     fi
     echo "[Ralph Pause]"
 
-    local used=$(jq -r '.quota.totalUsed' .ralph/state.json)
-    local limit=$(jq -r '.quota.limit' .ralph/state.json)
+    local used=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
+    local limit=$(jq -r '.quota.limit' ralph/.ralph/state.json)
     local percent=$((used * 100 / limit))
 
     echo "[Ralph Pause] Quota Status:"
@@ -306,8 +306,8 @@ pause_ralph_run() {
     echo "[Ralph Pause] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     # Save pause log
-    mkdir -p .ralph/logs
-    echo "[$(date -Iseconds)] Paused: ${reason} at ${current_phase}" >> .ralph/logs/pause-resume.log
+    mkdir -p ralph/.ralph/logs
+    echo "[$(date -Iseconds)] Paused: ${reason} at ${current_phase}" >> ralph/.ralph/logs/pause-resume.log
 
     # Exit gracefully
     exit 0
@@ -323,14 +323,14 @@ check_max_iterations() {
     local iteration_type=$1  # story, logic, formatting, global
 
     # Check if max iterations enabled
-    local enabled=$(jq -r '.maxIterations.enabled' .ralph/state.json)
+    local enabled=$(jq -r '.maxIterations.enabled' ralph/.ralph/state.json)
     if [ "$enabled" != "true" ]; then
         return 0  # No limit
     fi
 
     # Get current count and limit
-    local current=$(jq -r ".maxIterations.${iteration_type}_count // 0" .ralph/state.json)
-    local limit=$(jq -r ".maxIterations.${iteration_type}" .ralph/state.json)
+    local current=$(jq -r ".maxIterations.${iteration_type}_count // 0" ralph/.ralph/state.json)
+    local limit=$(jq -r ".maxIterations.${iteration_type}" ralph/.ralph/state.json)
 
     if [ "$limit" = "null" ] || [ -z "$limit" ]; then
         return 0  # No limit for this type
@@ -357,8 +357,8 @@ increment_iteration_count() {
 
     jq --arg type "$iteration_type" \
        '.maxIterations[($type + "_count")] += 1' \
-       .ralph/state.json > .ralph/state.json.tmp
-    mv .ralph/state.json.tmp .ralph/state.json
+       ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+    mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 }
 ```
 
@@ -409,7 +409,7 @@ fi
 
 ## Configuration
 
-Users can customize in `.ralph/quota-config.json`:
+Users can customize in `ralph/.ralph/quota-config.json`:
 
 ```json
 {

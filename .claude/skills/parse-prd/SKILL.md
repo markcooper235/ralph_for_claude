@@ -102,7 +102,7 @@ When this skill is invoked:
 
 5. **Create Test Checklist**
    - Generate checklist of all acceptance criteria
-   - Save to `specs/prds/<name>.checklist.md`
+   - Save to `ralph/specs/prds/<name>.checklist.md`
    - Format for easy `/test-spec` execution
 
 6. **Output Summary**
@@ -139,7 +139,7 @@ Expected PRD format:
 ## Output Format
 
 ```
-[Parse PRD] Reading: specs/prds/user-authentication.prd.md
+[Parse PRD] Reading: ralph/specs/prds/user-authentication.prd.md
 [Parse PRD]
 [Parse PRD] Project: User Authentication System
 [Parse PRD] Version: 1.0
@@ -169,8 +169,8 @@ Expected PRD format:
 [Parse PRD] ✓ Task 2 created: REQ-002 Session management (blocked by Task 1)
 [Parse PRD] ... (6 more tasks)
 [Parse PRD]
-[Parse PRD] Test checklist saved: specs/prds/user-authentication.checklist.md
-[Parse PRD] Structured data saved: specs/prds/user-authentication.parsed.json
+[Parse PRD] Test checklist saved: ralph/specs/prds/user-authentication.checklist.md
+[Parse PRD] Structured data saved: ralph/specs/prds/user-authentication.parsed.json
 [Parse PRD]
 [Parse PRD] Ready to start Ralph Loop? (y/n)
 ```
@@ -178,7 +178,7 @@ Expected PRD format:
 ## Examples
 
 ```
-/parse-prd specs/prds/user-authentication.prd.md
+/parse-prd ralph/specs/prds/user-authentication.prd.md
 ```
 
 ## Integration Points

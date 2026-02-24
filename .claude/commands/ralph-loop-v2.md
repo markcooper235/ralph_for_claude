@@ -16,7 +16,7 @@ This skill orchestrates the complete Ralph Loop using Task subagents for heavy o
 
 **Check for existing Ralph run:**
 ```bash
-if [ -f .ralph/state.json ]; then
+if [ -f ralph/.ralph/state.json ]; then
   echo "Error: Ralph run already in progress"
   echo "Complete or archive current run first: /ralph-archive"
   exit 1
@@ -25,12 +25,12 @@ fi
 
 **Create Ralph state directory:**
 ```bash
-mkdir -p .ralph/{state,logs,artifacts}
+mkdir -p ralph/.ralph/{state,logs,artifacts}
 ```
 
 **Initialize state file:**
-- Read `.ralph-state-template.json`
-- Create `.ralph/state.json` with:
+- Read `ralph/.ralph-state-template.json`
+- Create `ralph/.ralph/state.json` with:
   - runId: `<spec-name>-<timestamp>`
   - specFile: path provided
   - status: "parsing"
@@ -53,7 +53,7 @@ git checkout -b "$RALPH_BRANCH"
 # Update state
 ```
 
-Save origin and ralph branch to `.ralph/state.json`
+Save origin and ralph branch to `ralph/.ralph/state.json`
 
 ### Phase 1: Parse Specification (Subagent)
 
@@ -86,7 +86,7 @@ Parse the PRD specification at {spec_file}.
    - Keywords: UI, interface, component, page, form, button
    - File patterns: .tsx, .jsx, .vue, .svelte
    - Explicit flag: UI_TESTS_REQUIRED
-7. Save parsed data to .ralph/stories.json in this format:
+7. Save parsed data to ralph/.ralph/stories.json in this format:
    {{
      "stories": [
        {{
@@ -115,7 +115,7 @@ Parse the PRD specification at {spec_file}.
 **Wait for subagent completion**
 
 **Load results:**
-- Read `.ralph/stories.json`
+- Read `ralph/.ralph/stories.json`
 - Validate structure
 - Display summary to user
 
@@ -126,7 +126,7 @@ Parse the PRD specification at {spec_file}.
     - description: full details + acceptance criteria
     - metadata: { requirementId: "REQ-XXX", storyFile: "REQ-XXX.json" }
   - Save taskId to story data
-  - Update `.ralph/stories.json` with taskIds
+  - Update `ralph/.ralph/stories.json` with taskIds
 
 **Update state:**
 - status: "architecture"
@@ -144,7 +144,7 @@ Task(
   prompt=f"""
 Design implementation architecture for the parsed requirements.
 
-1. Load stories from .ralph/stories.json
+1. Load stories from ralph/.ralph/stories.json
 2. Analyze existing codebase:
    - Project structure
    - Existing patterns
@@ -161,7 +161,7 @@ Design implementation architecture for the parsed requirements.
    - UI: Playwright (if ui tests required)
    - Code quality: SonarLint/complexity metrics
 5. Create architecture decision record
-6. Save to .ralph/architecture.json:
+6. Save to ralph/.ralph/architecture.json:
    {{
      "projectType": "web-frontend|backend|api|library|cli",
      "techStack": [...],
@@ -230,7 +230,7 @@ Story details:
 - Files to modify: {story['codeImpact']['files']}
 
 Instructions:
-1. Load architecture plan from .ralph/architecture.json
+1. Load architecture plan from ralph/.ralph/architecture.json
 2. Implement the requirement following the plan
 3. Write tests for all acceptance criteria:
    - Test file: {test_file}
@@ -238,7 +238,7 @@ Instructions:
    - Test names: test_req_xxx_criterion_n
 4. Run tests locally to verify
 5. List all files created/modified
-6. Save implementation summary to .ralph/artifacts/{story['id']}-impl.json:
+6. Save implementation summary to ralph/.ralph/artifacts/{story['id']}-impl.json:
    {{
      "storyId": "{story['id']}",
      "status": "completed",
@@ -259,9 +259,9 @@ Instructions:
 
 **Check results:**
 - For each story in phase:
-  - Read `.ralph/artifacts/{story-id}-impl.json`
+  - Read `ralph/.ralph/artifacts/{story-id}-impl.json`
   - Check status
-  - Update story status in `.ralph/stories.json`
+  - Update story status in `ralph/.ralph/stories.json`
   - Update TaskUpdate with status
 
 **Mark completed stories:**
@@ -281,7 +281,7 @@ Task(
   prompt=f"""
 Run comprehensive tests for {story_id}.
 
-1. Load test tools from .ralph/architecture.json
+1. Load test tools from ralph/.ralph/architecture.json
 2. Run all tests in sequence:
 
    A. Lint/Format:
@@ -304,7 +304,7 @@ Run comprehensive tests for {story_id}.
       - Capture screenshots and results
       - Max 5 iterations
 
-3. Save results to .ralph/artifacts/{story_id}-tests.json:
+3. Save results to ralph/.ralph/artifacts/{story_id}-tests.json:
    {{
      "storyId": "{story_id}",
      "lint": {{"status": "passed", "output": "...", "iterations": 1}},
@@ -340,7 +340,7 @@ If any test fails:
 **When all tests pass:**
 - Update story status: "completed"
 - Update TaskUpdate: status="completed"
-- Save test results to `.ralph/artifacts/`
+- Save test results to `ralph/.ralph/artifacts/`
 
 ### Phase 5: Commit Story
 
@@ -348,8 +348,8 @@ If any test fails:
 
 ```bash
 # Get story files
-FILES=$(jq -r '.files[]' .ralph/artifacts/${STORY_ID}-impl.json)
-TEST_FILES=$(jq -r '.tests[]' .ralph/artifacts/${STORY_ID}-impl.json)
+FILES=$(jq -r '.files[]' ralph/.ralph/artifacts/${STORY_ID}-impl.json)
+TEST_FILES=$(jq -r '.tests[]' ralph/.ralph/artifacts/${STORY_ID}-impl.json)
 
 # Stage files
 git add $FILES $TEST_FILES
@@ -395,7 +395,7 @@ Task(
   prompt="""
 Comprehensive validation that all requirements are met.
 
-1. Load all stories from .ralph/stories.json
+1. Load all stories from ralph/.ralph/stories.json
 2. For each story:
    - Verify implementation exists
    - Verify tests exist and pass
@@ -411,7 +411,7 @@ Comprehensive validation that all requirements are met.
    - Per-requirement status
    - Overall coverage
    - Any gaps or failures
-5. Save to .ralph/artifacts/proof-report.json and .md
+5. Save to ralph/.ralph/artifacts/proof-report.json and .md
 6. Return summary: passed/failed with details
 """
 )
@@ -439,7 +439,7 @@ Comprehensive validation that all requirements are met.
 
 **Generate harvest summary:**
 ```
-.ralph/artifacts/harvest-summary.md:
+ralph/.ralph/artifacts/harvest-summary.md:
 - Total stories: X
 - Total commits: Y
 - Test coverage: Z%
@@ -475,7 +475,7 @@ Comprehensive validation that all requirements are met.
    ```
 
 4. **All stories completed:**
-   - Check `.ralph/stories.json`
+   - Check `ralph/.ralph/stories.json`
    - All status: "completed"
 
 5. **No inter-story conflicts:**
@@ -510,7 +510,7 @@ Comprehensive validation that all requirements are met.
 [Ralph Loop] Next step: /ralph-archive
 [Ralph Loop]
 [Ralph Loop] This will:
-[Ralph Loop] 1. Archive all artifacts to archive/user-auth-20260223145023/
+[Ralph Loop] 1. Archive all artifacts to ralph/archive/user-auth-20260223145023/
 [Ralph Loop] 2. Merge to {origin_branch}
 [Ralph Loop] 3. Clean up Ralph state
 [Ralph Loop] 4. Prepare for next run
@@ -521,8 +521,8 @@ Comprehensive validation that all requirements are met.
 ### Error Handling
 
 **At any phase, if error occurs:**
-1. Save error to `.ralph/state.json`
-2. Log to `.ralph/logs/error.log`
+1. Save error to `ralph/.ralph/state.json`
+2. Log to `ralph/.ralph/logs/error.log`
 3. Update status: "failed"
 4. Display error to user
 5. Provide recovery options:
@@ -532,10 +532,10 @@ Comprehensive validation that all requirements are met.
 ### State Persistence
 
 **After each phase, save:**
-- `.ralph/state.json` - current state
-- `.ralph/stories.json` - all stories with status
-- `.ralph/logs/<phase>.log` - phase execution log
-- `.ralph/artifacts/` - all artifacts generated
+- `ralph/.ralph/state.json` - current state
+- `ralph/.ralph/stories.json` - all stories with status
+- `ralph/.ralph/logs/<phase>.log` - phase execution log
+- `ralph/.ralph/artifacts/` - all artifacts generated
 
 **State is never committed to git** - only archived
 
@@ -543,7 +543,7 @@ Comprehensive validation that all requirements are met.
 
 ```bash
 # Start new Ralph run
-/ralph-loop specs/prds/user-auth.prd.md
+/ralph-loop ralph/specs/prds/user-auth.prd.md
 
 # Claude will:
 # 1. Create branch: ralph/user-auth-20260223145023

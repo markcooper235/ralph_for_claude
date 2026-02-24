@@ -23,17 +23,17 @@ This skill allows modifying specs during a Ralph run without losing progress.
 ### 1. Check Current State
 
 ```bash
-if [ ! -f .ralph/state.json ]; then
+if [ ! -f ralph/.ralph/state.json ]; then
   echo "[Modify Spec] Error: No Ralph run in progress"
   echo "[Modify Spec] Start a run first: /ralph-loop <spec>"
   exit 1
 fi
 
 # Load current state
-RUN_ID=$(jq -r '.runId' .ralph/state.json)
-SPEC_FILE=$(jq -r '.specFile' .ralph/state.json)
-STATUS=$(jq -r '.status' .ralph/state.json)
-CURRENT_STORY=$(jq -r '.currentStory // "none"' .ralph/state.json)
+RUN_ID=$(jq -r '.runId' ralph/.ralph/state.json)
+SPEC_FILE=$(jq -r '.specFile' ralph/.ralph/state.json)
+STATUS=$(jq -r '.status' ralph/.ralph/state.json)
+CURRENT_STORY=$(jq -r '.currentStory // "none"' ralph/.ralph/state.json)
 
 echo "[Modify Spec] Current Ralph Run: ${RUN_ID}"
 echo "[Modify Spec] Status: ${STATUS}"
@@ -56,8 +56,8 @@ if [ "$STATUS" = "implementing" ]; then
       .pauseReason = "spec_modification" |
       .resumePhase = "implementing" |
       .currentStory = $story' \
-     .ralph/state.json > .ralph/state.json.tmp
-  mv .ralph/state.json.tmp .ralph/state.json
+     ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+  mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
   echo "[Modify Spec] ✓ Work paused safely"
 fi
@@ -75,12 +75,12 @@ echo "[Modify Spec]"
 echo "[Modify Spec] Current Stories:"
 jq -r '.stories[] |
   "[Modify Spec]   [\(.status | ascii_upcase)] \(.id): \(.title) (priority: \(.priority))"' \
-  .ralph/stories.json
+  ralph/.ralph/stories.json
 
 echo "[Modify Spec]"
 echo "[Modify Spec] Progress:"
-COMPLETED=$(jq -r '[.stories[] | select(.status == "completed")] | length' .ralph/stories.json)
-TOTAL=$(jq -r '.stories | length' .ralph/stories.json)
+COMPLETED=$(jq -r '[.stories[] | select(.status == "completed")] | length' ralph/.ralph/stories.json)
+TOTAL=$(jq -r '.stories | length' ralph/.ralph/stories.json)
 echo "[Modify Spec]   Completed: ${COMPLETED}/${TOTAL}"
 ```
 
@@ -181,7 +181,7 @@ Present user with options:
 
 ```bash
 # Backup original spec
-SPEC_VERSION=$(jq -r '.specVersion // 1' .ralph/state.json)
+SPEC_VERSION=$(jq -r '.specVersion // 1' ralph/.ralph/state.json)
 NEW_VERSION=$((SPEC_VERSION + 1))
 BACKUP_FILE="${SPEC_FILE}.v${SPEC_VERSION}.backup"
 
@@ -295,8 +295,8 @@ jq --arg version "$NEW_VERSION" \
    '.specVersion = ($version | tonumber) |
     .specModified = $modified |
     .specModifications += 1' \
-   .ralph/state.json > .ralph/state.json.tmp
-mv .ralph/state.json.tmp .ralph/state.json
+   ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
 # Update stories.json with new/modified stories
 # ...
@@ -353,7 +353,7 @@ echo "[Modify Spec] ✓ Tasks synchronized"
 
 ```bash
 # Save modification record
-MODIFICATION_FILE=".ralph/artifacts/spec-modification-${SPEC_VERSION}.json"
+MODIFICATION_FILE="ralph/.ralph/artifacts/spec-modification-${SPEC_VERSION}.json"
 
 cat > "$MODIFICATION_FILE" <<EOF
 {
@@ -421,8 +421,8 @@ jq --arg now "$(date -Iseconds)" \
     .paused = false |
     del(.pausedAt, .pauseReason) |
     .specModificationCompleted = $now' \
-   .ralph/state.json > .ralph/state.json.tmp
-mv .ralph/state.json.tmp .ralph/state.json
+   ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
 echo "[Modify Spec] State updated: ready to resume"
 ```
@@ -481,7 +481,7 @@ After modification, `/ralph-loop` automatically:
 
 Final archive contains:
 ```
-archive/user-auth-20260223152030/
+ralph/archive/user-auth-20260223152030/
 ├── spec/
 │   ├── user-authentication.prd.md (v3 - final)
 │   ├── user-authentication.prd.md.v1.backup (original)

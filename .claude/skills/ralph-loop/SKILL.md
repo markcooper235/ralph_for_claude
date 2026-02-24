@@ -18,10 +18,10 @@ Execute the complete Ralph Loop development cycle: Requirement → Architecture 
 ## NX Workspace Detection
 
 Before starting any phase, check if this is an NX monorepo:
-- Check for `.ralph/nx-workspace.json` (written by installer)
+- Check for `ralph/.ralph/nx-workspace.json` (written by installer)
 - Or check for `nx.json` in the project root
 
-If NX workspace detected, read `.ralph/nx-workspace.json` to get:
+If NX workspace detected, read `ralph/.ralph/nx-workspace.json` to get:
 - `frontends` — frontend project names (e.g., `react-app`)
 - `backends` — backend project names (e.g., `nest-api`)
 - `unit_test` — default runner (jest/vitest)
@@ -77,7 +77,7 @@ When this skill is invoked:
      - Library: Unit test suite with coverage
    - **NX workspace:** use `nx run-many -t test,lint` to validate all projects,
      or `nx affected -t test --base=main` to test only changed projects
-   - Generate test report in feedback/ directory
+   - Generate test report in ralph/feedback/ directory
    - Identify any failing requirements
 
 6. **Harvest Phase** (--phase=harvest)
@@ -122,7 +122,7 @@ Provide clear progress updates:
 
 ### Full loop from PRD
 ```
-/ralph-loop specs/prds/user-auth.prd.md
+/ralph-loop ralph/specs/prds/user-auth.prd.md
 ```
 
 ### Resume from checkpoint
@@ -132,5 +132,5 @@ Provide clear progress updates:
 
 ### Run specific phase only
 ```
-/ralph-loop specs/prds/user-auth.prd.md --phase=prove
+/ralph-loop ralph/specs/prds/user-auth.prd.md --phase=prove
 ```

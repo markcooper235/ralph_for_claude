@@ -35,7 +35,7 @@ When this skill is invoked:
    - Check that tests actually validate the requirement
 
 4. **Execute All Tests**
-   - Check for NX workspace (`.ralph/nx-workspace.json` or `nx.json`)
+   - Check for NX workspace (`ralph/.ralph/nx-workspace.json` or `nx.json`)
    - **Standard project:** run complete test suite, then `/test-spec --all`
    - **NX workspace:**
      - Run `nx run-many -t test,lint` to validate all projects
@@ -58,7 +58,7 @@ When this skill is invoked:
    - Flag any circular dependencies
 
 7. **Generate Proof Report**
-   - Create comprehensive report in `feedback/<spec-id>/proof-report.md`
+   - Create comprehensive report in `ralph/feedback/<spec-id>/proof-report.md`
    - Include:
      - Overall status (All proven / Partial / Failed)
      - Per-requirement status
@@ -141,7 +141,7 @@ When this skill is invoked:
 [Prove Requirements] 2. Fix email notification in REQ-003
 [Prove Requirements] 3. Increase test coverage for REQ-003 to 90%+
 [Prove Requirements]
-[Prove Requirements] Full report: feedback/user-auth/proof-report-20260223.md
+[Prove Requirements] Full report: ralph/feedback/user-auth/proof-report-20260223.md
 [Prove Requirements]
 [Prove Requirements] Create tasks for blockers? (y/n)
 ```
@@ -157,7 +157,7 @@ When this skill is invoked:
 ## Examples
 
 ```
-/prove-requirements specs/prds/user-auth.prd.md
+/prove-requirements ralph/specs/prds/user-auth.prd.md
 ```
 
 ```

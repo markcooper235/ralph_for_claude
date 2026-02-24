@@ -15,9 +15,9 @@ Resume from saved Ralph state after quota replenishment or interruption.
 ### 1. Check for Ralph State
 
 ```bash
-if [ ! -f .ralph/state.json ]; then
+if [ ! -f ralph/.ralph/state.json ]; then
   echo "[Ralph Resume] Error: No Ralph run to resume"
-  echo "[Ralph Resume] No .ralph/state.json found"
+  echo "[Ralph Resume] No ralph/.ralph/state.json found"
   exit 1
 fi
 ```
@@ -25,11 +25,11 @@ fi
 ### 2. Load State
 
 ```bash
-STATE=$(cat .ralph/state.json)
-RUN_ID=$(jq -r '.runId' .ralph/state.json)
-STATUS=$(jq -r '.status' .ralph/state.json)
-PAUSED_AT=$(jq -r '.pausedAt // "unknown"' .ralph/state.json)
-PAUSE_REASON=$(jq -r '.pauseReason // "unknown"' .ralph/state.json)
+STATE=$(cat ralph/.ralph/state.json)
+RUN_ID=$(jq -r '.runId' ralph/.ralph/state.json)
+STATUS=$(jq -r '.status' ralph/.ralph/state.json)
+PAUSED_AT=$(jq -r '.pausedAt // "unknown"' ralph/.ralph/state.json)
+PAUSE_REASON=$(jq -r '.pauseReason // "unknown"' ralph/.ralph/state.json)
 ```
 
 ### 3. Verify Resumable
@@ -71,15 +71,15 @@ if [ "$PAUSE_REASON" = "quota_warning" ] || [ "$PAUSE_REASON" = "quota_limit" ];
   echo "[Ralph Resume] Checking quota availability..."
 
   # Load quota state
-  QUOTA_USED=$(jq -r '.quota.totalUsed' .ralph/state.json)
-  QUOTA_LIMIT=$(jq -r '.quota.limit' .ralph/state.json)
+  QUOTA_USED=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
+  QUOTA_LIMIT=$(jq -r '.quota.limit' ralph/.ralph/state.json)
   QUOTA_AVAILABLE=$((QUOTA_LIMIT - QUOTA_USED))
 
   echo "[Ralph Resume] Quota used: ${QUOTA_USED}/${QUOTA_LIMIT}"
   echo "[Ralph Resume] Quota available: ${QUOTA_AVAILABLE}"
 
   # Check if enough quota to continue
-  MIN_REQUIRED=$(jq -r '.quota.estimatedRemaining' .ralph/state.json)
+  MIN_REQUIRED=$(jq -r '.quota.estimatedRemaining' ralph/.ralph/state.json)
 
   if [ "$QUOTA_AVAILABLE" -lt "$MIN_REQUIRED" ]; then
     echo "[Ralph Resume] Warning: Insufficient quota available"
@@ -104,8 +104,8 @@ fi
 **Determine resume point:**
 
 ```bash
-RESUME_PHASE=$(jq -r '.resumePhase // .status' .ralph/state.json)
-CURRENT_STORY=$(jq -r '.currentStory // null' .ralph/state.json)
+RESUME_PHASE=$(jq -r '.resumePhase // .status' ralph/.ralph/state.json)
+CURRENT_STORY=$(jq -r '.currentStory // null' ralph/.ralph/state.json)
 
 echo "[Ralph Resume] Resuming from phase: ${RESUME_PHASE}"
 if [ "$CURRENT_STORY" != "null" ]; then
@@ -119,8 +119,8 @@ fi
 # Update state.json
 jq --arg now "$(date -Iseconds)" \
    '.status = .resumePhase | .resumedAt = $now | .paused = false | del(.pausedAt, .pauseReason, .resumePhase)' \
-   .ralph/state.json > .ralph/state.json.tmp
-mv .ralph/state.json.tmp .ralph/state.json
+   ralph/.ralph/state.json > ralph/.ralph/state.json.tmp
+mv ralph/.ralph/state.json.tmp ralph/.ralph/state.json
 
 echo "[Ralph Resume] State updated, resuming execution..."
 ```
@@ -137,7 +137,7 @@ echo "[Ralph Resume] State updated, resuming execution..."
 ```
 
 **Invoke ralph-loop:**
-- Ralph-loop will detect `.ralph/state.json` exists
+- Ralph-loop will detect `ralph/.ralph/state.json` exists
 - Will load state and continue from current phase
 - Will respect quota limits
 - Will save state on pause
@@ -284,8 +284,8 @@ The `/ralph-loop` skill checks for existing state:
 
 ```bash
 # In ralph-loop, before starting:
-if [ -f .ralph/state.json ]; then
-  STATUS=$(jq -r '.status' .ralph/state.json)
+if [ -f ralph/.ralph/state.json ]; then
+  STATUS=$(jq -r '.status' ralph/.ralph/state.json)
   if [[ "$STATUS" == paused_* ]]; then
     echo "Resuming from ${STATUS}"
     # Continue from saved phase

@@ -29,7 +29,7 @@ When this skill is invoked:
 
 **Create PRD file:**
 ```
-specs/prds/<spec-name>.prd.md
+ralph/specs/prds/<spec-name>.prd.md
 ```
 
 ### 2. Problem Statement Section
@@ -75,7 +75,7 @@ Continue until user says "done" or has 3-10 stories.
 - If existing codebase, ask: "Which files/modules will this touch?"
 - Use Glob/Grep to search relevant code
 - Note potential conflicts with other requirements
-- **NX workspace:** if `nx.json` or `.ralph/nx-workspace.json` exists, also ask:
+- **NX workspace:** if `nx.json` or `ralph/.ralph/nx-workspace.json` exists, also ask:
   "Which NX project(s) does this requirement touch?"
   (e.g., `react-app`, `nest-api`, `shared-lib`)
   Store as `nx_projects: [react-app, nest-api]` in the requirement metadata.
@@ -209,7 +209,7 @@ If validation fails, ask user to fix issues.
 
 ### 12. Generate Story Breakdown File
 
-Create: `specs/prds/<spec-name>.stories.json`
+Create: `ralph/specs/prds/<spec-name>.stories.json`
 
 ```json
 {
@@ -252,7 +252,7 @@ Create: `specs/prds/<spec-name>.stories.json`
 
 Display:
 ```
-[Ralph Create PRD] PRD Created: specs/prds/<spec-name>.prd.md
+[Ralph Create PRD] PRD Created: ralph/specs/prds/<spec-name>.prd.md
 [Ralph Create PRD]
 [Ralph Create PRD] Summary:
 [Ralph Create PRD] - 8 functional requirements
@@ -264,7 +264,7 @@ Display:
 [Ralph Create PRD]
 [Ralph Create PRD] Ready to start Ralph Loop!
 [Ralph Create PRD]
-[Ralph Create PRD] Next step: /ralph-loop specs/prds/<spec-name>.prd.md
+[Ralph Create PRD] Next step: /ralph-loop ralph/specs/prds/<spec-name>.prd.md
 ```
 
 ## Suggestions Feature
