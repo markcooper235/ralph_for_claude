@@ -17,7 +17,7 @@
 | express | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 supertest) | — |
 | python | basic | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 pytest) | venv auto-runs tests via venv/bin/pytest |
 | python | flask | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 pytest) | venv auto-runs tests via venv/bin/pytest |
-| python | reflex | ✅ PASS | ✅ PASS | ✅ PASS | ⚠️ ENV (reflex init required) | venv + rxconfig.py + test_state.py |
+| python | reflex | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (pytest passed) | --name flag makes init fully non-interactive |
 | go | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (go test ./...) | — |
 | ruby | basic | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (1/1 rspec) | — |
 | ruby | rails | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (bundle+rails test) | Rails 6.1.7.10, SQLite3 |
@@ -32,7 +32,7 @@
 | nx | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (workspace OK) | ralph/nx-workspace.json git-tracked |
 
 **18/18 project type/sub-type combinations created successfully.**
-**17/18 functional tests passing. 1/18 environment constraint (Python Reflex — requires interactive terminal for `reflex init`).**
+**18/18 functional tests passing.**
 
 ---
 
@@ -154,10 +154,6 @@ When `create_new_project()` called `create_dotnet_project "." "${project_name}"`
 Python and Flask project types use `python3 -m venv venv` and `venv/bin/pip install`. If the system pip is blocked by PEP 668 (Debian/Ubuntu externally-managed-environment), system pip fails but venv creation succeeds. All test commands use `venv/bin/pytest` directly — no activation required.
 
 The install script now runs `venv/bin/pytest tests/` automatically after setup to verify everything works without user needing to activate the venv.
-
-### Reflex: Requires Interactive Terminal
-
-`reflex init --template blank` requires an interactive terminal (downloads the Node.js runtime on first run). On a headless system it falls back to a manual placeholder structure (rxconfig.py + test_reflex/ + tests/). The pytest tests in tests/ still pass in the placeholder case.
 
 ### Rails: Requires gem install rails
 
