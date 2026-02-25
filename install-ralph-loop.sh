@@ -1214,6 +1214,41 @@ rubocop -a            # Auto-fix safe offenses
 EOF
             ;;
 
+        rocket)
+            cat >> "${claude_md}" << 'EOF'
+
+## Rocket Specific
+
+### Build Commands
+```bash
+cargo build           # Debug build
+cargo build --release # Release build
+cargo run             # Build and run (localhost:8000)
+```
+
+### Test Commands
+```bash
+cargo test            # Run all tests (uses Rocket's blocking test client)
+cargo test -- --nocapture  # Show println output
+cargo test <name>     # Run specific test
+```
+
+### Lint Commands
+```bash
+cargo fmt             # Format code
+cargo clippy          # Lint
+cargo check           # Fast type/borrow check
+```
+
+### Key Notes
+- Server runs on `http://localhost:8000` by default (Rocket default port)
+- Rocket 0.5 is stable — no nightly toolchain required
+- Tests use `rocket::local::blocking::Client` — no running server needed
+- Add `rocket_db_pools` for database connection pooling
+
+EOF
+            ;;
+
         actix)
             cat >> "${claude_md}" << 'EOF'
 
@@ -2539,6 +2574,120 @@ EOF
         || print_warning "cargo build failed — run manually: cd ${project_dir} && cargo build"
 
     print_success "Created Actix Web project structure"
+}
+
+create_rocket_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    if ! command -v cargo > /dev/null 2>&1; then
+        print_warning "cargo not found — creating placeholder Rocket structure"
+        mkdir -p "${project_dir}/src" "${project_dir}/tests"
+        cat > "${project_dir}/Cargo.toml" << EOF
+[package]
+name = "${project_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rocket = { version = "0.5", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+EOF
+        print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
+        return
+    fi
+
+    # Initialize cargo project
+    (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
+
+    # Cargo.toml with Rocket 0.5 (stable, no nightly required)
+    cat > "${project_dir}/Cargo.toml" << EOF
+[package]
+name = "${project_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rocket = { version = "0.5", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+EOF
+
+    # main.rs — basic Rocket server with health endpoint
+    cat > "${project_dir}/src/main.rs" << 'EOF'
+#[macro_use]
+extern crate rocket;
+
+use rocket::serde::{json::Json, Serialize};
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+struct GreetResponse {
+    message: String,
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde")]
+struct HealthResponse {
+    status: String,
+}
+
+#[get("/")]
+fn index() -> Json<GreetResponse> {
+    Json(GreetResponse {
+        message: "Hello from Ralph Loop!".to_string(),
+    })
+}
+
+#[get("/health")]
+fn health() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "ok".to_string(),
+    })
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build().mount("/", routes![index, health])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::local::blocking::Client;
+    use rocket::http::Status;
+
+    fn test_client() -> Client {
+        Client::tracked(rocket()).expect("valid rocket instance")
+    }
+
+    #[test]
+    fn test_index_ok() {
+        let client = test_client();
+        let response = client.get("/").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
+
+    #[test]
+    fn test_health_ok() {
+        let client = test_client();
+        let response = client.get("/health").dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
+}
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+/target/
+Cargo.lock
+EOF
+
+    print_info "Building Rocket project (downloads dependencies — may take a moment)..."
+    (cd "${project_dir}" && cargo build --quiet) \
+        && print_success "cargo build complete" \
+        || print_warning "cargo build failed — run manually: cd ${project_dir} && cargo build"
+
+    print_success "Created Rocket project structure"
 }
 
 create_angular_project() {
