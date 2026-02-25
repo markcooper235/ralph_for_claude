@@ -25,11 +25,17 @@ Load state.json. Check status field.
 ### Phase 1: Final Validation (Normal Archive Only)
 
 1. Run full test suite for this project type (detect from architecture.json or codebase)
-2. `git status --porcelain` — must be empty (no uncommitted changes)
+2. `git status --porcelain` — if output is not empty, commit all remaining changes before proceeding:
+   ```bash
+   git add -A
+   git commit -m "chore: commit uncommitted files before archive merge
+
+   Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+   ```
 3. `jq '[.stories[] | select(.status != "completed")] | length' ralph/.ralph/stories.json` — must be 0
 4. `git fetch origin && git merge-base --is-ancestor origin/$ORIGIN_BRANCH HEAD` — if fails, attempt `git merge origin/$ORIGIN_BRANCH` and abort on conflict
 
-If any check fails: display reason, exit. Do not proceed.
+If checks 3 or 4 fail: display reason, exit. Do not proceed.
 
 ### Phase 2: Create Archive Directory
 

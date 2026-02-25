@@ -249,6 +249,15 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 EOF
 )"
 COMMIT_HASH=$(git rev-parse HEAD)
+
+# Mop-up: commit any side-effect files (lock files, generated assets, etc.)
+DIRTY=$(git status --porcelain)
+if [ -n "$DIRTY" ]; then
+    git add -A
+    git commit -m "${STORY_ID}: commit side-effect files (lock files, generated assets)
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+fi
 ```
 Save commit hash to story in stories.json and to state.git.commits[].
 
