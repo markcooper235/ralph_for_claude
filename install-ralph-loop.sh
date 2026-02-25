@@ -2071,6 +2071,12 @@ coverage/
 .nyc_output/
 .env
 .env.local
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 EOF
 
     print_info "Installing JavaScript dependencies (npm selects compatible latest versions)..."
@@ -2188,6 +2194,12 @@ coverage/
 *.js.map
 .env
 .env.local
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 EOF
 
     print_info "Installing TypeScript dependencies (npm selects compatible latest versions)..."
@@ -2308,6 +2320,8 @@ build/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+logs/
+*.log
 EOF
 
     print_info "Creating Python virtual environment..."
@@ -2401,6 +2415,8 @@ EOF
 /tmp/
 coverage.out
 coverage.html
+logs/
+*.log
 EOF
 
     print_info "Running go mod tidy..."
@@ -2456,6 +2472,8 @@ EOF
     # .gitignore
     cat > "${project_dir}/.gitignore" << 'EOF'
 /target/
+logs/
+*.log
 EOF
 
     print_info "Running cargo check..."
@@ -2576,6 +2594,8 @@ EOF
     cat > "${project_dir}/.gitignore" << 'EOF'
 /target/
 Cargo.lock
+logs/
+*.log
 EOF
 
     print_info "Building Actix project (downloads dependencies — may take a moment)..."
@@ -2690,6 +2710,8 @@ EOF
     cat > "${project_dir}/.gitignore" << 'EOF'
 /target/
 Cargo.lock
+logs/
+*.log
 EOF
 
     print_info "Building Rocket project (downloads dependencies — may take a moment)..."
@@ -3109,6 +3131,12 @@ dist/
 coverage/
 .env
 .env.local
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 EOF
 
     print_info "Installing Express dependencies (npm selects compatible latest versions)..."
@@ -3242,6 +3270,8 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 instance/
+logs/
+*.log
 EOF
 
     print_info "Creating Python virtual environment..."
@@ -3367,6 +3397,8 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .coverage
+logs/
+*.log
 EOF
 
     print_info "Running tests..."
@@ -3455,6 +3487,8 @@ vendor/bundle/
 coverage/
 .yardoc/
 doc/
+logs/
+*.log
 EOF
 
     print_info "Installing Ruby gems..."
