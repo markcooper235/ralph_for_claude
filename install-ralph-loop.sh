@@ -719,6 +719,16 @@ ask_project_questions() {
             PROJECT_CONFIG[nx_community]="${community_choice:-none}"
             ;;
 
+        dotnet)
+            echo "Template? (webapi/mvc/blazorwasm/blazor) [webapi]:"
+            echo "  webapi     — ASP.NET Core REST API"
+            echo "  mvc        — ASP.NET MVC with Razor views"
+            echo "  blazorwasm — Blazor WebAssembly (SPA in C#)"
+            echo "  blazor     — Blazor (server-side / SSR, .NET 8+)"
+            read -r template_choice || true
+            PROJECT_CONFIG[dotnet_template]="${template_choice:-webapi}"
+            ;;
+
         reflex)
             # Direct shortcut — equivalent to --type python with framework=reflex
             PROJECT_CONFIG[python_framework]="reflex"
@@ -1174,6 +1184,53 @@ bundle exec rake test # Run Minitest suite
 rubocop               # Style and lint check
 rubocop -a            # Auto-fix safe offenses
 ```
+
+EOF
+            ;;
+
+        dotnet)
+            cat >> "${claude_md}" << 'EOF'
+
+## .NET Specific
+
+### Build Commands
+```bash
+dotnet build              # Build the project
+dotnet build -c Release   # Release build
+dotnet publish -c Release # Publish for deployment
+```
+
+### Development Commands
+```bash
+dotnet run                # Build and run
+dotnet watch run          # Hot-reload dev server
+dotnet run --project <name>.csproj  # Explicit project
+```
+
+### Test Commands
+```bash
+dotnet test               # Run all tests (from solution or test project)
+dotnet test --logger "console;verbosity=detailed"
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+### Package Management
+```bash
+dotnet add package <name>         # Add NuGet package
+dotnet remove package <name>      # Remove package
+dotnet restore                    # Restore all packages
+dotnet list package               # List installed packages
+```
+
+### Lint / Format Commands
+```bash
+dotnet format             # Format code (editorconfig rules)
+dotnet format --verify-no-changes  # Check formatting only
+```
+
+### Key Notes
+- Test project lives in `../<ProjectName>.Tests/` (sibling directory)
+- Run `dotnet new sln` + `dotnet sln add` to manage multi-project solutions
 
 EOF
             ;;
@@ -1775,6 +1832,9 @@ create_new_project() {
             ;;
         go)
             create_go_project "." "${project_name}"
+            ;;
+        dotnet)
+            create_dotnet_project "." "${project_name}"
             ;;
         rust)
             create_rust_project "." "${project_name}"
@@ -3112,6 +3172,60 @@ EOF
     fi
 
     print_success "Created Rails project structure"
+}
+
+create_dotnet_project() {
+    local project_dir="$1"
+    local project_name="$2"
+    local template="${PROJECT_CONFIG[dotnet_template]:-webapi}"
+
+    # Check runtime availability
+    if ! command -v dotnet > /dev/null 2>&1; then
+        print_warning "dotnet CLI not found — creating placeholder structure"
+        mkdir -p "${project_dir}/src"
+        cat > "${project_dir}/${project_name}.csproj" << EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+</Project>
+EOF
+        print_info "Install .NET SDK: https://dotnet.microsoft.com/download"
+        print_info "Then run: cd ${project_dir} && dotnet new ${template} --force"
+        return
+    fi
+
+    print_info "Scaffolding .NET ${template} project..."
+    # dotnet new creates files IN the current directory (no subdirectory)
+    (cd "${project_dir}" && dotnet new "${template}" \
+        --name "${project_name}" \
+        --output . \
+        --force \
+        --no-restore) \
+        && print_success ".NET project scaffolded" \
+        || { print_warning "dotnet new failed — run: cd ${project_dir} && dotnet new ${template} --name ${project_name} --output ."; return; }
+
+    # Add .gitignore via dotnet template
+    (cd "${project_dir}" && dotnet new gitignore --force 2>/dev/null) || true
+
+    # Create sibling xUnit test project
+    print_info "Creating xUnit test project..."
+    local sibling_test_name="${project_name}.Tests"
+    (cd "$(dirname "${project_dir}")" && dotnet new xunit \
+        --name "${sibling_test_name}" \
+        --output "${sibling_test_name}" \
+        --no-restore 2>/dev/null) \
+        && print_success "Test project: ../${sibling_test_name}" \
+        || print_warning "xUnit test project creation failed — run: dotnet new xunit --name ${sibling_test_name}"
+
+    # Restore packages
+    print_info "Restoring NuGet packages..."
+    (cd "${project_dir}" && dotnet restore --verbosity quiet) \
+        && print_success "NuGet packages restored" \
+        || print_warning "dotnet restore failed — run: cd ${project_dir} && dotnet restore"
+
+    print_success "Created .NET ${template} project structure"
 }
 
 create_nx_project() {
