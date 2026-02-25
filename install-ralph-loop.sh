@@ -2916,6 +2916,7 @@ create_nextjs_project() {
         @testing-library/user-event \
         @types/jest \
         ts-jest \
+        ts-node \
         --silent)
 
     # Add test scripts
