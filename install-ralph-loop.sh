@@ -1752,14 +1752,14 @@ initialize_existing_project() {
     if [ "${project_type}" = "unknown" ]; then
         print_warning "Could not auto-detect project type from existing files"
         while true; do
-            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby) [typescript]:"
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/reflex/go/dotnet/rust/ruby/rails/actix/rocket/nx) [typescript]:"
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -1929,7 +1929,7 @@ create_new_project() {
             create_go_project "." "${project_name}"
             ;;
         dotnet)
-            create_dotnet_project "." "${project_name}"
+            create_dotnet_project "$(pwd)" "${project_name}"
             ;;
         rust)
             case "${PROJECT_CONFIG[rust_framework]:-basic}" in
@@ -2329,11 +2329,16 @@ create_go_project() {
 
     mkdir -p "${project_dir}/internal"
 
+    # Detect installed Go version (major.minor only)
+    local go_version
+    go_version=$(go version 2>/dev/null | grep -oP 'go\K[0-9]+\.[0-9]+' | head -1)
+    go_version="${go_version:-1.22}"
+
     # go.mod
     cat > "${project_dir}/go.mod" << EOF
 module ${project_name}
 
-go 1.23
+go ${go_version}
 EOF
 
     # main.go
@@ -2468,10 +2473,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4"
+actix-web = "=4.2.1"
+actix-http = "=3.4.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+time = "=0.3.36"
+url = "=2.5.2"
+indexmap = "=2.7.0"
 EOF
         print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
         return
@@ -2481,6 +2490,7 @@ EOF
     (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
 
     # Write Cargo.toml with actix-web dependencies
+    # Versions pinned for compatibility with rustc < 1.81 (Cargo 1.75 environment)
     cat > "${project_dir}/Cargo.toml" << EOF
 [package]
 name = "${project_name}"
@@ -2488,10 +2498,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4"
+actix-web = "=4.2.1"
+actix-http = "=3.4.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+time = "=0.3.36"
+url = "=2.5.2"
+indexmap = "=2.7.0"
 
 [dev-dependencies]
 actix-rt = "2"
@@ -2499,7 +2513,7 @@ EOF
 
     # main.rs — basic Actix-web server with health endpoint
     cat > "${project_dir}/src/main.rs" << 'EOF'
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -2592,6 +2606,10 @@ edition = "2021"
 [dependencies]
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
+time = "=0.3.36"
+getrandom = "=0.2.15"
+tempfile = "=3.19.1"
+indexmap = "=2.7.0"
 EOF
         print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
         return
@@ -2601,6 +2619,7 @@ EOF
     (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
 
     # Cargo.toml with Rocket 0.5 (stable, no nightly required)
+    # Pins transitive deps to avoid edition2024 manifests incompatible with rustc < 1.82
     cat > "${project_dir}/Cargo.toml" << EOF
 [package]
 name = "${project_name}"
@@ -2610,6 +2629,10 @@ edition = "2021"
 [dependencies]
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
+time = "=0.3.36"
+getrandom = "=0.2.15"
+tempfile = "=3.19.1"
+indexmap = "=2.7.0"
 EOF
 
     # main.rs — basic Rocket server with health endpoint
@@ -3357,6 +3380,10 @@ EOF
 create_ruby_project() {
     local project_dir="$1"
     local project_name="$2"
+    # Convert hyphenated/underscored names to CamelCase for Ruby module names
+    # e.g. "test-ruby" → "TestRuby", "my_app" → "MyApp"
+    local ruby_module_name
+    ruby_module_name="$(echo "${project_name}" | sed 's/[-_]\([a-zA-Z0-9]\)/\U\1/g; s/^\([a-zA-Z0-9]\)/\U\1/')"
 
     mkdir -p "${project_dir}/lib"
     mkdir -p "${project_dir}/spec"
@@ -3370,7 +3397,7 @@ EOF
 
     cat > "${project_dir}/lib/${project_name}.rb" << EOF
 # Ralph Loop Framework - Ruby Project
-module ${project_name^}
+module ${ruby_module_name}
   def self.hello
     "Hello from Ralph Loop!"
   end
@@ -3380,7 +3407,7 @@ EOF
     cat > "${project_dir}/run.rb" << EOF
 require_relative 'lib/${project_name}'
 
-puts ${project_name^}.hello
+puts ${ruby_module_name}.hello
 EOF
 
     cat > "${project_dir}/spec/spec_helper.rb" << 'EOF'
@@ -3396,9 +3423,9 @@ EOF
     cat > "${project_dir}/spec/${project_name}_spec.rb" << EOF
 require_relative '../lib/${project_name}'
 
-RSpec.describe ${project_name^} do
+RSpec.describe ${ruby_module_name} do
   it 'returns a greeting' do
-    expect(${project_name^}.hello).to eq('Hello from Ralph Loop!')
+    expect(${ruby_module_name}.hello).to eq('Hello from Ralph Loop!')
   end
 end
 EOF
@@ -3799,10 +3826,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                         exit 1
                         ;;
                 esac
