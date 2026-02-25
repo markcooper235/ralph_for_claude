@@ -67,16 +67,33 @@ Create a new project with Ralph Loop pre-configured:
 The project is ready to build, test, and lint immediately after creation — no manual setup required. Package versions are always current because they're resolved at install time, not hardcoded.
 
 **Project types supported:**
-- `typescript` - TypeScript/JavaScript with npm/yarn/pnpm/bun
-- `python` - Python with pip/poetry/pipenv
-- `go` - Go with standard tooling
-- `rust` - Rust with Cargo
-- `angular` - Angular with npm/yarn
-- `react` - React with npm/yarn
-- `nextjs` - Next.js with npm/yarn
-- `express` - Express.js with npm/yarn
-- `flask` - Flask with pip/poetry
-- `ruby` - Ruby with bundler
+
+| Flag | What's created |
+|---|---|
+| `typescript` | TypeScript + Jest + ESLint |
+| `javascript` | Plain JavaScript + Jest + ESLint (no TypeScript) |
+| `express` | Express.js API + Supertest + ESLint |
+| `react` | React + Vite + Vitest (via create-vite) |
+| `nextjs` | Next.js App Router + TypeScript (via create-next-app) |
+| `angular` | Angular 19 workspace (via @angular/cli) |
+| `python` | Python with sub-type prompt: basic / flask / reflex |
+| `flask` | Flask + pytest + venv (direct shortcut) |
+| `reflex` | Python Reflex + pytest + venv (direct shortcut) |
+| `go` | Go module + standard testing |
+| `ruby` | Ruby with sub-type prompt: basic / rails |
+| `rails` | Ruby on Rails + SQLite3 (direct shortcut) |
+| `rust` | Rust with sub-type prompt: basic / actix / rocket |
+| `actix` | Rust Actix Web server (direct shortcut) |
+| `rocket` | Rust Rocket server (direct shortcut) |
+| `dotnet` | .NET with template prompt: webapi / mvc / blazorwasm / blazor |
+| `nx` | Nx monorepo workspace |
+
+**Sub-type groupings:**
+- `--type python` → asks: `basic` / `flask` / `reflex` [basic]
+- `--type ruby` → asks: `basic` / `rails` [basic]
+- `--type rust` → asks: `basic` / `actix` / `rocket` [basic]
+
+Use direct shortcuts (`--type flask`, `--type rails`, `--type actix`, `--type rocket`) to skip the sub-type question entirely.
 
 **Use when:**
 - Starting a new project from scratch
@@ -169,13 +186,47 @@ Include browser testing setup? (yes/no) [yes]:
 ### Rust
 
 ```
-Use workspace? (yes/no) [no]:
-> no
+Rust framework? (basic/actix/rocket) [basic]:
+> actix
 
-Include browser testing setup? (yes/no) [yes]:
+Include browser testing setup? (yes/no) [no]:
 > no
 ```
 
+### Ruby
+
+```
+Ruby framework? (basic/rails) [basic]:
+> rails
+
+Include browser testing setup? (yes/no) [yes]:
+> yes
+```
+
+### .NET
+
+```
+Template? (webapi/mvc/blazorwasm/blazor) [webapi]:
+> webapi
+
+Include browser testing setup? (yes/no) [no]:
+> no
+```
+
+### Flask / Reflex
+
+```
+# Flask (direct shortcut — no sub-type question):
+Use type checking? (mypy/pyright/none) [mypy]:
+> mypy
+
+Include browser testing setup? (yes/no) [no]:
+> no
+
+# Reflex (direct shortcut — no sub-type question):
+Include browser testing setup? (yes/no) [yes]:
+> yes
+```
 
 **Defaults in brackets** - Detected from existing files or common choices
 
@@ -439,6 +490,66 @@ cd my-go-service
 
 ---
 
+### Example 5: Create .NET WebAPI Project
+
+```bash
+./install-ralph-loop.sh --install-global --new-project my-api --type dotnet
+
+# Asks:
+# Template? (webapi/mvc/blazorwasm/blazor) [webapi]: webapi
+# Include browser testing setup? (yes/no) [no]: no
+
+# Result:
+# ✓ Created my-api/ (.NET WebAPI project)
+# ✓ Created my-api.Tests/ (sibling xUnit test project)
+# ✓ Ralph Loop configured
+
+cd my-api
+/ralph-create-prd
+```
+
+---
+
+### Example 6: Create Rails Project (Direct Shortcut)
+
+```bash
+./install-ralph-loop.sh --install-global --new-project my-blog --type rails
+
+# No sub-type question (rails is a direct shortcut)
+# Asks:
+# Include browser testing setup? (yes/no) [yes]: yes
+
+# Result:
+# ✓ Created my-blog/ (Rails app with SQLite3)
+# ✓ Gems installed
+# ✓ Ralph Loop configured
+
+cd my-blog
+/ralph-create-prd
+```
+
+---
+
+### Example 7: Python with Sub-Type Selection
+
+```bash
+./install-ralph-loop.sh --install-global --new-project my-app --type python
+
+# Asks:
+# Python framework? (basic/flask/reflex) [basic]: reflex
+# Include browser testing setup? (yes/no) [yes]: yes
+
+# Result:
+# ✓ Created my-app/ (Reflex app)
+# ✓ venv created and dependencies installed
+# ✓ Tests verified with venv/bin/pytest
+
+cd my-app
+/ralph-create-prd
+```
+
+---
+
 ## Troubleshooting
 
 ### Problem: Skills not found after installation
@@ -648,7 +759,7 @@ export RALPH_BROWSER_TESTING=yes
 ./install-ralph-loop.sh --install-global --init
 ```
 
-*(Note: Environment variable support would need to be added to script)*
+*(Note: Environment variable support for non-interactive use has not been implemented in the current script version)*
 
 ---
 
@@ -671,7 +782,7 @@ The Ralph Loop installation script provides:
 ✅ **Auto-detection** - Detects project type and tools
 ✅ **Interactive configuration** - Tailored questions by project type
 ✅ **Safe backups** - Never lose existing work
-✅ **Multi-language support** - TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
+✅ **Multi-language support** - TypeScript, JavaScript, Python, Flask, Reflex, Go, Rust, Actix, Rocket, Angular, React, Next.js, Express, Ruby, Rails, .NET, Nx (18 project types)
 ✅ **Flexible modes** - New projects or existing projects
 ✅ **Complete setup** - Documentation, templates, configs
 

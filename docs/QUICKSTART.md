@@ -151,7 +151,7 @@ Your code will be organized logically with:
 
 ```bash
 # 1. Create minimal PRD
-cat > ralph/specs/prds/quick-feature.prd.md << EOF
+cat > ralph/specs/prds/quick-feature.prd.md << 'EOF'
 # Quick Feature
 
 ## Functional Requirements
@@ -168,7 +168,8 @@ EOF
 # 2. Run the loop
 /ralph-loop ralph/specs/prds/quick-feature.prd.md
 
-# 3. Done! Check implementations/ directory
+# 3. Done! Archive when complete
+/ralph-archive
 ```
 
 ### Workflow 2: Full Feature (1+ hour)
@@ -336,8 +337,8 @@ vim .claude/templates/my-project-template.md
 - Use `/feedback-selector` to verify correct strategy
 
 **Q: Task dependencies wrong?**
-- Explicitly state dependencies in spec
-- Use TaskUpdate to fix blockedBy relationships
+- Explicitly state dependencies in spec (`Dependencies: REQ-001, REQ-002`)
+- Use `/ralph-modify-spec` to update dependency relationships mid-run
 
 ## Getting Help
 

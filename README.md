@@ -1,14 +1,16 @@
 # Ralph Loop Framework for Claude Code
 
-A Claude Code-focused iterative development framework for PRD/OpenSpec-style coding tasks with integrated feedback loops, testing harnesses, and intelligent task management.
+A Claude Code-focused iterative development framework for PRD/OpenSpec-style coding tasks with integrated feedback loops, parallel subagent execution, git branch management, and intelligent quota management.
 
 ## What is Ralph Loop?
 
 The Ralph Loop Framework is a structured approach to software development that combines:
 - **Specification-driven development** (PRD or OpenSpec formats)
+- **Parallel subagent execution** (max 3 concurrent, dependency-aware)
 - **Continuous feedback loops** (automated testing and validation)
-- **Intelligent task management** (Claude's built-in task system)
-- **Adaptive testing strategies** (project-aware feedback selection)
+- **Git branch management** (feature branches with safe merging)
+- **Quota management** (graceful pause/resume before exhaustion)
+- **Complete archival** (timestamped run history with full audit trail)
 
 The name "Ralph" represents the continuous cycle: **R**equirement → **A**rchitecture → **L**oop → **P**rove → **H**arvest
 
@@ -36,335 +38,341 @@ cd /path/to/existing/project
 
 ### Supported Project Types
 
-- **TypeScript/JavaScript** - npm, yarn, pnpm, bun support
-- **Python** - pip, poetry, pipenv support
-- **Go** - Standard Go tooling
-- **Rust** - Cargo support
-- **C/C++** - CMake, Make support
+18 project type/sub-type combinations are supported:
+
+| Type flag | What's created |
+|---|---|
+| `typescript` | TypeScript + Jest + ESLint |
+| `javascript` | Plain JavaScript + Jest + ESLint (no TypeScript) |
+| `express` | Express.js API + Supertest + ESLint |
+| `react` | React + Vite + Vitest (via create-vite) |
+| `nextjs` | Next.js App Router + TypeScript (via create-next-app) |
+| `angular` | Angular 19 workspace (via @angular/cli) |
+| `python` | Python basic/flask/reflex (prompted) |
+| `flask` | Flask + pytest + venv (shortcut) |
+| `reflex` | Python Reflex + pytest + venv (shortcut) |
+| `go` | Go module + standard testing |
+| `ruby` | Ruby basic/rails (prompted) |
+| `rails` | Ruby on Rails + SQLite3 (shortcut) |
+| `rust` | Rust basic/actix/rocket (prompted) |
+| `actix` | Rust Actix Web server (shortcut) |
+| `rocket` | Rust Rocket server (shortcut) |
+| `dotnet` | .NET (webapi/mvc/blazorwasm/blazor sub-choice) |
+| `nx` | Nx monorepo workspace |
+
+**Sub-type groupings:** When using the parent type (`python`, `ruby`, `rust`), the installer asks which framework:
+- `--type python` → asks: basic / flask / reflex
+- `--type ruby` → asks: basic / rails
+- `--type rust` → asks: basic / actix / rocket
+
+Shortcuts like `--type flask`, `--type rails`, `--type actix` skip the sub-type question.
 
 See `docs/INSTALLATION.md` for detailed installation guide including:
 - Auto-detection of existing projects
-- Interactive configuration
-- Backup system
-- Troubleshooting
+- Interactive configuration per project type
+- Sub-type selection
+- Backup system and troubleshooting
 
 ## Quick Start
 
 1. **Create a specification:**
    ```bash
    # Interactive PRD creation (recommended)
-   /ralph-create-prd
+   /ralph-create-prd my-feature
 
    # Or use templates manually
-   cp .claude/templates/prd-template.md specs/prds/my-feature.prd.md
+   cp .claude/templates/prd-template.md ralph/specs/prds/my-feature.prd.md
    # Edit the PRD with your requirements
    ```
 
 2. **Start the Ralph Loop:**
    ```bash
-   /ralph-loop
+   /ralph-loop ralph/specs/prds/my-feature.prd.md
    ```
 
 3. **Claude will automatically:**
-   - Parse your specification
-   - Break it into tasks
+   - Parse your specification into stories
    - Design the architecture
-   - Implement with continuous testing
+   - Implement with parallel subagents (max 3)
+   - Test each story (lint, unit, UI, code quality)
+   - Commit each story individually
    - Prove all requirements are met
-   - Harvest feedback for iteration
+   - Archive for the next iteration
+
+4. **Archive and merge:**
+   ```bash
+   /ralph-archive
+   ```
 
 ## Core Concepts
 
 ### The Loop Phases
 
-1. **Requirement Intake**: Parse PRD or OpenSpec documents into structured requirements
+1. **Requirement Intake**: Parse PRD or OpenSpec documents into structured stories with dependencies
 2. **Architecture**: Design implementation approach based on requirements and codebase
-3. **Loop Execution**: Implement features with continuous testing and feedback
+3. **Loop Execution**: Implement stories in parallel (max 3, dependency-aware) with continuous testing
 4. **Prove**: Validate all requirements are met through comprehensive testing
-5. **Harvest**: Collect feedback, identify gaps, and iterate
+5. **Harvest**: Collect feedback, generate summary, archive artifacts
 
 ### Specification Formats
 
 **PRD (Product Requirements Document)**
-- Traditional requirement format
-- User stories and acceptance criteria
-- Functional and non-functional requirements
+- Traditional requirement format with user stories and acceptance criteria
+- Each `REQ-XXX` becomes one story → one Claude Task → one git commit
 - Best for: Product features, business requirements
 
 **OpenSpec (Declarative Specification)**
 - Behavioral contracts with pre/post conditions
-- Property-based specifications
-- Type signatures and constraints
+- Property-based specifications with type signatures and constraints
 - Best for: APIs, libraries, technical specifications
+
+### Git Integration
+
+- Each run creates branch: `ralph/<spec-name>-<timestamp>`
+- Each story gets its own commit when all tests pass
+- Archive merges to origin branch with regular merge (preserves all commits)
+- Ralph branch preserved for audit trail
+
+### Quota Management
+
+Ralph monitors context quota usage throughout a run:
+- **Warning** (75%): User notified
+- **Safety** (85%): Pauses gracefully BEFORE starting next task
+- **Resume**: `/ralph-resume` continues from exact pause point — nothing is lost
 
 ## Available Skills
 
 ### Core Loop Skills
 
-- **`/ralph-loop`** - Main orchestrator for the entire development cycle
-- **`/test-spec`** - Test implementation against specification requirements
+- **`/ralph-create-prd`** - Interactive PRD creation with story breakdown, dependency detection, execution planning
+- **`/ralph-loop`** - Main orchestrator: parallel implementation (max 3), story commits, prove, harvest
+- **`/ralph-archive`** - Validate, archive artifacts, merge to origin branch, clean state
+- **`/ralph-status`** - Progress monitoring with story statuses and quota usage
+- **`/ralph-resume`** - Resume after quota pause or interruption
+
+### Spec Modification Skills
+
+- **`/ralph-modify-spec`** - Modify specification during run (add/change/remove requirements)
+- **`/ralph-add-requirement`** - Quick add single requirement discovered mid-run
+
+### Testing Skills
+
+- **`/test-spec`** - Test specific requirement against acceptance criteria
 - **`/prove-requirements`** - Comprehensive validation of all requirements
+- **`/browser-test`** - Browser-based UI testing with Playwright
+- **`/feedback-selector`** - Intelligent feedback method selection
 
 ### Parsing Skills
 
 - **`/parse-prd`** - Parse PRD documents into structured tasks
 - **`/parse-openspec`** - Parse OpenSpec documents into contracts and tests
 
-### Testing Skills
-
-- **`/browser-test`** - Browser-based UI testing with Playwright
-- **`/feedback-selector`** - Intelligent feedback method selection
-
 ## Project Structure
 
-```
-ralph_for_claude/
-├── .claude/
-│   ├── skills/              # Custom Ralph Loop skills
-│   │   ├── ralph-loop.md
-│   │   ├── test-spec.md
-│   │   ├── browser-test.md
-│   │   ├── feedback-selector.md
-│   │   ├── parse-prd.md
-│   │   ├── parse-openspec.md
-│   │   └── prove-requirements.md
-│   ├── templates/           # Specification templates
-│   │   ├── prd-template.md
-│   │   └── openspec-template.yaml
-│   └── feedback-configs/    # Auto-generated feedback configurations
-├── specs/
-│   ├── prds/               # Product Requirements Documents
-│   └── openspecs/          # OpenSpec format specifications
-├── implementations/         # Organized by specification
-├── tests/                  # Tests organized by specification
-├── feedback/               # Test results and feedback reports
-├── examples/               # Example specs and implementations
-└── docs/                   # Documentation
+After running the installer, your project will have:
 
+```
+project/
+├── .claude/
+│   ├── skills/                     # Custom Ralph skills (subdirectory format)
+│   └── templates/
+│       ├── prd-template.md
+│       └── openspec-template.yaml
+├── ralph/
+│   ├── .ralph/                     # Runtime state (not tracked in git)
+│   ├── archive/                    # Completed run archives
+│   ├── specs/
+│   │   ├── prds/                   # PRD files
+│   │   └── openspecs/              # OpenSpec files
+│   ├── docs/                       # Ralph documentation
+│   ├── tests/browser/              # Playwright tests
+│   ├── feedback/                   # Test results
+│   ├── .ralph-quota-config.json    # Quota config template
+│   ├── .ralph-state-template.json  # State template
+│   └── .ralph-story-template.json  # Story template
+├── CLAUDE.md                       # Claude guidance
+└── README.md                       # Project readme
+```
+
+### Global Skills (~/.claude/)
+
+Skills are installed as subdirectories; commands as flat files:
+
+```
+~/.claude/skills/
+├── ralph-loop/SKILL.md
+├── ralph-create-prd/SKILL.md
+├── test-spec/SKILL.md
+├── browser-test/SKILL.md
+├── feedback-selector/SKILL.md
+├── parse-prd/SKILL.md
+├── parse-openspec/SKILL.md
+└── prove-requirements/SKILL.md
+
+~/.claude/commands/
+├── ralph-archive.md
+├── ralph-status.md
+├── ralph-resume.md
+├── ralph-modify-spec.md
+├── ralph-add-requirement.md
+├── ralph-loop-v2.md
+└── ralph-quota.md
 ```
 
 ## Example Workflows
 
-### Workflow 1: Building a Feature from PRD
+### Workflow 1: New Project from Scratch
 
 ```bash
-# 1. Create your PRD from template
-cp .claude/templates/prd-template.md specs/prds/user-authentication.prd.md
-# Edit the PRD with your requirements
+# 1. Create project with Ralph Loop pre-configured
+./install-ralph-loop.sh --install-global --new-project my-api --type express
 
-# 2. Parse and validate
-/parse-prd specs/prds/user-authentication.prd.md
+# 2. Create a spec
+cd my-api
+/ralph-create-prd user-endpoints
 
-# 3. Run the complete loop
-/ralph-loop specs/prds/user-authentication.prd.md
+# 3. Run the loop
+/ralph-loop ralph/specs/prds/user-endpoints.prd.md
 
-# 4. Claude will:
-#    - Create tasks for each requirement
-#    - Design architecture
-#    - Implement with continuous testing
-#    - Prove all requirements
-#    - Generate feedback report
+# 4. Archive and merge when complete
+/ralph-archive
 ```
 
-### Workflow 2: Building an API from OpenSpec
+### Workflow 2: Building a Feature from PRD
+
+```bash
+# 1. Create your PRD (interactive)
+/ralph-create-prd user-authentication
+
+# 2. Run the complete loop
+/ralph-loop ralph/specs/prds/user-authentication.prd.md
+
+# 3. Check progress anytime
+/ralph-status
+
+# 4. If quota paused, resume later
+/ralph-resume
+
+# 5. Archive when ready
+/ralph-archive
+```
+
+### Workflow 3: Building an API from OpenSpec
 
 ```bash
 # 1. Create OpenSpec
-cp .claude/templates/openspec-template.yaml specs/openspecs/user-api.openspec.yaml
-# Define your contracts, types, and properties
+cp .claude/templates/openspec-template.yaml ralph/specs/openspecs/user-api.openspec.yaml
+# Define contracts, types, and properties
 
-# 2. Parse and generate tests
-/parse-openspec specs/openspecs/user-api.openspec.yaml
-
-# 3. Run the loop
-/ralph-loop specs/openspecs/user-api.openspec.yaml
-
-# 4. Claude will generate:
-#    - Property-based tests
-#    - Contract validation tests
-#    - Example-based tests
-#    - Complete implementation
+# 2. Run the loop
+/ralph-loop ralph/specs/openspecs/user-api.openspec.yaml
 ```
 
-### Workflow 3: Testing Existing Code
+### Workflow 4: Adding to an Existing Project
 
 ```bash
-# 1. Let Claude determine best feedback method
-/feedback-selector
+cd /path/to/my-existing-app
 
-# 2. Test specific requirement
-/test-spec REQ-001
+# Auto-detect project type and tools
+./install-ralph-loop.sh --install-global --init
 
-# 3. Test all requirements
-/test-spec --all
+# Create PRD
+/ralph-create-prd new-feature
 
-# 4. For UI components, use browser testing
-/browser-test src/components/LoginForm.tsx --visual-regression --a11y
-
-# 5. Comprehensive proof of all requirements
-/prove-requirements specs/prds/user-authentication.prd.md
+# Run loop
+/ralph-loop ralph/specs/prds/new-feature.prd.md
 ```
 
 ## Task Management Integration
 
-The framework leverages Claude's task management system:
+The framework uses Claude's built-in task system:
 
-```bash
-# View all tasks
-Use TaskList tool in Claude Code
+- Each `REQ-XXX` from your spec becomes one Claude Task
+- Tasks are created, updated, and completed automatically
+- Dependencies are tracked and respected (no story starts before its deps complete)
+- Max 3 stories run in parallel at any time
 
-# Tasks are automatically:
-# - Created from requirements
-# - Updated with test results
-# - Linked with dependencies
-# - Tracked through completion
+**Story execution planning:**
 ```
+Phase 1 (parallel, no deps):
+  - REQ-001 (high, touches: auth/login.ts)
+  - REQ-002 (high, touches: auth/session.ts)
 
-Each task includes:
-- Clear acceptance criteria
-- Links to requirements
-- Test coverage status
-- Implementation progress
+Phase 2 (sequential, same file):
+  - REQ-003 (medium, deps: REQ-001, touches: auth/login.ts)
+
+Phase 3 (parallel, deps satisfied):
+  - REQ-004 (low, deps: REQ-002)
+  - REQ-005 (low, deps: REQ-001)
+```
 
 ## Testing Strategies
 
-### Unit Testing
-- Generated from functional requirements
-- Test IDs match requirement IDs
-- Supports: Python (pytest), JavaScript (Jest/Vitest), Go, Rust
+### Per Story (Every story must pass all applicable tests):
 
-### Browser Testing
-- Playwright-based automation
-- Visual regression testing
-- Accessibility (WCAG 2.1) validation
-- Performance metrics (Lighthouse)
+1. **Lint/Format** (max 3 iterations) — ESLint, Black, Clippy; auto-fix when possible
+2. **Unit Tests** (max 5 iterations) — one test per acceptance criterion
+3. **Code Quality** (max 3 iterations) — complexity, duplication checks
+4. **UI Tests** (max 5 iterations, if applicable) — Playwright, visual regression, accessibility
+5. **Integration Tests** (max 5 iterations) — cross-component validation
 
-### Contract Testing
-- API endpoint validation
-- Request/response contracts
-- Integration testing
+### Browser Testing Defaults (Smart per type):
 
-### Property-Based Testing
-- From OpenSpec properties
-- Uses Hypothesis (Python), fast-check (JS)
-- Validates invariants
+| Framework | Browser testing default |
+|---|---|
+| angular, react, nextjs | yes (UI frameworks) |
+| ruby/rails, python/reflex | yes (full-stack UI) |
+| dotnet mvc, dotnet blazor, dotnet blazorwasm | yes (UI templates) |
+| typescript, javascript, express | no (backend/utility) |
+| go, python/basic, python/flask | no (API/CLI) |
+| rust/basic, rust/actix, rust/rocket | no (API frameworks) |
+| dotnet webapi | no (REST API) |
 
-## Feedback Loop Mechanisms
-
-The framework adapts testing to your project type:
+### Testing by Project Type:
 
 | Project Type | Primary Feedback Method | Secondary Methods |
-|--------------|------------------------|-------------------|
+|---|---|---|
 | Web Frontend | Browser Testing | Visual Regression, A11y |
 | Web Backend | Integration Tests | Unit Tests, Load Tests |
 | API/Service | Contract Tests | Integration, Performance |
 | Library/SDK | Unit Tests | Type Checking, Examples |
 | CLI Tool | Command Tests | Output Validation |
-| Mobile App | E2E Tests | Visual Regression |
-
-## Advanced Usage
-
-### Resume from Checkpoint
-
-```bash
-/ralph-loop --resume=user-auth-checkpoint-3
-```
-
-### Run Specific Phase
-
-```bash
-/ralph-loop specs/prds/feature.prd.md --phase=architecture
-/ralph-loop specs/prds/feature.prd.md --phase=implement
-/ralph-loop specs/prds/feature.prd.md --phase=prove
-```
-
-### Interactive Browser Testing
-
-```bash
-/browser-test src/components/Dashboard.tsx --interactive
-```
-
-### Custom Feedback Configuration
-
-```bash
-/feedback-selector --setup
-# Generates: .claude/feedback-configs/feedback-config.json
-# Customize thresholds, tools, and methods
-```
 
 ## Best Practices
 
-1. **Write specs first** - Always start with PRD or OpenSpec before coding
-2. **Small, testable requirements** - Each requirement should map to 1-3 tasks
-3. **Continuous testing** - Run `/test-spec` after each implementation
-4. **Use appropriate feedback** - Let `/feedback-selector` choose the right tools
-5. **Iterate on failures** - Feedback creates new tasks automatically
-6. **Track progress** - Use task management to see overall status
-
-## Examples
-
-See the `examples/` directory for:
-- Complete PRD with implementation
-- OpenSpec with generated tests
-- Multi-phase loop execution
-- Feedback integration patterns
-
-## Extending the Framework
-
-### Adding Custom Skills
-
-Create new skill files in `.claude/skills/`:
-
-```markdown
-# My Custom Skill
-
-## Usage
-/my-skill [args]
-
-## Instructions
-[Step-by-step instructions for Claude]
-```
-
-### Creating Custom Templates
-
-Add templates to `.claude/templates/`:
-- Custom specification formats
-- Project-specific requirements
-- Test templates
-
-### Custom Feedback Methods
-
-Edit `.claude/feedback-configs/feedback-config.json`:
-- Add new testing tools
-- Customize thresholds
-- Define project-specific strategies
+1. **Always use `/ralph-create-prd`** for new specs — ensures proper story breakdown, detects dependencies
+2. **5-10 requirements per spec** — larger features → multiple specs for better parallelization
+3. **Check status regularly** with `/ralph-status` — monitor progress, track quota usage
+4. **Review archives** in `ralph/archive/*/summary.md` — learn from each run
+5. **Write testable acceptance criteria** — "response time < 200ms" beats "must be fast"
+6. **Let parallel execution work** — trust dependency resolution, don't intervene unless necessary
 
 ## Troubleshooting
 
-**Loop gets stuck?**
+**Loop gets stuck or paused?**
 ```bash
-/ralph-loop status
+/ralph-status
+/ralph-resume
 ```
 
-**Need to reset?**
+**Need to abandon a failed run?**
 ```bash
-/ralph-loop reset
+/ralph-archive --abandon
+# Archives artifacts (marked abandoned), does NOT merge
+```
+
+**Want to add a requirement mid-run?**
+```bash
+/ralph-add-requirement "Email verification" --priority=high
+# Or full spec edit:
+/ralph-modify-spec
 ```
 
 **Check feedback history:**
 ```bash
-ls feedback/<spec-id>/
+ls ralph/feedback/
+cat ralph/archive/<run-id>/summary.md
 ```
-
-## Philosophy
-
-The Ralph Loop Framework is built on these principles:
-
-1. **Specification-Driven**: Clear requirements lead to clear implementations
-2. **Continuous Feedback**: Test early, test often, test automatically
-3. **Intelligent Adaptation**: Testing strategies adapt to project context
-4. **Task-Centric**: Break complex problems into manageable tasks
-5. **Iterative Refinement**: Each loop improves based on feedback
 
 ## Requirements
 
@@ -374,35 +382,40 @@ The framework works with any Claude Code installation. Individual skills may req
 - **Visual regression**: Percy or BackstopJS
 - **Accessibility**: axe-core
 
-The framework will detect missing dependencies and offer to install them.
+The framework detects missing dependencies and offers to install them.
 
-## Contributing
+## Philosophy
 
-To contribute to the framework:
-1. Add skills to `.claude/skills/`
-2. Create templates in `.claude/templates/`
-3. Share example specifications in `examples/`
-4. Improve feedback configurations
+The Ralph Loop Framework is built on these principles:
 
-## License
+1. **Specification-Driven**: Clear requirements lead to clear implementations
+2. **Parallel by Default**: Max throughput with dependency-aware scheduling
+3. **Never Lose Work**: Quota-aware execution with graceful pause/resume
+4. **Traceable**: Every story = one commit, every run = one archive
+5. **Iterative Refinement**: Each loop improves based on feedback
 
-This framework is designed for use with Claude Code and can be freely adapted to your needs.
+## Documentation
 
----
-
-## Getting Help
-
-- Read `CLAUDE.md` for Claude-specific instructions
-- Check `docs/` for detailed documentation
-- Review `examples/` for working examples
-- Use `/help` in Claude Code for general help
+- `docs/QUICKSTART.md` - 5-minute getting started
+- `docs/INSTALLATION.md` - Detailed installation guide with all project types
+- `docs/COMPLETE-WORKFLOW.md` - End-to-end workflow with full command output examples
+- `docs/QUOTA-MANAGEMENT.md` - Quota management guide
+- `docs/SPEC-MODIFICATIONS.md` - Modifying specs during a run
+- `ralph/archive/*/summary.md` - Per-run summaries (after running)
 
 ---
 
 **Start your first Ralph Loop:**
 
 ```bash
-/ralph-loop
-```
+# Install globally
+./install-ralph-loop.sh --install-global
 
-Claude will guide you through creating your first specification and running the complete development cycle.
+# Create a new project
+./install-ralph-loop.sh --install-global --new-project my-app --type typescript
+
+# Start the loop
+cd my-app
+/ralph-create-prd
+/ralph-loop ralph/specs/prds/<spec>.prd.md
+```
