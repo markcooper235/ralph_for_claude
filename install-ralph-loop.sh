@@ -2109,6 +2109,10 @@ create_angular_project() {
     # ng new creates its own directory, so we run it from the parent.
     # The pre-created empty project dir is removed first to avoid conflicts.
     # ng new also runs npm install automatically.
+    # IMPORTANT: the subshell below removes the pre-created empty project dir
+    # (so ng new can create it cleanly), then ng new recreates it with a new inode.
+    # After the subshell exits, the main shell's CWD still points to the OLD
+    # (now-orphaned) inode. We must re-cd by absolute path to get the new inode.
     if (
         cd "${parent_dir}" || exit 1
         rm -rf "${project_name}" 2>/dev/null || true
@@ -2120,6 +2124,8 @@ create_angular_project() {
             --defaults \
             --package-manager=npm
     ); then
+        # Re-enter project dir by absolute path to pick up the new inode
+        cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
         print_success "Angular project scaffolded with latest compatible packages"
         print_info "(All dependencies installed by ng new)"
         return 0
@@ -2127,6 +2133,7 @@ create_angular_project() {
 
     # Restore directory so subsequent script steps don't fail
     mkdir -p "${current_dir}"
+    cd "${current_dir}" 2>/dev/null || true
     print_warning "Angular scaffolding failed."
     print_warning "To scaffold manually run:"
     print_warning "  cd ${parent_dir} && npx @angular/cli@latest new ${project_name} --skip-git --standalone --defaults"
@@ -2148,16 +2155,22 @@ create_react_project() {
 
     # create-vite creates its own directory; run from parent after removing pre-created empty dir.
     # Note: create-vite does NOT run npm install automatically.
+    # IMPORTANT: rm -rf inside the subshell orphans our CWD inode.
+    # We must re-cd by absolute path after the subshell to get the new inode.
     if ! (
         cd "${parent_dir}" || exit 1
         rm -rf "${project_name}" 2>/dev/null || true
         npm create vite@latest "${project_name}" -- --template react-ts
     ); then
         mkdir -p "${current_dir}"
+        cd "${current_dir}" 2>/dev/null || true
         print_warning "React/Vite scaffolding failed."
         print_warning "To scaffold manually: cd ${parent_dir} && npm create vite@latest ${project_name} -- --template react-ts"
         return 0
     fi
+
+    # Re-enter project dir by absolute path to pick up the new inode
+    cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
 
     # Install base deps (create-vite does not run npm install)
     print_info "Installing base React dependencies..."
@@ -2256,6 +2269,8 @@ create_nextjs_project() {
 
     # create-next-app creates its own directory; run from parent after removing pre-created empty dir.
     # create-next-app@latest runs npm install automatically.
+    # IMPORTANT: rm -rf inside the subshell orphans our CWD inode.
+    # We must re-cd by absolute path after the subshell to get the new inode.
     if ! (
         cd "${parent_dir}" || exit 1
         rm -rf "${project_name}" 2>/dev/null || true
@@ -2269,10 +2284,14 @@ create_nextjs_project() {
             --use-npm
     ); then
         mkdir -p "${current_dir}"
+        cd "${current_dir}" 2>/dev/null || true
         print_warning "Next.js scaffolding failed."
         print_warning "To scaffold manually: npx create-next-app@latest ${project_name} --typescript --eslint --src-dir --app --use-npm"
         return 0
     fi
+
+    # Re-enter project dir by absolute path to pick up the new inode
+    cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
 
     # Install jest testing packages — npm resolves compatible latest versions
     print_info "Installing jest testing packages (npm selects compatible latest versions)..."
