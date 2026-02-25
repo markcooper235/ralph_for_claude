@@ -1751,15 +1751,15 @@ create_typescript_project() {
     "lint": "eslint src tests --ext .ts"
   },
   "devDependencies": {
-    "@types/jest": "^29.0.0",
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.0.0",
-    "ts-jest": "^29.0.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   }
 }
 EOF
@@ -1861,11 +1861,11 @@ create_python_project() {
 
     # requirements.txt
     cat > "${project_dir}/requirements.txt" << 'EOF'
-pytest>=7.0.0
-pytest-cov>=4.0.0
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0
+pytest>=8.3.0
+pytest-cov>=5.0.0
+black>=24.10.0
+flake8>=7.1.0
+mypy>=1.11.0
 EOF
 
     # setup.py
@@ -1976,7 +1976,7 @@ create_go_project() {
     cat > "${project_dir}/go.mod" << EOF
 module ${project_name}
 
-go 1.21
+go 1.23
 EOF
 
     # main.go
@@ -2116,29 +2116,29 @@ create_angular_project() {
     "lint": "ng lint"
   },
   "dependencies": {
-    "@angular/animations": "^17.0.0",
-    "@angular/common": "^17.0.0",
-    "@angular/compiler": "^17.0.0",
-    "@angular/core": "^17.0.0",
-    "@angular/forms": "^17.0.0",
-    "@angular/platform-browser": "^17.0.0",
-    "@angular/router": "^17.0.0",
-    "rxjs": "^7.8.0",
-    "tslib": "^2.6.0",
-    "zone.js": "^0.14.0"
+    "@angular/animations": "^18.2.0",
+    "@angular/common": "^18.2.0",
+    "@angular/compiler": "^18.2.0",
+    "@angular/core": "^18.2.0",
+    "@angular/forms": "^18.2.0",
+    "@angular/platform-browser": "^18.2.0",
+    "@angular/router": "^18.2.0",
+    "rxjs": "^7.8.1",
+    "tslib": "^2.7.0",
+    "zone.js": "^0.14.10"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^17.0.0",
-    "@angular/cli": "^17.0.0",
-    "@angular/compiler-cli": "^17.0.0",
-    "@types/jasmine": "^5.1.0",
-    "jasmine-core": "^5.1.0",
-    "karma": "^6.4.0",
+    "@angular-devkit/build-angular": "^18.2.0",
+    "@angular/cli": "^18.2.0",
+    "@angular/compiler-cli": "^18.2.0",
+    "@types/jasmine": "^5.1.4",
+    "jasmine-core": "^5.3.0",
+    "karma": "^6.4.4",
     "karma-chrome-launcher": "^3.2.0",
-    "karma-coverage": "^2.2.0",
+    "karma-coverage": "^2.2.1",
     "karma-jasmine": "^5.1.0",
     "karma-jasmine-html-reporter": "^2.1.0",
-    "typescript": "^5.2.0"
+    "typescript": "~5.5.0"
   }
 }
 EOF
@@ -2153,7 +2153,8 @@ EOF
     "esModuleInterop": true,
     "moduleResolution": "bundler",
     "experimentalDecorators": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "forceConsistentCasingInFileNames": true
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
@@ -2376,26 +2377,26 @@ create_react_project() {
     "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.0.0",
-    "@testing-library/react": "^14.0.0",
-    "@testing-library/user-event": "^14.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "@vitest/coverage-v8": "^1.0.0",
-    "eslint": "^8.0.0",
-    "eslint-plugin-react": "^7.33.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "jsdom": "^24.0.0",
-    "typescript": "^5.2.0",
-    "vite": "^5.0.0",
-    "vitest": "^1.0.0"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.8"
   }
 }
 EOF
@@ -2547,21 +2548,22 @@ create_nextjs_project() {
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "next": "^15.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.0.0",
-    "@testing-library/react": "^14.0.0",
-    "@testing-library/user-event": "^14.0.0",
-    "@types/jest": "^29.0.0",
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "jest": "^29.0.0",
-    "jest-environment-jsdom": "^29.0.0",
-    "ts-jest": "^29.0.0",
-    "typescript": "^5.2.0"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
   }
 }
 EOF
@@ -2688,22 +2690,22 @@ create_express_project() {
     "lint": "eslint src tests --ext .ts"
   },
   "dependencies": {
-    "express": "^4.18.0"
+    "express": "^4.21.1"
   },
   "devDependencies": {
-    "@types/express": "^4.17.0",
-    "@types/jest": "^29.0.0",
-    "@types/node": "^20.0.0",
-    "@types/supertest": "^6.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.0.0",
-    "nodemon": "^3.0.0",
-    "supertest": "^6.3.0",
-    "ts-jest": "^29.0.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.2.0"
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.0.0",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.7",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   }
 }
 EOF
@@ -2730,12 +2732,11 @@ EOF
 import type { Config } from 'jest';
 
 const config: Config = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/tests/**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.ts'],
-  globals: {
-    'ts-jest': { tsconfig: { module: 'commonjs' } },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
   },
 };
 
@@ -2836,11 +2837,11 @@ create_flask_project() {
     mkdir -p "${project_dir}/tests"
 
     cat > "${project_dir}/requirements.txt" << 'EOF'
-flask>=3.0.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
-black>=23.0.0
-flake8>=6.0.0
+flask>=3.1.0
+pytest>=8.3.0
+pytest-cov>=5.0.0
+black>=24.10.0
+flake8>=7.1.0
 EOF
 
     cat > "${project_dir}/app/__init__.py" << 'EOF'
@@ -2961,8 +2962,8 @@ create_ruby_project() {
     cat > "${project_dir}/Gemfile" << EOF
 source 'https://rubygems.org'
 
-gem 'rspec', '~> 3.12'
-gem 'rubocop', '~> 1.57', require: false
+gem 'rspec', '~> 3.13'
+gem 'rubocop', '~> 1.65', require: false
 EOF
 
     cat > "${project_dir}/lib/${project_name}.rb" << EOF
@@ -3003,7 +3004,7 @@ EOF
     cat > "${project_dir}/.rubocop.yml" << 'EOF'
 AllCops:
   NewCops: enable
-  TargetRubyVersion: 3.2
+  TargetRubyVersion: 3.3
 
 Style/Documentation:
   Enabled: false
