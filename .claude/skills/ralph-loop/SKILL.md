@@ -60,7 +60,11 @@ Auto-detect additional dependencies:
 - Logical (delete depends on create)
 - Code conflicts: requirements touching same files run sequentially (by priority)
 
-UI test flag: check for keywords (UI/interface/component/form/button), file types (.tsx/.jsx/.vue/.svelte), or UI_TESTS_REQUIRED metadata.
+UI test flag — set testRequirements.ui = true if ANY of the following are present (any one is sufficient):
+1. PRD metadata contains `ui_tests_required: true` — AUTHORITATIVE, always sets ui = true regardless of other signals
+2. Requirement text contains UI keywords: "UI", "interface", "page", "component", "form", "button", "display", "visual", "browser", "screen"
+3. codeImpact.files contains UI file extensions: .tsx, .jsx, .vue, .svelte, .html paired with JS/TS
+Rule: ui defaults to false; any signal above sets it to true. Keyword absence must never override explicit metadata.
 
 Save ralph/.ralph/stories.json:
 {{"stories":[{{"id","title","description","priority","acceptanceCriteria":[],"dependencies":[],"codeImpact":{{"files":[]}}}}],"testRequirements":{{"unit":true,"lint":true,"codeQuality":true,"ui":false,"integration":true}}}}
@@ -219,7 +223,7 @@ Run all tests for {story_id}. Load test tools from ralph/.ralph/architecture.jso
 A. Lint/Format: run linter, auto-fix where possible, max 3 iterations
 B. Unit tests: run tests for this story only, max 5 iterations for logic failures
 C. Code quality: complexity and duplication checks
-D. UI tests (only if testTools.ui set): playwright, max 5 iterations
+D. UI tests (only if testTools.ui set): playwright, max 5 iterations — before running Playwright, ensure the dev server is running: check `curl -s -o /dev/null -w "%{http_code}" <BASE_URL>` and start it in background if not responsive (see browser-test skill server table for commands/ports by project type)
 
 Save ralph/.ralph/artifacts/{story_id}-tests.json:
 {{"storyId":"{story_id}","overall":"passed|failed","lint":{{"status","iterations":0}},"unit":{{"status","iterations":0,"coverage":0}},"codeQuality":{{"status"}},"ui":{{"status","iterations":0}}}}

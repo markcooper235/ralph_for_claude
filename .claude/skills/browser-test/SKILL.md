@@ -24,6 +24,23 @@ When this skill is invoked:
    - If not installed, offer to install: `npm install -D @playwright/test`
    - Initialize browser testing configuration if needed
    - Set up test fixtures and helpers
+   - **Start dev server** (required before Playwright can connect):
+     - Detect project type from `ralph/.ralph/architecture.json` (`.projectType`) or codebase
+     - Determine server command and base URL using this table:
+
+       | Project type | Start command | Base URL |
+       |---|---|---|
+       | React (Vite) | `npm run dev` | `http://localhost:5173` |
+       | Next.js | `npm run dev` | `http://localhost:3000` |
+       | Angular | `npm run start` | `http://localhost:4200` |
+       | Reflex | `venv/bin/reflex run` | `http://localhost:3000` |
+       | Rails | `bundle exec rails server` | `http://localhost:3000` |
+       | .NET MVC/Blazor | `dotnet run` | check `Properties/launchSettings.json` |
+
+     - Check if server already responding: `curl -s -o /dev/null -w "%{http_code}" <BASE_URL>` → skip start if HTTP 200/30x returned
+     - If not running: start in background (`nohup <command> &` or `<command> &`), then poll until responsive (up to 30 s, 1 s intervals)
+     - Record `SERVER_STARTED_BY_US=true` so it can be stopped in cleanup
+     - If server fails to start: abort tests and report the error clearly
 
 2. **Identify Test Targets**
    - If component-path provided, test that specific component/page
@@ -106,6 +123,7 @@ When this skill is invoked:
     - Update related tasks based on test results
     - Create new tasks for visual regressions or a11y issues
     - Add test coverage information to task descriptions
+    - If `SERVER_STARTED_BY_US=true`: stop the dev server process after tests complete
 
 ## Test Template Generation
 
@@ -116,7 +134,8 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('ComponentName', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000/component-path');
+    // BASE_URL is set from project type detection (e.g. localhost:5173 React, :3000 Next/Reflex/Rails, :4200 Angular)
+    await page.goto(`${process.env.BASE_URL || 'http://localhost:3000'}/component-path`);
   });
 
   test('REQ-XXX: requirement description', async ({ page }) => {
