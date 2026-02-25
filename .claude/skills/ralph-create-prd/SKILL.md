@@ -75,7 +75,7 @@ Continue until user says "done" or has 3-10 stories.
 - If existing codebase, ask: "Which files/modules will this touch?"
 - Use Glob/Grep to search relevant code
 - Note potential conflicts with other requirements
-- **NX workspace:** if `nx.json` or `ralph/.ralph/nx-workspace.json` exists, also ask:
+- **NX workspace:** if `nx.json` or `ralph/nx-workspace.json` exists, also ask:
   "Which NX project(s) does this requirement touch?"
   (e.g., `react-app`, `nest-api`, `shared-lib`)
   Store as `nx_projects: [react-app, nest-api]` in the requirement metadata.

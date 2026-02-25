@@ -35,7 +35,7 @@ When this skill is invoked:
    - Check that tests actually validate the requirement
 
 4. **Execute All Tests**
-   - Check for NX workspace (`ralph/.ralph/nx-workspace.json` or `nx.json`)
+   - Check for NX workspace (`ralph/nx-workspace.json` or `nx.json`)
    - **Standard project:** run complete test suite, then `/test-spec --all`
    - **NX workspace:**
      - Run `nx run-many -t test,lint` to validate all projects

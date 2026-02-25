@@ -35,7 +35,7 @@ git checkout -b "$RALPH_BRANCH"
 ```
 Save both branches to state.json.
 
-**NX workspace check:** If `nx.json` or `ralph/.ralph/nx-workspace.json` exists, load NX config (frontends, backends, unit_test runner). Use `nx run <project>:<cmd>` instead of `npm run <cmd>` throughout.
+**NX workspace check:** If `nx.json` or `ralph/nx-workspace.json` exists, load NX config (frontends, backends, unit_test runner). Use `nx run <project>:<cmd>` instead of `npm run <cmd>` throughout.
 
 ### Phase 1: Parse Specification
 

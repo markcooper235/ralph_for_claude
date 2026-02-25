@@ -438,7 +438,7 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             # Test framework
@@ -448,12 +448,12 @@ ask_project_questions() {
             fi
 
             echo "Test framework? (jest/vitest/mocha) [${default_test}]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
 
             # Build tool
             echo "Use build tool? (none/webpack/vite/esbuild) [vite]:"
-            read -r build_choice
+            read -r build_choice || true
             PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
             ;;
 
@@ -464,11 +464,11 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (npm/yarn/pnpm) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             echo "Test framework? (karma/jest) [karma]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-karma}"
             ;;
 
@@ -479,15 +479,15 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             echo "Test framework? (jest/vitest) [vitest]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-vitest}"
 
             echo "Build tool? (vite/create-react-app) [vite]:"
-            read -r build_choice
+            read -r build_choice || true
             PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
             ;;
 
@@ -498,16 +498,20 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             echo "Test framework? (jest/vitest) [jest]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-jest}"
 
             echo "Use App Router? (yes/no) [yes]:"
-            read -r router_choice
+            read -r router_choice || true
             PROJECT_CONFIG[app_router]="${router_choice:-yes}"
+
+            echo "Use React Compiler? (auto-memoization, stable since 2025) (yes/no) [no]:"
+            read -r rc_choice || true
+            PROJECT_CONFIG[react_compiler]="${rc_choice:-no}"
             ;;
 
         express)
@@ -517,15 +521,15 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             echo "Test framework? (jest/mocha/supertest) [jest]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-jest}"
 
             echo "Use TypeScript? (yes/no) [yes]:"
-            read -r ts_choice
+            read -r ts_choice || true
             PROJECT_CONFIG[typescript]="${ts_choice:-yes}"
             ;;
 
@@ -537,7 +541,7 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (pip/poetry/pipenv) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             # Test framework
@@ -547,12 +551,12 @@ ask_project_questions() {
             fi
 
             echo "Test framework? (pytest/unittest) [${default_test}]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
 
             # Type checking
             echo "Use type checking? (mypy/pyright/none) [mypy]:"
-            read -r type_choice
+            read -r type_choice || true
             PROJECT_CONFIG[type_checker]="${type_choice:-mypy}"
             ;;
 
@@ -563,25 +567,25 @@ ask_project_questions() {
             fi
 
             echo "Package manager? (pip/poetry/pipenv) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             echo "Test framework? (pytest/unittest) [pytest]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-pytest}"
 
             echo "Use SQLAlchemy? (yes/no) [no]:"
-            read -r db_choice
+            read -r db_choice || true
             PROJECT_CONFIG[sqlalchemy]="${db_choice:-no}"
             ;;
 
         ruby)
             echo "Test framework? (rspec/minitest) [rspec]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[test_framework]="${test_choice:-rspec}"
 
             echo "Use Bundler? (yes/no) [yes]:"
-            read -r bundler_choice
+            read -r bundler_choice || true
             PROJECT_CONFIG[package_manager]="bundler"
             ;;
 
@@ -590,7 +594,7 @@ ask_project_questions() {
             PROJECT_CONFIG[test_framework]="testing"
 
             echo "Use additional test framework? (testify/ginkgo/none) [none]:"
-            read -r test_choice
+            read -r test_choice || true
             PROJECT_CONFIG[additional_test]="${test_choice:-none}"
             ;;
 
@@ -599,14 +603,14 @@ ask_project_questions() {
             PROJECT_CONFIG[test_framework]="cargo-test"
 
             echo "Use workspace? (yes/no) [no]:"
-            read -r workspace_choice
+            read -r workspace_choice || true
             PROJECT_CONFIG[workspace]="${workspace_choice:-no}"
             ;;
 
         nx)
             # Workspace type
             echo "Workspace type? (integrated/package-based) [integrated]:"
-            read -r ws_type
+            read -r ws_type || true
             PROJECT_CONFIG[nx_workspace_type]="${ws_type:-integrated}"
 
             # Package manager
@@ -615,7 +619,7 @@ ask_project_questions() {
                 default_pm="npm"
             fi
             echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice
+            read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
             # Frontend apps
@@ -624,7 +628,7 @@ ask_project_questions() {
             echo "  Options: react angular nextjs vue"
             echo "  Example: react nextjs"
             echo "  [none]:"
-            read -r frontend_choice
+            read -r frontend_choice || true
             PROJECT_CONFIG[nx_frontends]="${frontend_choice:-none}"
 
             # Backend apps
@@ -633,23 +637,23 @@ ask_project_questions() {
             echo "  Options: nest express node"
             echo "  Example: nest express"
             echo "  [none]:"
-            read -r backend_choice
+            read -r backend_choice || true
             PROJECT_CONFIG[nx_backends]="${backend_choice:-none}"
 
             # E2E framework
             echo
             echo "E2E test framework? (playwright/cypress/none) [playwright]:"
-            read -r e2e_choice
+            read -r e2e_choice || true
             PROJECT_CONFIG[nx_e2e]="${e2e_choice:-playwright}"
 
             # Unit test runner (default; each app can override)
             echo "Default unit test runner? (jest/vitest) [jest]:"
-            read -r unit_choice
+            read -r unit_choice || true
             PROJECT_CONFIG[nx_unit_test]="${unit_choice:-jest}"
 
             # Nx Cloud
             echo "Connect to Nx Cloud for remote caching? (yes/no) [no]:"
-            read -r cloud_choice
+            read -r cloud_choice || true
             PROJECT_CONFIG[nx_cloud]="${cloud_choice:-no}"
 
             # Community language plugins
@@ -657,7 +661,7 @@ ask_project_questions() {
             print_info "Community language plugins (space-separated, or 'none'):"
             echo "  Options: python go"
             echo "  [none]:"
-            read -r community_choice
+            read -r community_choice || true
             PROJECT_CONFIG[nx_community]="${community_choice:-none}"
             ;;
 
@@ -671,7 +675,7 @@ ask_project_questions() {
     if [ "${project_type}" != "nx" ]; then
         echo
         echo "Include browser testing setup? (yes/no) [yes]:"
-        read -r browser_choice
+        read -r browser_choice || true
         PROJECT_CONFIG[browser_testing]="${browser_choice:-yes}"
     fi
 
@@ -791,30 +795,55 @@ npm run lint:fix      # Auto-fix issues
 EOF
             ;;
 
+        javascript)
+            cat >> "${claude_md}" << 'EOF'
+
+## JavaScript Specific
+
+### Dev Commands
+```bash
+npm run dev           # Run with node
+npm test              # Run all tests (jest)
+npm run test:coverage # Coverage report
+```
+
+### Lint Commands
+```bash
+npm run lint          # ESLint check
+```
+
+EOF
+            ;;
+
         python)
             cat >> "${claude_md}" << 'EOF'
 
 ## Python Specific
 
-### Setup Commands
+### Setup (First Time)
 ```bash
-python -m venv venv            # Create virtual environment
-source venv/bin/activate       # Activate (Linux/Mac)
-pip install -r requirements.txt # Install dependencies
+# venv is created automatically by the install script
+source venv/bin/activate      # Activate (Linux/Mac)
+# venv/Scripts/activate       # Activate (Windows)
 ```
 
 ### Test Commands
 ```bash
-pytest                # Run all tests
-pytest -v             # Verbose output
-pytest --cov          # Coverage report
+venv/bin/pytest tests/        # Run tests (no activation needed)
+venv/bin/pytest -v tests/     # Verbose output
+venv/bin/pytest --cov tests/  # Coverage report
+```
+
+### Dev Commands
+```bash
+venv/bin/python src/main.py   # Run script
 ```
 
 ### Lint Commands
 ```bash
-flake8 .              # Style checking
-mypy .                # Type checking
-black .               # Code formatting
+venv/bin/flake8 .             # Style checking
+venv/bin/mypy .               # Type checking
+venv/bin/black .              # Code formatting
 ```
 
 EOF
@@ -1002,31 +1031,31 @@ EOF
 
 ## Flask Specific
 
-### Setup Commands
+### Setup (First Time)
 ```bash
-python -m venv venv            # Create virtual environment
-source venv/bin/activate       # Activate (Linux/Mac)
-pip install -r requirements.txt # Install dependencies
+# venv is created automatically by the install script
+source venv/bin/activate      # Activate (Linux/Mac)
+# venv/Scripts/activate       # Activate (Windows)
 ```
 
 ### Development Commands
 ```bash
-flask run             # Dev server (localhost:5000)
-flask run --debug     # Debug mode with reload
+venv/bin/flask run            # Dev server (localhost:5000)
+venv/bin/flask run --debug    # Debug mode with reload
+venv/bin/python run.py        # Alternative: run via run.py
 ```
 
 ### Test Commands
 ```bash
-pytest                # Run all tests
-pytest -v             # Verbose output
-pytest --cov          # Coverage report
+venv/bin/pytest tests/        # Run tests (no activation needed)
+venv/bin/pytest -v tests/     # Verbose output
+venv/bin/pytest --cov tests/  # Coverage report
 ```
 
 ### Lint Commands
 ```bash
-flake8 .              # Style checking
-black .               # Code formatting
-mypy .                # Type checking (if configured)
+venv/bin/flake8 .             # Style checking
+venv/bin/black .              # Code formatting
 ```
 
 EOF
@@ -1132,7 +1161,7 @@ nx format:check                   # Check formatting
 - Use `nx affected` in CI to skip unaffected projects
 - Store `.nx/cache` in CI cache for faster runs
 - Project tags (`scope:`, `type:`) enforce architectural boundaries
-- Check `ralph/.ralph/nx-workspace.json` for workspace metadata used by Ralph
+- Check `ralph/nx-workspace.json` for workspace metadata used by Ralph
 
 EOF
             ;;
@@ -1533,8 +1562,11 @@ create_new_project() {
 
     # Create basic project structure based on type
     case "${project_type}" in
-        typescript|javascript)
+        typescript)
             create_typescript_project "."
+            ;;
+        javascript)
+            create_javascript_project "."
             ;;
         angular)
             create_angular_project "." "${project_name}"
@@ -1596,6 +1628,112 @@ create_new_project() {
 #==============================================================================
 # Project Type Creators
 #==============================================================================
+
+create_javascript_project() {
+    local project_dir="$1"
+
+    # Create basic JavaScript structure
+    mkdir -p "${project_dir}/src"
+    mkdir -p "${project_dir}/tests"
+
+    # package.json — scripts only; npm install below resolves compatible latest versions
+    cat > "${project_dir}/package.json" << 'EOF'
+{
+  "name": "project",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node src/index.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src tests"
+  }
+}
+EOF
+
+    # jest.config.js — plain JS, no TypeScript
+    cat > "${project_dir}/jest.config.js" << 'EOF'
+/** @type {import('jest').Config} */
+const config = {
+  testEnvironment: 'node',
+  testMatch: ['**/tests/**/*.test.js'],
+  collectCoverageFrom: ['src/**/*.js'],
+};
+
+module.exports = config;
+EOF
+
+    # ESLint 9 flat config — JS only (no typescript-eslint)
+    cat > "${project_dir}/eslint.config.cjs" << 'EOF'
+// eslint.config.cjs — ESLint 9 flat config
+const js = require('@eslint/js');
+
+module.exports = [
+  { ignores: ['coverage/', 'node_modules/'] },
+  js.configs.recommended,
+  {
+    rules: {
+      'no-unused-vars': 'warn',
+      'no-console': 'off',
+    },
+  },
+];
+EOF
+
+    # src/index.js
+    cat > "${project_dir}/src/index.js" << 'EOF'
+// Ralph Loop Framework - JavaScript Project
+
+/**
+ * Returns a greeting for the given name.
+ * @param {string} name
+ * @returns {string}
+ */
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+
+module.exports = { greet };
+
+if (require.main === module) {
+  console.log(greet('Ralph Loop'));
+}
+EOF
+
+    # tests/index.test.js
+    cat > "${project_dir}/tests/index.test.js" << 'EOF'
+const { greet } = require('../src/index');
+
+describe('greet', () => {
+  it('returns a greeting with the given name', () => {
+    expect(greet('World')).toBe('Hello, World!');
+  });
+
+  it('returns a greeting for Ralph Loop', () => {
+    expect(greet('Ralph Loop')).toBe('Hello, Ralph Loop!');
+  });
+});
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+coverage/
+.nyc_output/
+.env
+.env.local
+EOF
+
+    print_info "Installing JavaScript dependencies (npm selects compatible latest versions)..."
+    (cd "${project_dir}" && npm install --save-dev \
+        jest \
+        eslint @eslint/js \
+        --silent \
+    ) && print_success "npm install complete" \
+      || print_warning "npm install failed — run manually: cd ${project_dir} && npm install --save-dev jest eslint @eslint/js"
+
+    print_success "Created JavaScript project structure"
+}
 
 create_typescript_project() {
     local project_dir="$1"
@@ -1823,8 +1961,15 @@ htmlcov/
 .mypy_cache/
 EOF
 
-    print_info "Installing Python dependencies..."
-    (cd "${project_dir}" && python3 -m pip install -r requirements.txt -q) && print_success "pip install complete" || print_warning "pip install failed — run manually: cd ${project_dir} && pip install -r requirements.txt"
+    print_info "Creating Python virtual environment..."
+    (cd "${project_dir}" && python3 -m venv venv) \
+        && print_success "venv created at venv/" \
+        || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
+
+    print_info "Installing Python dependencies into venv..."
+    (cd "${project_dir}" && venv/bin/pip install -r requirements.txt -q) \
+        && print_success "pip install complete" \
+        || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
 
     print_success "Created Python project structure"
 }
@@ -2132,6 +2277,13 @@ create_nextjs_project() {
     print_info "Scaffolding Next.js project via create-next-app@latest..."
     print_info "(Installs Next.js + all compatible dependencies — may take 1-2 minutes)"
 
+    # React Compiler flag — user choice from ask_project_questions (default: no)
+    local rc_flag="--no-react-compiler"
+    if [ "${PROJECT_CONFIG[react_compiler]:-no}" = "yes" ]; then
+        rc_flag="--react-compiler"
+        print_info "React Compiler enabled (auto-memoization)"
+    fi
+
     # create-next-app creates its own directory; run from parent after removing pre-created empty dir.
     # create-next-app@latest runs npm install automatically.
     # IMPORTANT: rm -rf inside the subshell orphans our CWD inode.
@@ -2146,12 +2298,13 @@ create_nextjs_project() {
             --src-dir \
             --app \
             --no-import-alias \
-            --use-npm
+            --use-npm \
+            "${rc_flag}"
     ); then
         mkdir -p "${current_dir}"
         cd "${current_dir}" 2>/dev/null || true
         print_warning "Next.js scaffolding failed."
-        print_warning "To scaffold manually: npx create-next-app@latest ${project_name} --typescript --eslint --src-dir --app --use-npm"
+        print_warning "To scaffold manually: npx create-next-app@latest ${project_name} --typescript --eslint --src-dir --app --use-npm ${rc_flag}"
         return 0
     fi
 
@@ -2495,8 +2648,15 @@ htmlcov/
 instance/
 EOF
 
-    print_info "Installing Python dependencies..."
-    (cd "${project_dir}" && python3 -m pip install -r requirements.txt -q) && print_success "pip install complete" || print_warning "pip install failed — run manually: cd ${project_dir} && pip install -r requirements.txt"
+    print_info "Creating Python virtual environment..."
+    (cd "${project_dir}" && python3 -m venv venv) \
+        && print_success "venv created at venv/" \
+        || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
+
+    print_info "Installing Python dependencies into venv..."
+    (cd "${project_dir}" && venv/bin/pip install -r requirements.txt -q) \
+        && print_success "pip install complete" \
+        || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
 
     print_success "Created Flask project structure"
 }
@@ -2763,8 +2923,10 @@ create_nx_project() {
     fi
 
     # Write Ralph workspace metadata so Ralph skills know this is an NX workspace
-    mkdir -p "ralph/.ralph"
-    cat > "ralph/.ralph/nx-workspace.json" << EOF
+    # Stored in ralph/ (git-tracked) so it survives archive/cleanup of ralph/.ralph/
+    # Note: create_ralph_structure() hasn't run yet for NX, so create ralph/ first
+    mkdir -p "ralph"
+    cat > "ralph/nx-workspace.json" << EOF
 {
   "nx_workspace": true,
   "workspace_type": "${ws_type}",
