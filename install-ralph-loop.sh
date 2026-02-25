@@ -56,7 +56,11 @@ Usage: $0 [OPTIONS]
 OPTIONS:
     --install-global            Install skills to ~/.claude/skills/ and commands to ~/.claude/commands/
     --new-project <name>        Create new project with Ralph framework
-    --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx)
+    --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, go, dotnet, rust, ruby, nx)
+                                  Python sub-types:  python (prompts basic/flask/reflex), or direct: flask, reflex
+                                  Ruby sub-types:    ruby (prompts basic/rails), or direct: rails
+                                  Rust sub-types:    rust (prompts basic/actix/rocket), or direct: actix, rocket
+                                  .NET sub-types:    dotnet (prompts webapi/mvc/blazorwasm/blazor)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -534,30 +538,50 @@ ask_project_questions() {
             ;;
 
         python)
+            # Sub-framework selection
+            echo "Python framework? (basic/flask/reflex) [basic]:"
+            read -r py_fw_choice || true
+            PROJECT_CONFIG[python_framework]="${py_fw_choice:-basic}"
+
             # Package manager
             local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
             if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
                 default_pm="pip"
             fi
 
-            echo "Package manager? (pip/poetry/pipenv) [${default_pm}]:"
+            echo "Package manager? (pip/poetry/uv) [${default_pm}]:"
             read -r pm_choice || true
             PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
 
-            # Test framework
-            local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
-            if [ -z "${default_test}" ] || [ "${default_test}" = "unknown" ]; then
-                default_test="pytest"
-            fi
+            case "${PROJECT_CONFIG[python_framework]}" in
+                flask)
+                    echo "Test framework? (pytest/unittest) [pytest]:"
+                    read -r test_choice || true
+                    PROJECT_CONFIG[test_framework]="${test_choice:-pytest}"
 
-            echo "Test framework? (pytest/unittest) [${default_test}]:"
-            read -r test_choice || true
-            PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
+                    echo "Use SQLAlchemy? (yes/no) [no]:"
+                    read -r db_choice || true
+                    PROJECT_CONFIG[sqlalchemy]="${db_choice:-no}"
+                    ;;
+                reflex)
+                    echo "Use type checking? (mypy/pyright/none) [none]:"
+                    read -r type_choice || true
+                    PROJECT_CONFIG[type_checker]="${type_choice:-none}"
+                    ;;
+                *)  # basic
+                    local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
+                    if [ -z "${default_test}" ] || [ "${default_test}" = "unknown" ]; then
+                        default_test="pytest"
+                    fi
+                    echo "Test framework? (pytest/unittest) [${default_test}]:"
+                    read -r test_choice || true
+                    PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
 
-            # Type checking
-            echo "Use type checking? (mypy/pyright/none) [mypy]:"
-            read -r type_choice || true
-            PROJECT_CONFIG[type_checker]="${type_choice:-mypy}"
+                    echo "Use type checking? (mypy/pyright/none) [mypy]:"
+                    read -r type_choice || true
+                    PROJECT_CONFIG[type_checker]="${type_choice:-mypy}"
+                    ;;
+            esac
             ;;
 
         flask)
@@ -665,18 +689,49 @@ ask_project_questions() {
             PROJECT_CONFIG[nx_community]="${community_choice:-none}"
             ;;
 
+        reflex)
+            # Direct shortcut — equivalent to --type python with framework=reflex
+            PROJECT_CONFIG[python_framework]="reflex"
+            local default_pm="pip"
+            echo "Package manager? (pip/uv) [${default_pm}]:"
+            read -r pm_choice || true
+            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+            echo "Use type checking? (mypy/pyright/none) [none]:"
+            read -r type_choice || true
+            PROJECT_CONFIG[type_checker]="${type_choice:-none}"
+            ;;
+
         *)
             print_warning "Unknown project type '${project_type}' — skipping type-specific configuration"
             print_info "You can manually configure build tools and test frameworks after project creation"
             ;;
     esac
 
+    # Determine browser testing default (UI frameworks: yes; API/CLI: no)
+    local browser_default="no"
+    case "${project_type}" in
+        angular|react|nextjs) browser_default="yes" ;;
+        reflex) browser_default="yes" ;;
+        rails) browser_default="yes" ;;
+        dotnet)
+            case "${PROJECT_CONFIG[dotnet_template]:-webapi}" in
+                mvc|blazorwasm|blazor) browser_default="yes" ;;
+            esac
+            ;;
+        ruby)
+            [ "${PROJECT_CONFIG[ruby_framework]:-basic}" = "rails" ] && browser_default="yes"
+            ;;
+        python)
+            [ "${PROJECT_CONFIG[python_framework]:-basic}" = "reflex" ] && browser_default="yes"
+            ;;
+    esac
+
     # Common questions for all types (skip for nx — it manages its own browser testing)
     if [ "${project_type}" != "nx" ]; then
         echo
-        echo "Include browser testing setup? (yes/no) [yes]:"
+        echo "Include browser testing setup? (yes/no) [${browser_default}]:"
         read -r browser_choice || true
-        PROJECT_CONFIG[browser_testing]="${browser_choice:-yes}"
+        PROJECT_CONFIG[browser_testing]="${browser_choice:-${browser_default}}"
     fi
 
     echo
@@ -1093,6 +1148,47 @@ rubocop -a            # Auto-fix safe offenses
 EOF
             ;;
 
+        reflex)
+            cat >> "${claude_md}" << 'EOF'
+
+## Reflex Specific
+
+### Setup (First Time)
+```bash
+# venv is created automatically by the install script
+source venv/bin/activate      # Activate (Linux/Mac)
+# venv/Scripts/activate       # Activate (Windows)
+```
+
+### Development Commands
+```bash
+venv/bin/reflex run           # Dev server (localhost:3000)
+venv/bin/reflex run --env prod # Production mode
+```
+
+### Build Commands
+```bash
+venv/bin/reflex export        # Export static site
+venv/bin/reflex build         # Build for deployment
+```
+
+### Test Commands
+```bash
+venv/bin/pytest tests/        # Unit tests for state logic (no activation needed)
+venv/bin/pytest -v tests/
+venv/bin/pytest --cov tests/
+```
+
+### Lint Commands
+```bash
+venv/bin/ruff check .         # Fast linting (pip install ruff)
+venv/bin/black .              # Code formatting
+venv/bin/mypy .               # Type checking (if configured)
+```
+
+EOF
+            ;;
+
         nx)
             cat >> "${claude_md}" << 'EOF'
 
@@ -1489,14 +1585,17 @@ create_new_project() {
     # Detect project type if not specified (needed before dir creation for nx path)
     if [ -z "${project_type}" ] || [ "${project_type}" = "unknown" ]; then
         while true; do
-            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/go/rust/ruby/nx) [typescript]:"
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/go/dotnet/rust/ruby/nx) [typescript]:"
+            echo "  Python sub-types: python (asks basic/flask/reflex), or direct: flask, reflex"
+            echo "  Ruby sub-types:   ruby (asks basic/rails), or direct: rails"
+            echo "  Rust sub-types:   rust (asks basic/actix/rocket), or direct: actix, rocket"
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|go|rust|ruby|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, go, rust, ruby, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -1581,10 +1680,17 @@ create_new_project() {
             create_express_project "." "${project_name}"
             ;;
         python)
-            create_python_project "."
+            case "${PROJECT_CONFIG[python_framework]:-basic}" in
+                flask)  create_flask_project "." "${project_name}"; project_type="flask" ;;
+                reflex) create_reflex_project ".";                  project_type="reflex" ;;
+                *)      create_python_project "." ;;
+            esac
             ;;
         flask)
             create_flask_project "." "${project_name}"
+            ;;
+        reflex)
+            create_reflex_project "."
             ;;
         ruby)
             create_ruby_project "." "${project_name}"
@@ -2659,6 +2765,114 @@ EOF
         || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
 
     print_success "Created Flask project structure"
+}
+
+create_reflex_project() {
+    local project_dir="$1"
+
+    print_info "Creating Python virtual environment..."
+    (cd "${project_dir}" && python3 -m venv venv) \
+        && print_success "venv created at venv/" \
+        || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
+
+    print_info "Installing Reflex and test dependencies..."
+    (cd "${project_dir}" && venv/bin/pip install reflex pytest pytest-cov -q) \
+        && print_success "Reflex installed" \
+        || print_warning "pip install failed — run: source venv/bin/activate && pip install reflex pytest pytest-cov"
+
+    print_info "Initializing Reflex project (downloads Node.js runtime on first run)..."
+    if (cd "${project_dir}" && venv/bin/reflex init --template blank 2>/dev/null); then
+        print_success "Reflex project initialized"
+    else
+        print_warning "reflex init failed — creating minimal structure"
+        local module_name
+        module_name=$(basename "${project_dir}" | tr '-' '_' | tr '[:upper:]' '[:lower:]')
+        mkdir -p "${project_dir}/${module_name}"
+        touch "${project_dir}/${module_name}/__init__.py"
+        cat > "${project_dir}/${module_name}/${module_name}.py" << EOF
+"""${module_name} — main Reflex application."""
+import reflex as rx
+
+
+class State(rx.State):
+    """Application state."""
+    count: int = 0
+
+    def increment(self):
+        self.count += 1
+
+
+def index() -> rx.Component:
+    return rx.center(
+        rx.vstack(
+            rx.heading("Reflex App", size="8"),
+            rx.text(f"Count: {State.count}"),
+            rx.button("Increment", on_click=State.increment),
+            spacing="5",
+        )
+    )
+
+
+app = rx.App()
+app.add_page(index)
+EOF
+        cat > "${project_dir}/rxconfig.py" << EOF
+import reflex as rx
+
+config = rx.Config(
+    app_name="${module_name}",
+)
+EOF
+    fi
+
+    # Tests directory — pytest unit tests for State logic
+    mkdir -p "${project_dir}/tests"
+    touch "${project_dir}/tests/__init__.py"
+    cat > "${project_dir}/tests/test_state.py" << 'EOF'
+"""Tests for Reflex application state.
+
+Import your State class and test methods directly — no browser needed.
+For UI testing use Playwright (if browser testing was enabled).
+
+Example:
+    from <module>.<module> import State
+    state = State()
+    state.increment()
+    assert state.count == 1
+"""
+
+
+def test_placeholder():
+    """Replace with actual state unit tests."""
+    assert True
+EOF
+
+    # requirements.txt (may already exist from reflex init)
+    if [ ! -f "${project_dir}/requirements.txt" ]; then
+        cat > "${project_dir}/requirements.txt" << 'EOF'
+reflex
+pytest
+pytest-cov
+EOF
+    else
+        grep -q "^pytest" "${project_dir}/requirements.txt" \
+            || printf "\npytest\npytest-cov\n" >> "${project_dir}/requirements.txt"
+    fi
+
+    # .gitignore (append Reflex-specific entries)
+    cat >> "${project_dir}/.gitignore" << 'EOF'
+# Reflex runtime
+.web/
+.states/
+*.db
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+EOF
+
+    print_success "Created Reflex project structure"
 }
 
 create_ruby_project() {
