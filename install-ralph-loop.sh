@@ -743,156 +743,21 @@ create_claude_md() {
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Ralph Loop
 
-This project uses the **Ralph Loop Framework** for specification-driven development with:
-- PRD/OpenSpec-style requirements
-- Parallel implementation with Claude Tasks
-- Automated testing and validation
-- Comprehensive archival
+This project uses the Ralph Loop Framework for specification-driven development.
 
-## Ralph Loop Commands
-
-### Create Specification
 ```bash
-/ralph-create-prd          # Interactive PRD creation
-/parse-prd <file>          # Parse existing PRD
-/parse-openspec <file>     # Parse OpenSpec file
-```
-
-### Run Development Loop
-```bash
-/ralph-loop                # Start full RALPH cycle
-/ralph-status              # Check current progress
-/ralph-resume              # Resume paused run
-/ralph-archive             # Archive and merge results
-```
-
-### Modify Specifications
-```bash
-/ralph-modify-spec         # Full modification interface
+/ralph-create-prd          # Create a new PRD specification (start here)
+/ralph-loop <spec-file>    # Run the development loop
+/ralph-status              # Check current progress and quota
+/ralph-resume              # Resume a paused run
+/ralph-archive             # Archive and merge completed run
+/ralph-modify-spec         # Modify spec during a run
 /ralph-add-requirement     # Quick add single requirement
 ```
 
-### Testing & Validation
-```bash
-/test-spec                 # Test against requirements
-/prove-requirements        # Comprehensive validation
-/browser-test              # UI testing with Playwright
-/feedback-selector         # Determine test strategy
-```
-
-## Workflow
-
-1. **Create PRD**: `/ralph-create-prd` - Interactive requirement gathering
-2. **Review Spec**: Check `ralph/specs/prds/` for generated specification
-3. **Run Loop**: `/ralph-loop` - Automated implementation
-4. **Monitor**: `/ralph-status` - Track progress and quota
-5. **Resume if needed**: `/ralph-resume` - Continue after pause
-6. **Archive**: `/ralph-archive` - Validate, merge, and archive
-
-## Ralph Loop Features
-
-### Parallel Execution
-- Max 3 concurrent Claude Task subagents
-- Dependency-aware scheduling
-- Code conflict detection
-
-### Quota Management
-- Automatic token tracking
-- Pause at 85% threshold (configurable)
-- Resume capability with state preservation
-- Cost estimation before tasks
-
-### Git Integration
-- Branch: `ralph/<spec-name>-<timestamp>`
-- One commit per requirement (REQ-XXX)
-- Merge during archive (after validation)
-- Ralph branch preserved by default
-
-### Testing Strategy
-- Lint checks before implementation
-- Unit tests per story
-- Integration tests per phase
-- Browser tests for UI (if applicable)
-- Code quality validation
-
-### Spec Modifications
-- Add requirements during run
-- Modify existing requirements
-- Change priorities dynamically
-- Full version tracking with backups
-- No progress lost
-
-## State Management
-
-Ralph Loop maintains state in `ralph/.ralph/` directory:
-- `state.json` - Current run state and quota
-- `stories.json` - All stories with dependencies
-- `tasks.json` - Claude Task mappings
-- `phases.json` - Execution phases
-
-**Never manually edit state files** - use Ralph commands.
-
-## Archive Structure
-
-After completion, find archives in `ralph/archive/<run-id>/`:
-- `summary.md` - Run overview and results
-- `spec/` - All spec versions
-- `code/` - Final implementation
-- `tests/` - All test results
-- `git/` - Commits and diffs
-- `artifacts/` - Task outputs and logs
-- `metrics/` - Quota usage and timing
-
-## Configuration
-
-### Quota Limits
-Edit `ralph/.ralph-quota-config.json`:
-```json
-{
-  "limits": {
-    "contextWindow": 200000,
-    "safetyThreshold": 0.85,
-    "warningThreshold": 0.75
-  }
-}
-```
-
-### Max Iterations
-```json
-{
-  "maxIterations": {
-    "enabled": true,
-    "logic": 5,
-    "formatting": 3
-  }
-}
-```
-
-## Best Practices
-
-1. **Start with clear requirements** - Use `/ralph-create-prd` for guidance
-2. **Review generated spec** - Verify requirements before running loop
-3. **Monitor quota** - Use `/ralph-status` during long runs
-4. **Modify specs when needed** - Don't hesitate to add missing requirements
-5. **Review archives** - Learn from completed runs
-6. **Keep Ralph branches** - Useful for audit trail
-
-## Troubleshooting
-
-- **Quota exhausted**: `/ralph-resume` after context replenishes
-- **Test failures**: Ralph pauses automatically, fix and resume
-- **Spec gaps**: `/ralph-add-requirement` to add missing requirements
-- **Circular dependencies**: Modify spec with `/ralph-modify-spec`
-- **Merge conflicts**: Manually resolve, Ralph detects git state
-
-## Additional Resources
-
-- `ralph/docs/QUICKSTART.md` - Getting started guide
-- `ralph/docs/COMPLETE-WORKFLOW.md` - Detailed workflow with examples
-- `ralph/docs/QUOTA-MANAGEMENT.md` - Quota strategies
-- `ralph/docs/SPEC-MODIFICATIONS.md` - Modifying specs during runs
+Full documentation: `ralph/docs/QUICKSTART.md`
 
 EOF
 
