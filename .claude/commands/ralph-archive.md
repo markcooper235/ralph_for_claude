@@ -69,6 +69,18 @@ Write `${ARCHIVE_DIR}/summary.md` with: run ID, spec file, start/end times, git 
 
 Write `${ARCHIVE_DIR}/metadata.json` with: runId, specFile, originBranch, ralphBranch, status, archivedAt, abandoned (bool).
 
+### Phase 5b: Commit Archive to Ralph Branch
+
+```bash
+git add "${ARCHIVE_DIR}"
+git commit -m "chore: add run archive ${RUN_ID}
+
+Archive: ${ARCHIVE_DIR}
+Stories: $(jq '[.stories[] | select(.status=="completed")] | length' ralph/.ralph/stories.json) completed
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
 ### Phase 6: Merge (Normal Archive Only)
 
 ```bash
