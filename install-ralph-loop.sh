@@ -3274,13 +3274,15 @@ create_reflex_project() {
         && print_success "Reflex installed" \
         || print_warning "pip install failed — run: source venv/bin/activate && pip install reflex pytest pytest-cov"
 
-    print_info "Initializing Reflex project (downloads Node.js runtime on first run)..."
-    if (cd "${project_dir}" && venv/bin/reflex init --template blank 2>/dev/null); then
+    # Derive module name: lowercase, hyphens/dots → underscores
+    local module_name
+    module_name=$(basename "${project_dir}" | tr '-.' '_' | tr '[:upper:]' '[:lower:]')
+
+    print_info "Initializing Reflex project..."
+    if (cd "${project_dir}" && venv/bin/reflex init --template blank --name "${module_name}" 2>/dev/null); then
         print_success "Reflex project initialized"
     else
-        print_warning "reflex init failed — creating minimal structure"
-        local module_name
-        module_name=$(basename "${project_dir}" | tr '-' '_' | tr '[:upper:]' '[:lower:]')
+        print_warning "reflex init failed — creating minimal placeholder structure"
         mkdir -p "${project_dir}/${module_name}"
         touch "${project_dir}/${module_name}/__init__.py"
         cat > "${project_dir}/${module_name}/${module_name}.py" << EOF
