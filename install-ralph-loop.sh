@@ -604,13 +604,43 @@ ask_project_questions() {
             ;;
 
         ruby)
-            echo "Test framework? (rspec/minitest) [rspec]:"
-            read -r test_choice || true
-            PROJECT_CONFIG[test_framework]="${test_choice:-rspec}"
+            # Sub-framework selection
+            echo "Ruby framework? (basic/rails) [basic]:"
+            read -r rb_fw_choice || true
+            PROJECT_CONFIG[ruby_framework]="${rb_fw_choice:-basic}"
 
-            echo "Use Bundler? (yes/no) [yes]:"
-            read -r bundler_choice || true
-            PROJECT_CONFIG[package_manager]="bundler"
+            case "${PROJECT_CONFIG[ruby_framework]}" in
+                rails)
+                    echo "Test framework? (minitest/rspec) [minitest]:"
+                    read -r test_choice || true
+                    PROJECT_CONFIG[test_framework]="${test_choice:-minitest}"
+
+                    echo "API only? (yes/no) [no]:"
+                    read -r api_choice || true
+                    PROJECT_CONFIG[rails_api]="${api_choice:-no}"
+                    ;;
+                *)  # basic
+                    echo "Test framework? (rspec/minitest) [rspec]:"
+                    read -r test_choice || true
+                    PROJECT_CONFIG[test_framework]="${test_choice:-rspec}"
+
+                    echo "Use Bundler? (yes/no) [yes]:"
+                    read -r bundler_choice || true
+                    PROJECT_CONFIG[package_manager]="bundler"
+                    ;;
+            esac
+            ;;
+
+        rails)
+            # Direct shortcut — equivalent to --type ruby with framework=rails
+            PROJECT_CONFIG[ruby_framework]="rails"
+            echo "Test framework? (minitest/rspec) [minitest]:"
+            read -r test_choice || true
+            PROJECT_CONFIG[test_framework]="${test_choice:-minitest}"
+
+            echo "API only? (yes/no) [no]:"
+            read -r api_choice || true
+            PROJECT_CONFIG[rails_api]="${api_choice:-no}"
             ;;
 
         go)
@@ -1143,6 +1173,48 @@ bundle exec rake test # Run Minitest suite
 ```bash
 rubocop               # Style and lint check
 rubocop -a            # Auto-fix safe offenses
+```
+
+EOF
+            ;;
+
+        rails)
+            cat >> "${claude_md}" << 'EOF'
+
+## Rails Specific
+
+### Setup
+```bash
+bundle install            # Install gems
+bundle exec rails db:create db:migrate  # Create and migrate database
+```
+
+### Development Commands
+```bash
+bundle exec rails server  # Dev server (localhost:3000)
+bundle exec rails console # Rails REPL
+bundle exec rails routes  # Show all routes
+```
+
+### Test Commands
+```bash
+bundle exec rails test    # Run all tests (Minitest)
+bundle exec rspec         # Run all tests (RSpec, if configured)
+bundle exec rails test test/models/     # Test specific directory
+```
+
+### Generate Commands
+```bash
+bundle exec rails generate model User name:string email:string
+bundle exec rails generate controller Pages index
+bundle exec rails generate scaffold Post title:string body:text
+bundle exec rails db:migrate
+```
+
+### Lint Commands
+```bash
+bundle exec rubocop       # Style and lint check
+bundle exec rubocop -a    # Auto-fix safe offenses
 ```
 
 EOF
@@ -1693,7 +1765,13 @@ create_new_project() {
             create_reflex_project "."
             ;;
         ruby)
-            create_ruby_project "." "${project_name}"
+            case "${PROJECT_CONFIG[ruby_framework]:-basic}" in
+                rails) create_rails_project "." "${project_name}"; project_type="rails" ;;
+                *)     create_ruby_project "." "${project_name}" ;;
+            esac
+            ;;
+        rails)
+            create_rails_project "." "${project_name}"
             ;;
         go)
             create_go_project "." "${project_name}"
@@ -2955,6 +3033,85 @@ EOF
     (cd "${project_dir}" && bundle install --quiet) && print_success "bundle install complete" || print_warning "bundle install failed — run manually: cd ${project_dir} && bundle install"
 
     print_success "Created Ruby project structure"
+}
+
+create_rails_project() {
+    local project_dir="$1"
+    local project_name="$2"
+    local current_dir
+    current_dir="$(pwd)"
+    local parent_dir
+    parent_dir="$(dirname "${current_dir}")"
+
+    # Check runtime availability
+    if ! command -v ruby > /dev/null 2>&1; then
+        print_warning "ruby not found — creating placeholder Rails structure"
+        mkdir -p "${project_dir}/app/controllers" "${project_dir}/app/models" \
+                 "${project_dir}/app/views" "${project_dir}/config"
+        cat > "${project_dir}/Gemfile" << 'EOF'
+source 'https://rubygems.org'
+
+gem 'rails'
+gem 'sqlite3'
+EOF
+        print_info "Install Ruby then run: cd ${project_dir} && gem install rails && rails new . --force --database=sqlite3"
+        return
+    fi
+
+    # Install Rails gem if not already present
+    if ! command -v rails > /dev/null 2>&1; then
+        print_info "Installing Rails gem..."
+        gem install rails --no-document -q \
+            && print_success "Rails installed" \
+            || { print_warning "gem install rails failed — install manually: gem install rails"; return; }
+    fi
+
+    local test_fw="${PROJECT_CONFIG[test_framework]:-minitest}"
+    local api_only="${PROJECT_CONFIG[rails_api]:-no}"
+
+    local rails_flags="--database=sqlite3 --skip-bundle --skip-git"
+    [ "${api_only}" = "yes" ] && rails_flags="${rails_flags} --api"
+    [ "${test_fw}" = "rspec" ] && rails_flags="${rails_flags} --skip-test"
+
+    print_info "Scaffolding Rails project (this may take a moment)..."
+    # rails new creates its own dir — remove the pre-created empty dir first, then scaffold from parent
+    if (
+        cd "${parent_dir}" || exit 1
+        rm -rf "${project_name}" 2>/dev/null || true
+        # shellcheck disable=SC2086
+        rails new "${project_name}" ${rails_flags}
+    ); then
+        # Re-enter project dir by absolute path (new inode after rm + recreate)
+        cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
+        print_success "Rails project scaffolded"
+    else
+        mkdir -p "${current_dir}"
+        cd "${current_dir}" 2>/dev/null || true
+        print_warning "rails new failed — run manually: cd ${parent_dir} && rails new ${project_name} --database=sqlite3 --skip-git"
+        return
+    fi
+
+    print_info "Installing gems..."
+    (cd "${current_dir}" && bundle install --quiet) \
+        && print_success "Gems installed" \
+        || print_warning "bundle install failed — run manually: cd ${project_dir} && bundle install"
+
+    # Add RSpec if chosen
+    if [ "${test_fw}" = "rspec" ]; then
+        # Append rspec-rails to Gemfile development/test group
+        cat >> "${current_dir}/Gemfile" << 'EOF'
+
+group :development, :test do
+  gem 'rspec-rails'
+end
+EOF
+        (cd "${current_dir}" && bundle install --quiet \
+            && bundle exec rails generate rspec:install) \
+            && print_success "RSpec configured" \
+            || print_warning "RSpec setup failed — run: bundle install && rails generate rspec:install"
+    fi
+
+    print_success "Created Rails project structure"
 }
 
 create_nx_project() {
