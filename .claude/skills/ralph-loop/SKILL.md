@@ -229,9 +229,10 @@ Save ralph/.ralph/artifacts/{story_id}-tests.json:
 {{"storyId":"{story_id}","overall":"passed|failed","lint":{{"status","iterations":0}},"unit":{{"status","iterations":0,"coverage":0}},"codeQuality":{{"status"}},"ui":{{"status","iterations":0}}}}
 
 Update ralph/.ralph/artifacts-index.json:
-- Load or create: {{"stories":{{}},"allPassed":true}}
-- Set stories.{story_id}: {{"status":"passed|failed","coverage":<N>}}
+- Load or create: {{"stories":{{}},"allPassed":true,"avgCoverage":0}}
+- Set stories.{story_id}: {{"status":"passed|failed","coverage":<unit.coverage>}}
 - Set allPassed: true only if ALL entries in stories have status "passed"
+- Update avgCoverage: mean of all coverage values across stories in the index
 
 Write full test log to ralph/.ralph/logs/test-{story_id}-{ITER}.log
 Return ONE LINE ONLY: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s>"

@@ -35,9 +35,12 @@ When this skill is invoked:
    - Check that tests actually validate the requirement
 
 4. **Execute All Tests**
+   - If `ralph/.ralph/architecture.json` exists, load `testTools` — use `testTools.unit` and `testTools.lint` verbatim as the test commands (these already contain the correct full paths, e.g. `venv/bin/pytest` for Python projects set up by Ralph)
    - Check for NX workspace (`ralph/nx-workspace.json` or `nx.json`)
-   - **Standard project:** run complete test suite, then `/test-spec --all`
-   - **Python:** If `venv/` directory exists, run `venv/bin/pytest tests/ -v --cov` for the complete suite (not bare `pytest`)
+   - **Standard project (with architecture.json):** run `<testTools.unit> tests/ -v --cov` and `<testTools.lint>`, then `/test-spec --all`
+   - **Standard project (no architecture.json):**
+     - **Python:** If `venv/` directory exists, run `venv/bin/pytest tests/ -v --cov` (not bare `pytest`)
+     - **Other:** detect test runner from project type and run appropriate command
    - **NX workspace:**
      - Run `nx run-many -t test,lint` to validate all projects
      - Or use `nx affected -t test --base=main` for changed projects only (faster in CI)
