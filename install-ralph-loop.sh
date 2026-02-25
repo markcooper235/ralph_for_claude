@@ -1739,7 +1739,7 @@ create_typescript_project() {
     mkdir -p "${project_dir}/src"
     mkdir -p "${project_dir}/tests"
 
-    # package.json — Node.js TypeScript with jest + ts-jest + eslint
+    # package.json — scripts only; npm install below resolves compatible latest versions
     cat > "${project_dir}/package.json" << 'EOF'
 {
   "name": "project",
@@ -1748,18 +1748,8 @@ create_typescript_project() {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "lint": "eslint src tests --ext .ts"
-  },
-  "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "eslint": "^8.57.1",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src tests"
   }
 }
 EOF
@@ -1797,14 +1787,16 @@ const config: Config = {
 export default config;
 EOF
 
-    # .eslintrc.json
-    cat > "${project_dir}/.eslintrc.json" << 'EOF'
-{
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
-  "env": { "node": true, "jest": true }
-}
+    # ESLint 9 flat config using typescript-eslint unified package
+    # Compatible with whatever version npm installs (ESLint 9+ required)
+    cat > "${project_dir}/eslint.config.cjs" << 'EOF'
+// eslint.config.cjs — ESLint 9 flat config with typescript-eslint
+const tseslint = require('typescript-eslint');
+
+module.exports = tseslint.config(
+  { ignores: ['dist/', 'coverage/', 'node_modules/', 'eslint.config.cjs'] },
+  ...tseslint.configs.recommended,
+);
 EOF
 
     # src/index.ts
@@ -1846,8 +1838,14 @@ coverage/
 .env.local
 EOF
 
-    print_info "Installing npm dependencies..."
-    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
+    print_info "Installing TypeScript dependencies (npm selects compatible latest versions)..."
+    (cd "${project_dir}" && npm install --save-dev \
+        typescript ts-node @types/node \
+        jest ts-jest @types/jest \
+        eslint typescript-eslint \
+        --silent \
+    ) && print_success "npm install complete" \
+      || print_warning "npm install failed — run manually: cd ${project_dir} && npm install --save-dev typescript ts-node @types/node jest ts-jest @types/jest eslint typescript-eslint"
 
     print_success "Created TypeScript project structure"
 }
@@ -1859,13 +1857,13 @@ create_python_project() {
     mkdir -p "${project_dir}/src"
     mkdir -p "${project_dir}/tests"
 
-    # requirements.txt
+    # requirements.txt — no version pins; pip selects latest compatible versions
     cat > "${project_dir}/requirements.txt" << 'EOF'
-pytest>=8.3.0
-pytest-cov>=5.0.0
-black>=24.10.0
-flake8>=7.1.0
-mypy>=1.11.0
+pytest
+pytest-cov
+black
+flake8
+mypy
 EOF
 
     # setup.py
@@ -2100,325 +2098,91 @@ EOF
 create_angular_project() {
     local project_dir="$1"
     local project_name="$2"
+    local current_dir
+    current_dir="$(pwd)"
+    local parent_dir
+    parent_dir="$(dirname "${current_dir}")"
 
-    mkdir -p "${project_dir}/src/app"
-    mkdir -p "${project_dir}/src/assets"
+    print_info "Scaffolding Angular project via @angular/cli@latest..."
+    print_info "(Installs Angular + all compatible dependencies — may take 2-3 minutes)"
 
-    cat > "${project_dir}/package.json" << EOF
-{
-  "name": "${project_name}",
-  "version": "1.0.0",
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "test": "ng test --watch=false --browsers=ChromeHeadless",
-    "lint": "ng lint"
-  },
-  "dependencies": {
-    "@angular/animations": "^18.2.0",
-    "@angular/common": "^18.2.0",
-    "@angular/compiler": "^18.2.0",
-    "@angular/core": "^18.2.0",
-    "@angular/forms": "^18.2.0",
-    "@angular/platform-browser": "^18.2.0",
-    "@angular/router": "^18.2.0",
-    "rxjs": "^7.8.1",
-    "tslib": "^2.7.0",
-    "zone.js": "^0.14.10"
-  },
-  "devDependencies": {
-    "@angular-devkit/build-angular": "^18.2.0",
-    "@angular/cli": "^18.2.0",
-    "@angular/compiler-cli": "^18.2.0",
-    "@types/jasmine": "^5.1.4",
-    "jasmine-core": "^5.3.0",
-    "karma": "^6.4.4",
-    "karma-chrome-launcher": "^3.2.0",
-    "karma-coverage": "^2.2.1",
-    "karma-jasmine": "^5.1.0",
-    "karma-jasmine-html-reporter": "^2.1.0",
-    "typescript": "~5.5.0"
-  }
-}
-EOF
+    # ng new creates its own directory, so we run it from the parent.
+    # The pre-created empty project dir is removed first to avoid conflicts.
+    # ng new also runs npm install automatically.
+    if (
+        cd "${parent_dir}" || exit 1
+        rm -rf "${project_name}" 2>/dev/null || true
+        npx --yes @angular/cli@latest new "${project_name}" \
+            --skip-git \
+            --routing=false \
+            --style=css \
+            --standalone \
+            --defaults \
+            --package-manager=npm
+    ); then
+        print_success "Angular project scaffolded with latest compatible packages"
+        print_info "(All dependencies installed by ng new)"
+        return 0
+    fi
 
-    cat > "${project_dir}/tsconfig.json" << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "lib": ["ES2022", "dom"],
-    "strict": true,
-    "esModuleInterop": true,
-    "moduleResolution": "bundler",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "forceConsistentCasingInFileNames": true
-  },
-  "angularCompilerOptions": {
-    "enableI18nLegacyMessageIdFormat": false,
-    "strictInjectionParameters": true,
-    "strictInputAccessModifiers": true,
-    "strictTemplates": true
-  }
-}
-EOF
+    # Restore directory so subsequent script steps don't fail
+    mkdir -p "${current_dir}"
+    print_warning "Angular scaffolding failed."
+    print_warning "To scaffold manually run:"
+    print_warning "  cd ${parent_dir} && npx @angular/cli@latest new ${project_name} --skip-git --standalone --defaults"
 
-    # tsconfig.spec.json for tests
-    cat > "${project_dir}/tsconfig.spec.json" << 'EOF'
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./out-tsc/spec",
-    "types": ["jasmine"]
-  },
-  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
-}
-EOF
-
-    # angular.json — required for all ng commands
-    cat > "${project_dir}/angular.json" << EOF
-{
-  "\$schema": "./node_modules/@angular/cli/lib/config/schema.json",
-  "version": 1,
-  "newProjectRoot": "projects",
-  "projects": {
-    "${project_name}": {
-      "projectType": "application",
-      "schematics": {
-        "@schematics/angular:component": { "standalone": true },
-        "@schematics/angular:directive": { "standalone": true },
-        "@schematics/angular:pipe": { "standalone": true }
-      },
-      "root": "",
-      "sourceRoot": "src",
-      "prefix": "app",
-      "architect": {
-        "build": {
-          "builder": "@angular-devkit/build-angular:application",
-          "options": {
-            "outputPath": "dist/${project_name}",
-            "index": "src/index.html",
-            "browser": "src/main.ts",
-            "polyfills": ["zone.js"],
-            "tsConfig": "tsconfig.json",
-            "assets": ["src/assets"],
-            "styles": [],
-            "scripts": []
-          },
-          "configurations": {
-            "production": {
-              "budgets": [
-                { "type": "initial", "maximumWarning": "500kb", "maximumError": "1mb" },
-                { "type": "anyComponentStyle", "maximumWarning": "2kb", "maximumError": "4kb" }
-              ],
-              "outputHashing": "all"
-            },
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
-          "configurations": {
-            "production": { "buildTarget": "${project_name}:build:production" },
-            "development": { "buildTarget": "${project_name}:build:development" }
-          },
-          "defaultConfiguration": "development"
-        },
-        "test": {
-          "builder": "@angular-devkit/build-angular:karma",
-          "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
-            "tsConfig": "tsconfig.spec.json",
-            "assets": ["src/assets"],
-            "styles": [],
-            "scripts": [],
-            "codeCoverage": true
-          }
-        }
-      }
-    }
-  }
-}
-EOF
-
-    # karma.conf.js
-    cat > "${project_dir}/karma.conf.js" << 'EOF'
-module.exports = function (config) {
-  config.set({
-    basePath: '',
-    frameworks: ['jasmine', '@angular-devkit/build-angular'],
-    plugins: [
-      require('karma-jasmine'),
-      require('karma-chrome-launcher'),
-      require('karma-jasmine-html-reporter'),
-      require('karma-coverage'),
-      require('@angular-devkit/build-angular/plugins/karma'),
-    ],
-    client: { jasmine: {}, clearContext: false },
-    coverageReporter: { dir: require('path').join(__dirname, './coverage/${project_name}'), subdir: '.', reporters: [{ type: 'html' }, { type: 'text-summary' }] },
-    reporters: ['progress', 'kjhtml'],
-    browsers: ['ChromeHeadless'],
-    singleRun: true,
-  });
-};
-EOF
-
-    # src/index.html
-    cat > "${project_dir}/src/index.html" << EOF
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>${project_name^}</title>
-  <base href="/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-</head>
-<body>
-  <app-root></app-root>
-</body>
-</html>
-EOF
-
-    # src/app/app.component.ts
-    cat > "${project_dir}/src/app/app.component.ts" << 'EOF'
-import { Component } from '@angular/core';
-
-@Component({
-  selector: 'app-root',
-  template: '<h1>Hello from Ralph Loop!</h1>',
-  standalone: true,
-})
-export class AppComponent {
-  title = 'app';
-
-  greet(name: string): string {
-    return `Hello, ${name}!`;
-  }
-}
-EOF
-
-    # src/app/app.component.spec.ts
-    cat > "${project_dir}/src/app/app.component.spec.ts" << 'EOF'
-import { TestBed } from '@angular/core/testing';
-import { AppComponent } from './app.component';
-
-describe('AppComponent', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [AppComponent],
-    }).compileComponents();
-  });
-
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should greet by name', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app.greet('World')).toBe('Hello, World!');
-  });
-});
-EOF
-
-    # src/main.ts
-    cat > "${project_dir}/src/main.ts" << 'EOF'
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
-
-bootstrapApplication(AppComponent).catch((err) => console.error(err));
-EOF
-
-    # .gitignore
-    cat > "${project_dir}/.gitignore" << 'EOF'
-node_modules/
-dist/
-out-tsc/
-coverage/
-.angular/
-.env
-.env.local
-EOF
-
-    print_info "Installing npm dependencies (Angular — this may take a minute)..."
-    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
-
-    print_success "Created Angular project structure"
+    # Fallback: note instructions in a README and exit
+    print_warning "Project directory created but Angular is not configured."
+    print_warning "Run the scaffold command above to complete setup."
 }
 
 create_react_project() {
     local project_dir="$1"
     local project_name="$2"
+    local current_dir
+    current_dir="$(pwd)"
+    local parent_dir
+    parent_dir="$(dirname "${current_dir}")"
 
-    mkdir -p "${project_dir}/src"
-    mkdir -p "${project_dir}/public"
+    print_info "Scaffolding React (Vite) project via create-vite@latest..."
 
-    cat > "${project_dir}/package.json" << EOF
-{
-  "name": "${project_name}",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext ts,tsx"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/user-event": "^14.5.2",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "@vitejs/plugin-react": "^4.3.2",
-    "@vitest/coverage-v8": "^2.1.8",
-    "eslint": "^8.57.1",
-    "eslint-plugin-react": "^7.37.2",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "jsdom": "^25.0.1",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.10",
-    "vitest": "^2.1.8"
-  }
-}
-EOF
+    # create-vite creates its own directory; run from parent after removing pre-created empty dir.
+    # Note: create-vite does NOT run npm install automatically.
+    if ! (
+        cd "${parent_dir}" || exit 1
+        rm -rf "${project_name}" 2>/dev/null || true
+        npm create vite@latest "${project_name}" -- --template react-ts
+    ); then
+        mkdir -p "${current_dir}"
+        print_warning "React/Vite scaffolding failed."
+        print_warning "To scaffold manually: cd ${parent_dir} && npm create vite@latest ${project_name} -- --template react-ts"
+        return 0
+    fi
 
-    cat > "${project_dir}/tsconfig.json" << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true
-  },
-  "include": ["src"]
-}
-EOF
+    # Install base deps (create-vite does not run npm install)
+    print_info "Installing base React dependencies..."
+    (cd "${current_dir}" && npm install --silent)
 
-    # vite.config.ts — includes vitest config
+    # Add testing packages — npm resolves compatible latest versions
+    print_info "Installing testing packages (npm selects compatible latest versions)..."
+    (cd "${current_dir}" && npm install --save-dev \
+        vitest \
+        @vitest/coverage-v8 \
+        @testing-library/react \
+        @testing-library/jest-dom \
+        @testing-library/user-event \
+        jsdom \
+        --silent)
+
+    # Update package.json scripts to add test commands
+    (cd "${current_dir}" && \
+        npm pkg set scripts.test="vitest run" && \
+        npm pkg set scripts.test:watch="vitest" && \
+        npm pkg set scripts.test:coverage="vitest run --coverage")
+
+    # Overwrite vite.config.ts to add vitest config
     cat > "${project_dir}/vite.config.ts" << 'EOF'
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -2436,41 +2200,29 @@ export default defineConfig({
 });
 EOF
 
-    # .eslintrc.json
-    cat > "${project_dir}/.eslintrc.json" << 'EOF'
-{
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "react", "react-hooks"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:react/recommended",
-    "plugin:react-hooks/recommended"
-  ],
-  "settings": { "react": { "version": "detect" } },
-  "rules": { "react/react-in-jsx-scope": "off" }
-}
-EOF
-
-    # src/setupTests.ts
+    # Testing setup file
     cat > "${project_dir}/src/setupTests.ts" << 'EOF'
 import '@testing-library/jest-dom';
 EOF
 
-    # src/App.tsx
+    # Overwrite App.tsx with Ralph greeting example
     cat > "${project_dir}/src/App.tsx" << 'EOF'
 interface AppProps {
   name?: string;
 }
 
 function App({ name = 'Ralph Loop' }: AppProps) {
-  return <h1>Hello from {name}!</h1>;
+  return (
+    <div>
+      <h1>Hello from {name}!</h1>
+    </div>
+  );
 }
 
 export default App;
 EOF
 
-    # src/App.test.tsx
+    # Example test
     cat > "${project_dir}/src/App.test.tsx" << 'EOF'
 import { render, screen } from '@testing-library/react';
 import App from './App';
@@ -2481,101 +2233,65 @@ describe('App', () => {
     expect(screen.getByText('Hello from Ralph Loop!')).toBeInTheDocument();
   });
 
-  it('renders custom name greeting', () => {
+  it('renders custom name', () => {
     render(<App name="World" />);
     expect(screen.getByText('Hello from World!')).toBeInTheDocument();
   });
 });
 EOF
 
-    # src/main.tsx
-    cat > "${project_dir}/src/main.tsx" << 'EOF'
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-EOF
-
-    # public/index.html
-    cat > "${project_dir}/public/index.html" << 'EOF'
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><title>Ralph Loop App</title></head>
-<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
-</html>
-EOF
-
-    # .gitignore
-    cat > "${project_dir}/.gitignore" << 'EOF'
-node_modules/
-dist/
-coverage/
-.nyc_output/
-.env
-.env.local
-EOF
-
-    print_info "Installing npm dependencies..."
-    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
-
-    print_success "Created React project structure"
+    print_success "React project scaffolded with latest compatible packages"
 }
 
 create_nextjs_project() {
     local project_dir="$1"
     local project_name="$2"
+    local current_dir
+    current_dir="$(pwd)"
+    local parent_dir
+    parent_dir="$(dirname "${current_dir}")"
 
-    mkdir -p "${project_dir}/src/app"
-    mkdir -p "${project_dir}/src/app/api"
-    mkdir -p "${project_dir}/src/__tests__"
-    mkdir -p "${project_dir}/public"
+    print_info "Scaffolding Next.js project via create-next-app@latest..."
+    print_info "(Installs Next.js + all compatible dependencies — may take 1-2 minutes)"
 
-    cat > "${project_dir}/package.json" << EOF
-{
-  "name": "${project_name}",
-  "version": "1.0.0",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "test": "jest",
-    "test:coverage": "jest --coverage"
-  },
-  "dependencies": {
-    "next": "^15.0.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/user-event": "^14.5.2",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.0.0",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "ts-jest": "^29.2.5",
-    "typescript": "^5.6.3"
-  }
-}
-EOF
+    # create-next-app creates its own directory; run from parent after removing pre-created empty dir.
+    # create-next-app@latest runs npm install automatically.
+    if ! (
+        cd "${parent_dir}" || exit 1
+        rm -rf "${project_name}" 2>/dev/null || true
+        npx create-next-app@latest "${project_name}" \
+            --typescript \
+            --eslint \
+            --no-tailwind \
+            --src-dir \
+            --app \
+            --no-import-alias \
+            --use-npm
+    ); then
+        mkdir -p "${current_dir}"
+        print_warning "Next.js scaffolding failed."
+        print_warning "To scaffold manually: npx create-next-app@latest ${project_name} --typescript --eslint --src-dir --app --use-npm"
+        return 0
+    fi
 
-    # next.config.js
-    cat > "${project_dir}/next.config.js" << 'EOF'
-/** @type {import('next').NextConfig} */
-const nextConfig = {};
-module.exports = nextConfig;
-EOF
+    # Install jest testing packages — npm resolves compatible latest versions
+    print_info "Installing jest testing packages (npm selects compatible latest versions)..."
+    (cd "${current_dir}" && npm install --save-dev \
+        jest \
+        jest-environment-jsdom \
+        @testing-library/react \
+        @testing-library/jest-dom \
+        @testing-library/user-event \
+        @types/jest \
+        ts-jest \
+        --silent)
 
-    # jest.config.ts — uses Next.js jest preset
+    # Add test scripts
+    (cd "${current_dir}" && \
+        npm pkg set scripts.test="jest" && \
+        npm pkg set scripts.test:coverage="jest --coverage")
+
+    # jest.config.ts using Next.js jest preset
     cat > "${project_dir}/jest.config.ts" << 'EOF'
 import type { Config } from 'jest';
 import nextJest from 'next/jest.js';
@@ -2591,43 +2307,12 @@ const config: Config = {
 export default createJestConfig(config);
 EOF
 
-    # jest.setup.ts
+    # jest setup file
     cat > "${project_dir}/jest.setup.ts" << 'EOF'
 import '@testing-library/jest-dom';
 EOF
 
-    # tsconfig.json
-    cat > "${project_dir}/tsconfig.json" << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "jsx": "preserve",
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "incremental": true,
-    "plugins": [{ "name": "next" }]
-  },
-  "include": ["src", "next.config.js", "jest.config.ts", "jest.setup.ts"],
-  "exclude": ["node_modules"]
-}
-EOF
-
-    # src/app/layout.tsx
-    cat > "${project_dir}/src/app/layout.tsx" << 'EOF'
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
-EOF
-
-    # src/app/page.tsx
+    # Update home page with Ralph greeting
     cat > "${project_dir}/src/app/page.tsx" << 'EOF'
 export default function Home() {
   return (
@@ -2638,7 +2323,8 @@ export default function Home() {
 }
 EOF
 
-    # src/__tests__/page.test.tsx
+    # Add example test
+    mkdir -p "${project_dir}/src/__tests__"
     cat > "${project_dir}/src/__tests__/page.test.tsx" << 'EOF'
 import { render, screen } from '@testing-library/react';
 import Home from '../app/page';
@@ -2651,22 +2337,7 @@ describe('Home page', () => {
 });
 EOF
 
-    # .gitignore
-    cat > "${project_dir}/.gitignore" << 'EOF'
-node_modules/
-.next/
-out/
-dist/
-coverage/
-.env
-.env.local
-.env.*.local
-EOF
-
-    print_info "Installing npm dependencies..."
-    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
-
-    print_success "Created Next.js project structure"
+    print_success "Next.js project scaffolded with latest compatible packages"
 }
 
 create_express_project() {
@@ -2677,9 +2348,10 @@ create_express_project() {
     mkdir -p "${project_dir}/src/middleware"
     mkdir -p "${project_dir}/tests"
 
-    cat > "${project_dir}/package.json" << EOF
+    # package.json — scripts only; npm install below resolves compatible latest versions
+    cat > "${project_dir}/package.json" << 'EOF'
 {
-  "name": "${project_name}",
+  "name": "project",
   "version": "1.0.0",
   "scripts": {
     "dev": "nodemon src/index.ts",
@@ -2687,25 +2359,7 @@ create_express_project() {
     "build": "tsc",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src tests --ext .ts"
-  },
-  "dependencies": {
-    "express": "^4.21.1"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.0.0",
-    "@types/supertest": "^6.0.2",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "eslint": "^8.57.1",
-    "jest": "^29.7.0",
-    "nodemon": "^3.1.7",
-    "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "lint": "eslint src tests"
   }
 }
 EOF
@@ -2743,14 +2397,15 @@ const config: Config = {
 export default config;
 EOF
 
-    # .eslintrc.json
-    cat > "${project_dir}/.eslintrc.json" << 'EOF'
-{
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
-  "env": { "node": true, "jest": true }
-}
+    # ESLint 9 flat config using typescript-eslint unified package
+    cat > "${project_dir}/eslint.config.cjs" << 'EOF'
+// eslint.config.cjs — ESLint 9 flat config with typescript-eslint
+const tseslint = require('typescript-eslint');
+
+module.exports = tseslint.config(
+  { ignores: ['dist/', 'coverage/', 'node_modules/', 'eslint.config.cjs'] },
+  ...tseslint.configs.recommended,
+);
 EOF
 
     # src/index.ts
@@ -2823,8 +2478,17 @@ coverage/
 .env.local
 EOF
 
-    print_info "Installing npm dependencies..."
-    (cd "${project_dir}" && npm install --silent) && print_success "npm install complete" || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
+    print_info "Installing Express dependencies (npm selects compatible latest versions)..."
+    (cd "${project_dir}" && npm install express --silent && \
+        npm install --save-dev \
+            typescript ts-node @types/node @types/express \
+            nodemon \
+            jest ts-jest @types/jest \
+            supertest @types/supertest \
+            eslint typescript-eslint \
+            --silent \
+    ) && print_success "npm install complete" \
+      || print_warning "npm install failed — run manually: cd ${project_dir} && npm install express && npm install --save-dev typescript ts-node @types/node @types/express nodemon jest ts-jest @types/jest supertest @types/supertest eslint typescript-eslint"
 
     print_success "Created Express project structure"
 }
@@ -2836,12 +2500,13 @@ create_flask_project() {
     mkdir -p "${project_dir}/app"
     mkdir -p "${project_dir}/tests"
 
+    # requirements.txt — no version pins; pip selects latest compatible versions
     cat > "${project_dir}/requirements.txt" << 'EOF'
-flask>=3.1.0
-pytest>=8.3.0
-pytest-cov>=5.0.0
-black>=24.10.0
-flake8>=7.1.0
+flask
+pytest
+pytest-cov
+black
+flake8
 EOF
 
     cat > "${project_dir}/app/__init__.py" << 'EOF'

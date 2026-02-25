@@ -56,11 +56,15 @@ Create a new project with Ralph Loop pre-configured:
 5. Creates `CLAUDE.md` with project-specific guidance
 6. Creates `.gitignore` for the language (node_modules, dist, venv, target, etc.)
 7. Creates `README.md` with Ralph Loop workflow
-8. **Installs dependencies** — runs `npm install`, `pip install`, `go mod tidy`, `cargo check`, or `bundle install` as appropriate
+8. **Installs dependencies** with latest compatible versions:
+   - **Angular/React/Next.js**: Uses official scaffolding tools (`ng new`, `create-vite`, `create-next-app`) — the tool itself resolves all compatible package versions
+   - **TypeScript/Express**: Runs `npm install --save-dev` with bare package names — npm selects latest compatible versions
+   - **Python/Flask**: Runs `pip install -r requirements.txt` with unversioned package names — pip selects latest compatible versions
+   - **Go**: Runs `go mod tidy`; **Rust**: Runs `cargo check`; **Ruby**: Runs `bundle install`
 9. Initializes git repository
 10. Makes initial commit
 
-The project is ready to build, test, and lint immediately after creation — no manual setup required.
+The project is ready to build, test, and lint immediately after creation — no manual setup required. Package versions are always current because they're resolved at install time, not hardcoded.
 
 **Project types supported:**
 - `typescript` - TypeScript/JavaScript with npm/yarn/pnpm/bun
@@ -373,8 +377,8 @@ CLAUDE.md → CLAUDE.md.ralph-backup-20260223-153045
 # Include browser testing setup? (yes/no) [yes]: no
 
 # Result:
-# ✓ Created my-web-app/ with src/, tests/, jest.config.ts, .eslintrc.json
-# ✓ npm install run — project ready to build/test/lint immediately
+# ✓ Created my-web-app/ with src/, tests/, jest.config.ts, eslint.config.cjs
+# ✓ npm install --save-dev run with bare package names (npm picks latest compatible versions)
 # ✓ .gitignore created (node_modules/, dist/, coverage/)
 # ✓ Ralph Loop structure configured
 # ✓ Initial git commit made
