@@ -2320,6 +2320,11 @@ EOF
         && print_success "pip install complete" \
         || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
 
+    print_info "Running tests..."
+    (cd "${project_dir}" && venv/bin/pytest tests/ -q 2>&1) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && venv/bin/pytest tests/"
+
     print_success "Created Python project structure"
 }
 
@@ -2473,14 +2478,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "=4.2.1"
-actix-http = "=3.4.0"
+actix-web = "4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-time = "=0.3.36"
-url = "=2.5.2"
-indexmap = "=2.7.0"
 EOF
         print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
         return
@@ -2490,7 +2491,6 @@ EOF
     (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
 
     # Write Cargo.toml with actix-web dependencies
-    # Versions pinned for compatibility with rustc < 1.81 (Cargo 1.75 environment)
     cat > "${project_dir}/Cargo.toml" << EOF
 [package]
 name = "${project_name}"
@@ -2498,14 +2498,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "=4.2.1"
-actix-http = "=3.4.0"
+actix-web = "4"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-time = "=0.3.36"
-url = "=2.5.2"
-indexmap = "=2.7.0"
 
 [dev-dependencies]
 actix-rt = "2"
@@ -2606,10 +2602,6 @@ edition = "2021"
 [dependencies]
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
-time = "=0.3.36"
-getrandom = "=0.2.15"
-tempfile = "=3.19.1"
-indexmap = "=2.7.0"
 EOF
         print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
         return
@@ -2619,7 +2611,6 @@ EOF
     (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
 
     # Cargo.toml with Rocket 0.5 (stable, no nightly required)
-    # Pins transitive deps to avoid edition2024 manifests incompatible with rustc < 1.82
     cat > "${project_dir}/Cargo.toml" << EOF
 [package]
 name = "${project_name}"
@@ -2629,10 +2620,6 @@ edition = "2021"
 [dependencies]
 rocket = { version = "0.5", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
-time = "=0.3.36"
-getrandom = "=0.2.15"
-tempfile = "=3.19.1"
-indexmap = "=2.7.0"
 EOF
 
     # main.rs — basic Rocket server with health endpoint
@@ -3266,6 +3253,11 @@ EOF
         && print_success "pip install complete" \
         || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
 
+    print_info "Running tests..."
+    (cd "${project_dir}" && venv/bin/pytest tests/ -q 2>&1) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && venv/bin/pytest tests/"
+
     print_success "Created Flask project structure"
 }
 
@@ -3373,6 +3365,11 @@ __pycache__/
 .pytest_cache/
 .coverage
 EOF
+
+    print_info "Running tests..."
+    (cd "${project_dir}" && venv/bin/pytest tests/ -q 2>&1) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && venv/bin/pytest tests/"
 
     print_success "Created Reflex project structure"
 }

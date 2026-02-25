@@ -1,7 +1,7 @@
 # Ralph Loop — Full Project Types & Sub-Types Test Report
 
-**Date:** 2026-02-25
-**System:** Node.js v22.17.0, Python 3.12.3, pip 24.0, Go 1.22.2, Cargo/Rust 1.75.0, Ruby 3.2.3, dotnet 10.0.103 (WSL2 / Ubuntu)
+**Date:** 2026-02-25 (updated after Cargo upgrade)
+**System:** Node.js v22.17.0, Python 3.12.3, pip 24.0, Go 1.22.2, Cargo/Rust 1.93.1, Ruby 3.2.3, dotnet 10.0.103 (WSL2 / Ubuntu)
 **Rails:** gem install rails (6.1.7.10) — pre-installed from previous tests
 **Reflex:** pip install via venv
 **Test directory:** `/tmp/` (cleaned up after testing)
@@ -15,8 +15,8 @@
 | typescript | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 jest) | — |
 | javascript | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 jest) | Plain JS, no tsconfig |
 | express | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 supertest) | — |
-| python | basic | ✅ PASS | ✅ PASS | ✅ PASS | ⚠️ ENV (venv/PEP 668) | venv created, deps installed inside |
-| python | flask | ✅ PASS | ✅ PASS | ✅ PASS | ⚠️ ENV (venv/PEP 668) | venv created, deps installed inside |
+| python | basic | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 pytest) | venv auto-runs tests via venv/bin/pytest |
+| python | flask | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 pytest) | venv auto-runs tests via venv/bin/pytest |
 | python | reflex | ✅ PASS | ✅ PASS | ✅ PASS | ⚠️ ENV (reflex init required) | venv + rxconfig.py + test_state.py |
 | go | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (go test ./...) | — |
 | ruby | basic | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (1/1 rspec) | — |
@@ -25,14 +25,14 @@
 | nextjs | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (build OK) | --no-react-compiler default |
 | angular | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (build OK) | Angular 19 |
 | rust | basic | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 cargo test) | — |
-| rust | actix | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 cargo test) | Version pins for Rust 1.75 compat |
-| rust | rocket | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 cargo test) | Version pins for Rust 1.75 compat |
+| rust | actix | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 cargo test) | actix-web 4.13.0, no version pins needed |
+| rust | rocket | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (2/2 cargo test) | rocket 0.5, no version pins needed |
 | dotnet | webapi | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (1/1 xunit) | Sibling .Tests/ project correct |
 | dotnet | mvc | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (1/1 xunit) | Sibling .Tests/ project correct |
 | nx | — | ✅ PASS | ✅ PASS | ✅ PASS | ✅ PASS (workspace OK) | ralph/nx-workspace.json git-tracked |
 
 **18/18 project type/sub-type combinations created successfully.**
-**15/18 had functional tests passing. 3/18 had environment constraints (Python PEP 668 — venv created correctly).**
+**17/18 functional tests passing. 1/18 environment constraint (Python Reflex — requires interactive terminal for `reflex init`).**
 
 ---
 
@@ -149,25 +149,15 @@ When `create_new_project()` called `create_dotnet_project "." "${project_name}"`
 
 ## Environment Constraints (Not Bugs)
 
-### Python/Flask/Reflex: PEP 668
+### Python/Flask: PEP 668
 
-All three Python project types use `python3 -m venv venv` and `venv/bin/pip install`. If the system's pip is blocked by PEP 668 (Debian/Ubuntu externally-managed-environment), the system pip install fails but the venv creation succeeds. The install script warns and continues:
+Python and Flask project types use `python3 -m venv venv` and `venv/bin/pip install`. If the system pip is blocked by PEP 668 (Debian/Ubuntu externally-managed-environment), system pip fails but venv creation succeeds. All test commands use `venv/bin/pytest` directly — no activation required.
 
-```
-pip install failed — run manually: source venv/bin/activate && pip install -r requirements.txt
-```
+The install script now runs `venv/bin/pytest tests/` automatically after setup to verify everything works without user needing to activate the venv.
 
-**Reflex additional note:** `reflex init --template blank` requires an internet connection and a terminal. On a headless system it may fall back to the manual placeholder structure (rxconfig.py + test_reflex/ + tests/). This is by design and documented in the output.
+### Reflex: Requires Interactive Terminal
 
-### Rust Actix / Rocket: Version Pins for Rust 1.75 Compatibility
-
-Both `actix-web` 4.x and `rocket` 0.5 have transitive dependency chains that pull in newer crates requiring rustc ≥ 1.81 or `edition2024` (Cargo ≥ 1.85). The install script pins specific versions to keep the full dependency graph compatible with Rust 1.75:
-
-**Actix pins:** `actix-web = "=4.2.1"`, `actix-http = "=3.4.0"`, `time = "=0.3.36"`, `url = "=2.5.2"`, `indexmap = "=2.7.0"`
-
-**Rocket pins:** `time = "=0.3.36"`, `getrandom = "=0.2.15"`, `tempfile = "=3.19.1"`, `indexmap = "=2.7.0"`
-
-Both build and test successfully on Rust 1.75.0 with these pins. Users who upgrade to Rust ≥ 1.82 can remove the pins and use unpinned versions.
+`reflex init --template blank` requires an interactive terminal (downloads the Node.js runtime on first run). On a headless system it falls back to a manual placeholder structure (rxconfig.py + test_reflex/ + tests/). The pytest tests in tests/ still pass in the placeholder case.
 
 ### Rails: Requires gem install rails
 
@@ -179,13 +169,13 @@ Rails is not pre-installed with Ruby. The install script automatically runs `gem
 
 | Tool | Version |
 |---|---|
-| install-ralph-loop.sh | post-`c685777` (includes all 5 framework commits + 2 bug fixes) |
+| install-ralph-loop.sh | post-`040058b` (all framework types + version pin removal + venv pytest) |
 | Node.js | 22.17.0 |
 | npm | 11.7.0 |
 | Go | 1.22.2 |
 | Python | 3.12.3 |
 | pip | 24.0 |
-| Cargo/Rust | 1.75.0 |
+| Cargo/Rust | 1.93.1 |
 | Ruby | 3.2.3 |
 | Rails | 6.1.7.10 (gem) |
 | dotnet | 10.0.103 |
