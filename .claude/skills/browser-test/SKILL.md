@@ -1,7 +1,7 @@
 ---
 name: browser-test
 description: UI testing with Playwright for browser-based functional tests, visual regression, and accessibility (WCAG 2.1) audits. Use for UI components, pages, or full user interaction flows.
-argument-hint: [component-path] [--interactive] [--visual-regression] [--a11y]
+argument-hint: "[component-path] [--interactive] [--visual-regression] [--a11y]"
 disable-model-invocation: true
 ---
 

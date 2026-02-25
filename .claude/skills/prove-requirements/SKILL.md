@@ -1,7 +1,7 @@
 ---
 name: prove-requirements
 description: Comprehensive validation that all requirements from a specification are fully implemented and tested. Locates implementations, verifies test coverage for each acceptance criterion, runs the full test suite, and generates a proof report.
-argument-hint: [spec-file] [--report]
+argument-hint: "[spec-file] [--report]"
 disable-model-invocation: true
 ---
 
@@ -37,6 +37,7 @@ When this skill is invoked:
 4. **Execute All Tests**
    - Check for NX workspace (`ralph/nx-workspace.json` or `nx.json`)
    - **Standard project:** run complete test suite, then `/test-spec --all`
+   - **Python:** If `venv/` directory exists, run `venv/bin/pytest tests/ -v --cov` for the complete suite (not bare `pytest`)
    - **NX workspace:**
      - Run `nx run-many -t test,lint` to validate all projects
      - Or use `nx affected -t test --base=main` for changed projects only (faster in CI)

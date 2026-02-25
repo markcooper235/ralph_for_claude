@@ -1,7 +1,7 @@
 ---
 name: test-spec
 description: Test implementation against specification requirements. Validates acceptance criteria, runs appropriate test suites (pytest, Jest, go test, cargo test), updates task status, and generates detailed feedback reports.
-argument-hint: [requirement-id] [--all] [--verbose]
+argument-hint: "[requirement-id] [--all] [--verbose]"
 disable-model-invocation: true
 ---
 
@@ -110,7 +110,12 @@ nx run <project>:lint
 
 ### Python Projects
 ```bash
-pytest tests/test_req_*.py -v --cov
+# Ralph Python projects always have a venv/ — use venv/bin/pytest directly
+if [ -d "venv" ]; then
+    venv/bin/pytest tests/test_req_*.py -v --cov
+else
+    pytest tests/test_req_*.py -v --cov
+fi
 ```
 
 ### JavaScript/TypeScript

@@ -106,6 +106,11 @@ Design implementation approach per requirement. Select test tools:
 - ui: playwright (only if testRequirements.ui = true)
 - codeQuality: complexity/duplication
 
+**Python venv:** If `venv/` directory exists in the project root (always present for Ralph-created Python/Flask/Reflex projects), prefix ALL Python tool commands with `venv/bin/`:
+- testTools.unit → `venv/bin/pytest`
+- testTools.lint → `venv/bin/black` (or `venv/bin/ruff` if ruff is in requirements.txt)
+- Record the full binary path in architecture.json so Phase 4 and ralph-archive use it verbatim — no shell activation needed.
+
 Save ralph/.ralph/architecture.json:
 {{"projectType","techStack":[],"testTools":{{"lint","unit","ui","codeQuality"}},"implementation":{{"REQ-XXX":{{"files":[],"tests":[],"approach":""}}}}}}
 

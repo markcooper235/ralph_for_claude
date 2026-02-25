@@ -1,7 +1,7 @@
 ---
 name: ralph-create-prd
 description: Interactive PRD creation helper. Guides through creating a complete, structured PRD with problem statement, user stories, requirements, acceptance criteria, dependency analysis, and story breakdown for Ralph Loop execution.
-argument-hint: [spec-name]
+argument-hint: "[spec-name]"
 disable-model-invocation: true
 ---
 

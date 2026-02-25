@@ -1,7 +1,7 @@
 ---
 name: feedback-selector
 description: Analyze project structure and requirements to determine the optimal testing and feedback strategy. Recommends tools, configures thresholds, and sets up test infrastructure based on project type (frontend, backend, API, library, CLI, etc.).
-argument-hint: [--analyze-only] [--recommend] [--setup]
+argument-hint: "[--analyze-only] [--recommend] [--setup]"
 disable-model-invocation: true
 ---
 
