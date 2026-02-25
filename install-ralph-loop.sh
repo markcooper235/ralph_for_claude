@@ -653,12 +653,38 @@ ask_project_questions() {
             ;;
 
         rust)
+            # Sub-framework selection
+            echo "Rust framework? (basic/actix/rocket) [basic]:"
+            read -r rs_fw_choice || true
+            PROJECT_CONFIG[rust_framework]="${rs_fw_choice:-basic}"
+
             PROJECT_CONFIG[package_manager]="cargo"
             PROJECT_CONFIG[test_framework]="cargo-test"
 
-            echo "Use workspace? (yes/no) [no]:"
-            read -r workspace_choice || true
-            PROJECT_CONFIG[workspace]="${workspace_choice:-no}"
+            case "${PROJECT_CONFIG[rust_framework]}" in
+                basic)
+                    echo "Use workspace? (yes/no) [no]:"
+                    read -r workspace_choice || true
+                    PROJECT_CONFIG[workspace]="${workspace_choice:-no}"
+                    ;;
+                actix|rocket)
+                    # Web frameworks — no extra questions needed
+                    ;;
+            esac
+            ;;
+
+        actix)
+            # Direct shortcut — equivalent to --type rust with framework=actix
+            PROJECT_CONFIG[rust_framework]="actix"
+            PROJECT_CONFIG[package_manager]="cargo"
+            PROJECT_CONFIG[test_framework]="cargo-test"
+            ;;
+
+        rocket)
+            # Direct shortcut — equivalent to --type rust with framework=rocket
+            PROJECT_CONFIG[rust_framework]="rocket"
+            PROJECT_CONFIG[package_manager]="cargo"
+            PROJECT_CONFIG[test_framework]="cargo-test"
             ;;
 
         nx)
@@ -1184,6 +1210,40 @@ bundle exec rake test # Run Minitest suite
 rubocop               # Style and lint check
 rubocop -a            # Auto-fix safe offenses
 ```
+
+EOF
+            ;;
+
+        actix)
+            cat >> "${claude_md}" << 'EOF'
+
+## Actix Web Specific
+
+### Build Commands
+```bash
+cargo build           # Debug build
+cargo build --release # Release build
+cargo run             # Build and run (localhost:8080)
+```
+
+### Test Commands
+```bash
+cargo test            # Run all tests (includes integration tests)
+cargo test -- --nocapture  # Show println output
+cargo test <name>     # Run specific test
+```
+
+### Lint Commands
+```bash
+cargo fmt             # Format code
+cargo clippy          # Lint (treat warnings as errors in CI)
+cargo check           # Fast type/borrow check without linking
+```
+
+### Key Notes
+- Server runs on `http://localhost:8080` by default
+- Tests use `actix_web::test` helpers — no running server needed
+- Add `tracing` + `tracing-actix-web` crates for structured logging
 
 EOF
             ;;
@@ -1837,7 +1897,17 @@ create_new_project() {
             create_dotnet_project "." "${project_name}"
             ;;
         rust)
-            create_rust_project "." "${project_name}"
+            case "${PROJECT_CONFIG[rust_framework]:-basic}" in
+                actix)  create_actix_project "." "${project_name}"; project_type="actix" ;;
+                rocket) create_rocket_project "." "${project_name}"; project_type="rocket" ;;
+                *)      create_rust_project "." "${project_name}" ;;
+            esac
+            ;;
+        actix)
+            create_actix_project "." "${project_name}"
+            ;;
+        rocket)
+            create_rocket_project "." "${project_name}"
             ;;
         *)
             print_warning "No scaffold available for project type '${project_type}'"
@@ -2347,6 +2417,128 @@ EOF
     (cd "${project_dir}" && cargo check --quiet) && print_success "cargo check complete" || print_warning "cargo check failed — run manually: cd ${project_dir} && cargo check"
 
     print_success "Created Rust project structure"
+}
+
+create_actix_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    if ! command -v cargo > /dev/null 2>&1; then
+        print_warning "cargo not found — creating placeholder Actix structure"
+        mkdir -p "${project_dir}/src" "${project_dir}/tests"
+        cat > "${project_dir}/Cargo.toml" << EOF
+[package]
+name = "${project_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+EOF
+        print_info "Install Rust from https://rustup.rs/ then run: cd ${project_dir} && cargo build"
+        return
+    fi
+
+    # Initialize cargo project
+    (cd "${project_dir}" && cargo init --name "${project_name}" 2>/dev/null) || true
+
+    # Write Cargo.toml with actix-web dependencies
+    cat > "${project_dir}/Cargo.toml" << EOF
+[package]
+name = "${project_name}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+actix-rt = "2"
+EOF
+
+    # main.rs — basic Actix-web server with health endpoint
+    cat > "${project_dir}/src/main.rs" << 'EOF'
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+}
+
+#[derive(Serialize)]
+struct GreetResponse {
+    message: String,
+}
+
+#[get("/")]
+async fn index() -> impl Responder {
+    HttpResponse::Ok().json(GreetResponse {
+        message: "Hello from Ralph Loop!".to_string(),
+    })
+}
+
+#[get("/health")]
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(HealthResponse {
+        status: "ok".to_string(),
+    })
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    println!("Starting server at http://localhost:8080");
+    HttpServer::new(|| {
+        App::new()
+            .service(index)
+            .service(health)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{test, App};
+
+    #[actix_web::test]
+    async fn test_index_ok() {
+        let app = test::init_service(App::new().service(index)).await;
+        let req = test::TestRequest::get().uri("/").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
+
+    #[actix_web::test]
+    async fn test_health_ok() {
+        let app = test::init_service(App::new().service(health)).await;
+        let req = test::TestRequest::get().uri("/health").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
+}
+EOF
+
+    # .gitignore
+    cat > "${project_dir}/.gitignore" << 'EOF'
+/target/
+Cargo.lock
+EOF
+
+    print_info "Building Actix project (downloads dependencies — may take a moment)..."
+    (cd "${project_dir}" && cargo build --quiet) \
+        && print_success "cargo build complete" \
+        || print_warning "cargo build failed — run manually: cd ${project_dir} && cargo build"
+
+    print_success "Created Actix Web project structure"
 }
 
 create_angular_project() {
