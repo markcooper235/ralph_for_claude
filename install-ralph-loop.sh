@@ -3486,12 +3486,27 @@ EOF
         return
     fi
 
-    # Install Rails gem if not already present
-    if ! command -v rails > /dev/null 2>&1; then
-        print_info "Installing Rails gem..."
-        gem install rails --no-document -q \
-            && print_success "Rails installed" \
-            || { print_warning "gem install rails failed — install manually: gem install rails"; return; }
+    # Ensure Rails 7+ is available — Rails 6.x is incompatible with Ruby 3.2+
+    local rails_bin
+    rails_bin=$(command -v rails 2>/dev/null || true)
+    local rails_major=0
+    [[ -n "${rails_bin}" ]] && rails_major=$(rails --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+
+    if [[ "${rails_major:-0}" -lt 7 ]]; then
+        if [[ "${rails_major:-0}" -gt 0 ]]; then
+            print_info "System Rails v${rails_major} is incompatible with Ruby 3.2+ (need Rails 7+), installing latest..."
+        else
+            print_info "Rails not found — installing latest..."
+        fi
+        if gem install rails --user-install --no-document -q 2>/dev/null; then
+            local user_rails
+            user_rails="$(ruby -e 'puts File.join(Gem.user_dir, "bin", "rails")' 2>/dev/null)"
+            [[ -x "${user_rails}" ]] && rails_bin="${user_rails}" || rails_bin="rails"
+            print_success "Rails installed: $(${rails_bin} --version 2>/dev/null)"
+        else
+            print_warning "gem install rails failed — install manually: gem install rails --user-install"
+            return
+        fi
     fi
 
     local test_fw="${PROJECT_CONFIG[test_framework]:-minitest}"
@@ -3507,7 +3522,7 @@ EOF
         cd "${parent_dir}" || exit 1
         rm -rf "${project_name}" 2>/dev/null || true
         # shellcheck disable=SC2086
-        rails new "${project_name}" ${rails_flags}
+        "${rails_bin}" new "${project_name}" ${rails_flags}
     ); then
         # Re-enter project dir by absolute path (new inode after rm + recreate)
         cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
@@ -3519,10 +3534,31 @@ EOF
         return
     fi
 
-    print_info "Installing gems..."
+    # Configure Bundler to install gems locally to avoid needing system-level write perms
+    (cd "${current_dir}" && bundle config set --local path 'vendor/bundle' 2>/dev/null) || true
+
+    # Ensure libyaml-dev is available — required to compile the psych gem (YAML parser)
+    # Rails 8 requires psych 5.x which must be compiled against libyaml headers.
+    if command -v dpkg >/dev/null 2>&1 && ! dpkg -l libyaml-dev 2>/dev/null | grep -q '^ii'; then
+        print_info "Installing libyaml-dev (required to compile Rails psych gem)..."
+        if sudo apt-get install -y libyaml-dev -qq 2>/dev/null; then
+            print_success "libyaml-dev installed"
+        else
+            print_warning "libyaml-dev is not installed and could not be auto-installed."
+            print_warning "bundle install may fail. Fix with: sudo apt-get install libyaml-dev"
+            print_warning "Then re-run: cd ${current_dir} && bundle install"
+        fi
+    fi
+
+    print_info "Installing gems (to vendor/bundle)..."
     (cd "${current_dir}" && bundle install --quiet) \
         && print_success "Gems installed" \
         || print_warning "bundle install failed — run manually: cd ${project_dir} && bundle install"
+
+    # Ensure vendor/bundle is gitignored
+    if ! grep -q 'vendor/bundle' "${current_dir}/.gitignore" 2>/dev/null; then
+        echo "vendor/bundle/" >> "${current_dir}/.gitignore"
+    fi
 
     # Add RSpec if chosen
     if [ "${test_fw}" = "rspec" ]; then
