@@ -5,16 +5,6 @@ argument-hint: <spec-file>
 disable-model-invocation: true
 ---
 
-# Ralph Loop - Main Orchestration Skill
-
-Execute complete Ralph Loop with parallel subagent execution, state management, and git integration.
-
-## Usage
-
-```
-/ralph-loop <spec-file>
-```
-
 ## Instructions
 
 When this skill is invoked:
@@ -182,48 +172,14 @@ Read `ralph/.ralph/architecture.json`. Update state: status="implementing", test
 
 ### Phase 3: Implementation Loop
 
-Determine execution phases (pseudo-code):
-```python
-ITER = 1
-completed = set()
-
-while stories_remaining(completed):
-    # Find stories ready to run (all deps satisfied)
-    ready = [s for s in stories if all(d in completed for d in s.dependencies) and s.id not in completed]
-
-    # Group by code file overlap (same-file stories run sequentially)
-    conflict_groups = group_by_file_overlap(ready)
-
-    # Take up to 3 non-conflicting stories for this phase
-    phase_stories = select_up_to_3_non_conflicting(ready, conflict_groups)
-
-    # Launch parallel impl subagents (max 3)
-    subagents = [launch_impl(story, ITER) for story in phase_stories]
-    wait_all(subagents)
-
-    for story, result in zip(phase_stories, subagents):
-        if "FAIL" in result:
-            detail = read(f"ralph/.ralph/logs/progress-{story.id}-{ITER}.log")
-            # handle_impl_failure: max 2 retries before pausing for user
-            impl_iter = state.impl_iterations.get(story.id, 0) + 1
-            update_state(impl_iterations={story.id: impl_iter})
-            if impl_iter <= 2:
-                # Re-run impl with failure context injected
-                brief = read_file(f"ralph/.ralph/stories/{story.id}-brief.md")
-                retry_prompt = f"{brief}\n\n## Previous Attempt Failed\n{detail}\n\nFix the issues and implement correctly."
-                # re-launch impl subagent with retry_prompt (same Task structure, prompt=retry_prompt)
-            else:
-                update_state(status="paused_error")
-                log_error(f"{story.id} impl failed after 2 retries — user intervention required")
-                exit()
-        else:
-            run_tests(story, ITER)       # Phase 4
-            commit_story(story)          # Phase 5
-            completed.add(story.id)
-
-    update_state(completedStories=len(completed))
-    ITER += 1
-```
+Execution loop (`ITER` starts at 1, increments each outer pass):
+1. Find ready stories — all dependencies in `completed` set, story not yet completed
+2. Group ready stories by code-file overlap; same-file stories run sequentially by priority, not in parallel
+3. Select up to 3 non-conflicting stories; launch all as parallel subagents; wait for all to finish
+4. Per result:
+   - **FAIL**: read `ralph/.ralph/logs/progress-{story.id}-{ITER}.log`; increment `state.impl_iterations[story.id]`; if ≤ 2 re-launch impl subagent with brief + failure detail injected into prompt; if > 2 set `status="paused_error"`, log error, halt
+   - **PASS**: run Phase 4 tests → run Phase 5 commit → add story to `completed`
+5. Update `state.completedStories = len(completed)`; `ITER += 1`; repeat until all stories completed
 
 **Impl subagent (launched per story):**
 ```python
