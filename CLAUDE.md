@@ -48,7 +48,7 @@ The Ralph Loop is a continuous feedback cycle with state management:
 - **Unit Tests**: Logic validation, max 5 iterations
 - **Code Quality**: Complexity, duplication checks
 - **UI Tests**: Playwright (if applicable), max 5 iterations
-- **Integration Tests**: Full system validation
+- **Integration Tests**: In-process HTTP client testing for server/API project types (max 5 iterations)
 - Iteration not complete until ALL tests pass
 
 **Spec Modification** ⭐ NEW
@@ -305,9 +305,11 @@ Phase 3 (parallel, deps satisfied):
    - Accessibility (WCAG 2.1)
    - Triggered by: keywords, file patterns, explicit flag
 
-5. **Integration Tests** (max 5 iterations)
-   - Full system validation
-   - Cross-component testing
+5. **Integration Tests** (max 5 iterations, server/API projects only)
+   - In-process HTTP client testing (no live server needed)
+   - supertest (Express/Next.js), Flask test_client, net/http/httptest (Go), RSpec request specs (Rails), WebApplicationFactory (.NET), actix/rocket built-in test modules
+   - Triggered by: server/API project type OR API keywords in PRD (REST, endpoint, route, etc.)
+   - Skipped for: react, angular, blazorwasm, nx
 
 **Test Failure Handling:**
 - Pause immediately on failure
