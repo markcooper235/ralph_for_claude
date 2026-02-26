@@ -722,8 +722,13 @@ ask_project_questions() {
 
             # E2E framework
             echo
-            echo "E2E test framework? (playwright/cypress/none) [playwright]:"
+            echo "E2E test framework? (playwright/none) [playwright]:"
             read -r e2e_choice || true
+            # Normalize: cypress → playwright (Cypress removed; Playwright covers all E2E needs)
+            if [[ "${e2e_choice}" == "cypress" ]]; then
+                print_warning "Cypress is not supported — using Playwright instead"
+                e2e_choice="playwright"
+            fi
             PROJECT_CONFIG[nx_e2e]="${e2e_choice:-playwright}"
 
             # Unit test runner (default; each app can override)
@@ -2247,6 +2252,8 @@ pytest-cov
 black
 flake8
 mypy
+httpx
+pytest-asyncio
 EOF
 
     # setup.py
@@ -2986,6 +2993,8 @@ create_nextjs_project() {
         @types/jest \
         ts-jest \
         ts-node \
+        supertest \
+        @types/supertest \
         --silent)
 
     # Add test scripts
@@ -3348,9 +3357,9 @@ create_reflex_project() {
         || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
 
     print_info "Installing Reflex and test dependencies..."
-    (cd "${project_dir}" && venv/bin/pip install reflex pytest pytest-cov -q) \
+    (cd "${project_dir}" && venv/bin/pip install reflex pytest pytest-cov httpx pytest-asyncio -q) \
         && print_success "Reflex installed" \
-        || print_warning "pip install failed — run: source venv/bin/activate && pip install reflex pytest pytest-cov"
+        || print_warning "pip install failed — run: source venv/bin/activate && pip install reflex pytest pytest-cov httpx pytest-asyncio"
 
     # Derive module name: lowercase, hyphens/dots → underscores
     local module_name
@@ -3473,6 +3482,7 @@ source 'https://rubygems.org'
 gem 'rspec', '~> 3.13'
 gem 'rubocop', '~> 1.65', require: false
 gem 'simplecov', require: false
+gem 'rack-test', group: :test
 EOF
 
     cat > "${project_dir}/lib/${project_name}.rb" << EOF
@@ -3741,6 +3751,16 @@ EOF
         --no-restore 2>/dev/null) \
         && print_success "Test project: ../${sibling_test_name}" \
         || print_warning "xUnit test project creation failed — run: dotnet new xunit --name ${sibling_test_name}"
+
+    # Add Microsoft.AspNetCore.Mvc.Testing for integration tests (webapi / mvc / blazor server only)
+    local test_proj_dir
+    test_proj_dir="$(dirname "${project_dir}")/${project_name}.Tests"
+    if [[ "${template}" != "blazorwasm" ]] && [ -d "${test_proj_dir}" ]; then
+        print_info "Adding Microsoft.AspNetCore.Mvc.Testing for integration tests..."
+        (cd "${test_proj_dir}" && dotnet add package Microsoft.AspNetCore.Mvc.Testing --verbosity quiet 2>/dev/null) \
+            && print_success "Microsoft.AspNetCore.Mvc.Testing added" \
+            || print_warning "Could not add Mvc.Testing — run: cd ${test_proj_dir} && dotnet add package Microsoft.AspNetCore.Mvc.Testing"
+    fi
 
     # Restore packages
     print_info "Restoring NuGet packages..."

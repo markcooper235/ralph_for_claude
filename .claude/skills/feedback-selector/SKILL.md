@@ -62,14 +62,28 @@ When this skill is invoked:
    - Jest/Vitest for component unit tests
 
    **Web Application (Backend)**
-   - Integration tests for API endpoints
+   - Integration testing (in-process, no live server required):
+     - Express/Next.js:      supertest            → `npm i -D supertest @types/supertest`
+     - Flask:                Flask test_client      (built-in, no install needed)
+     - Python/FastAPI:       httpx + pytest         → `pip install httpx pytest-asyncio`
+     - Go:                   net/http/httptest      (stdlib, no install needed)
+     - Rails:                RSpec request specs    (rspec-rails in Gemfile)
+     - Rust (actix/rocket):  built-in test module   (no install needed)
+     - .NET WebAPI/MVC:      WebApplicationFactory  → `dotnet add package Microsoft.AspNetCore.Mvc.Testing`
    - Unit tests for business logic
    - Load testing (k6, Artillery) for performance
    - Security scanning (OWASP ZAP) for security requirements
 
    **API/Service**
    - Contract testing (Pact) for API compatibility
-   - Integration tests for endpoint behavior
+   - Integration testing (in-process, no live server required):
+     - Express/Next.js:      supertest            → `npm i -D supertest @types/supertest`
+     - Flask:                Flask test_client      (built-in, no install needed)
+     - Python/FastAPI:       httpx + pytest         → `pip install httpx pytest-asyncio`
+     - Go:                   net/http/httptest      (stdlib, no install needed)
+     - Rails:                RSpec request specs    (rspec-rails in Gemfile)
+     - Rust (actix/rocket):  built-in test module   (no install needed)
+     - .NET WebAPI/MVC:      WebApplicationFactory  → `dotnet add package Microsoft.AspNetCore.Mvc.Testing`
    - Load testing for performance requirements
    - API documentation validation (Swagger/OpenAPI)
 

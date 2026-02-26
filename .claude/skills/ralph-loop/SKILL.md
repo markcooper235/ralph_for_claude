@@ -70,8 +70,13 @@ UI test flag — set testRequirements.ui = true if ANY of the following are pres
 3. codeImpact.files contains UI file extensions: .tsx, .jsx, .vue, .svelte, .html paired with JS/TS
 Rule: ui defaults to false; any signal above sets it to true. Keyword absence must never override explicit metadata.
 
+Integration test flag — set testRequirements.integration = true if ANY of the following are present:
+1. projectType is a server/API type: express, nextjs, flask, python, reflex, go, actix, rocket, rails, ruby, dotnet (webapi/mvc/blazor sub-types only)
+2. OR PRD text contains API keywords: "API", "endpoint", "REST", "route", "POST", "GET", "PUT", "DELETE", "CRUD", "HTTP", "middleware", "authentication", "authorization"
+Never set true for: react, angular, dotnet blazorwasm, nx.
+
 Save ralph/.ralph/stories.json:
-{{"stories":[{{"id","title","description","priority","status":"pending","acceptanceCriteria":[],"dependencies":[],"codeImpact":{{"files":[]}}}}],"testRequirements":{{"unit":true,"lint":true,"codeQuality":true,"ui":false}}}}
+{{"stories":[{{"id","title","description","priority","status":"pending","acceptanceCriteria":[],"dependencies":[],"codeImpact":{{"files":[]}}}}],"testRequirements":{{"unit":true,"lint":true,"codeQuality":true,"ui":false,"integration":false}}}}
 
 For each story, write ralph/.ralph/stories/<ID>-brief.md:
 ```
@@ -115,6 +120,18 @@ Design implementation approach per requirement. Select test tools:
 - ui: playwright command (e.g. `npx playwright test`) if testRequirements.ui = true, otherwise empty string ""
 - codeQuality: complexity/duplication
 - coverage: command that produces coverage data alongside unit tests
+- integration: in-process API test command if testRequirements.integration = true, otherwise empty string ""
+  By project type:
+  express / nextjs / typescript / javascript: `npx jest --testPathPattern=tests/integration`
+  flask:                                      `venv/bin/pytest tests/integration/ -v`
+  python / reflex:                            `venv/bin/pytest tests/integration/ -v`
+  go:                                         `go test -run TestIntegration ./...`
+  actix / rocket:                             `cargo test --test integration`
+  rust (basic):                               `cargo test --test integration`
+  rails:                                      `bundle exec rspec spec/requests/ --format progress`
+  ruby (non-Rails):                           `bundle exec rspec spec/integration/`
+  dotnet (webapi / mvc / blazor server):      `dotnet test --filter Category=Integration`
+  react / angular / dotnet blazorwasm / nx:   "" (frontend only — no integration tests)
 
 Coverage tool selection by language/framework:
 - Jest (JS/TS): `jest --coverage` — built-in, no extra tool needed
@@ -134,7 +151,7 @@ Write `testTools.coverage` as the full command string (empty string if not avail
 - Record the full binary path in architecture.json so Phase 4 and ralph-archive use it verbatim — no shell activation needed.
 
 Save ralph/.ralph/architecture.json:
-{{"projectType","techStack":[],"testTools":{{"lint","unit","coverage","ui","codeQuality"}},"implementation":{{"REQ-XXX":{{"files":[],"tests":[],"approach":""}}}}}}
+{{"projectType","techStack":[],"testTools":{{"lint","unit","coverage","ui","codeQuality","integration"}},"implementation":{{"REQ-XXX":{{"files":[],"tests":[],"approach":""}}}}}}
 
 For each story, append its implementation section to ralph/.ralph/stories/<ID>-brief.md:
 ```
@@ -142,6 +159,16 @@ For each story, append its implementation section to ralph/.ralph/stories/<ID>-b
 Files: <implementation.REQ-XXX.files list>
 Tests: <implementation.REQ-XXX.tests list>
 Approach: <implementation.REQ-XXX.approach>
+
+## Integration Tests (only include this section if testTools.integration is set)
+File: tests/integration/test_{story_id_lower}.{ext}
+Test this story's HTTP routes using in-process test client (no live server needed):
+  Flask:    app.test_client()            Express:  supertest(app)
+  Go:       httptest.NewRecorder()       Rails:    RSpec request spec (rack-based)
+  .NET:     WebApplicationFactory        actix:    actix_web::test::init_service()
+  rocket:   rocket::local::blocking::Client::tracked()
+Test: status codes, response body shape, auth/middleware per acceptance criteria.
+Name pattern: test_{story_id_lower}_integration (pytest/go), {storyId}.integration (jest/rspec)
 ```
 
 Write full architecture details to ralph/.ralph/logs/architecture-1.log
@@ -233,15 +260,16 @@ Task(
     subagent_type="general-purpose",
     description=f"Test {story_id}",
     prompt=f"""
-Run all tests for {story_id}. Test tools (injected from state — no file read needed): lint={testTools['lint']} | unit={testTools['unit']} | coverage={testTools['coverage']} | ui={testTools['ui']} | codeQuality={testTools['codeQuality']}
+Run all tests for {story_id}. Test tools (injected from state — no file read needed): lint={testTools['lint']} | unit={testTools['unit']} | coverage={testTools['coverage']} | ui={testTools['ui']} | codeQuality={testTools['codeQuality']} | integration={testTools['integration']}
 
 A. Lint/Format: run linter, auto-fix where possible, max 3 iterations
 B. Unit tests: scope to this story only — filter pattern is the story ID lowercased with hyphens→underscores (REQ-001 → `test_req_001`). Use `-k test_req_001` for pytest, `--testNamePattern test_req_001` for jest, equivalent for other frameworks. Max 5 iterations for logic failures
 C. Code quality: complexity and duplication checks
 D. UI tests (only if testTools.ui set): playwright, max 5 iterations — before running Playwright, ensure the dev server is running: check `curl -s -o /dev/null -w "%{http_code}" <BASE_URL>` and start it in background if not responsive (see browser-test skill server table for commands/ports by project type)
+E. Integration tests (only if testTools.integration set): run integration command scoped to this story's test name pattern (same lowercased ID convention as unit tests). Tests must be hermetic — use in-process test clients, not a live server. Max 5 iterations for failures.
 
 Save ralph/.ralph/artifacts/{story_id}-tests.json:
-{{"storyId":"{story_id}","overall":"passed|failed","lint":{{"status","iterations":0}},"unit":{{"status","iterations":0,"coverage":0}},"codeQuality":{{"status"}},"ui":{{"status","iterations":0}}}}
+{{"storyId":"{story_id}","overall":"passed|failed","lint":{{"status","iterations":0}},"unit":{{"status","iterations":0,"coverage":0}},"codeQuality":{{"status"}},"ui":{{"status","iterations":0}},"integration":{{"status","iterations":0}}}}
 
 Update ralph/.ralph/artifacts-index.json:
 - Load or create: {{"stories":{{}},"allPassed":true,"avgCoverage":0}}
@@ -251,7 +279,7 @@ Update ralph/.ralph/artifacts-index.json:
 
 Write full test log to ralph/.ralph/logs/test-{story_id}-{ITER}.log
 All test output, error details, and fix iterations go to the log — NOT returned to the orchestrator.
-Return ONE LINE ONLY to the orchestrator: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s>"
+Return ONE LINE ONLY to the orchestrator: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s> integration:<s>"
 """
 )
 ```
