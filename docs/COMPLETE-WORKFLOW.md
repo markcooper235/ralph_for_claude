@@ -669,29 +669,20 @@ Working tree: clean
 [Ralph Archive] Pre-Merge Validation:
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[Ralph Archive] Check 1: All stories completed
-[Ralph Archive] ✓ 8/8 stories completed
+[Ralph Archive] Check 1: Test results
+[Ralph Archive] Reading: ralph/.ralph/artifacts/artifacts-index.json
+[Ralph Archive] ✓ allPassed: true (8/8 stories) — trusting Phase 4 results
 
-[Ralph Archive] Check 2: All tests passing
-[Ralph Archive] Running: npm test
-[Ralph Archive] ✓ All tests passed (42/42)
-
-[Ralph Archive] Check 3: No uncommitted changes
+[Ralph Archive] Check 2: No uncommitted changes
 [Ralph Archive] Running: git status --porcelain
 [Ralph Archive] ✓ Working tree clean
 
+[Ralph Archive] Check 3: All stories completed
+[Ralph Archive] ✓ completedStories (8) == totalStories (8)
+
 [Ralph Archive] Check 4: No merge conflicts
-[Ralph Archive] Fetching: origin/main
-[Ralph Archive] Checking: git merge-base --is-ancestor origin/main HEAD
-[Ralph Archive] ✓ No conflicts detected
-
-[Ralph Archive] Check 5: Code quality
-[Ralph Archive] Running: npm run lint
-[Ralph Archive] ✓ Lint passed (0 errors, 0 warnings)
-
-[Ralph Archive] Check 6: Coverage thresholds
-[Ralph Archive] Running: npm run coverage
-[Ralph Archive] ✓ Coverage: 89% (target: 80%)
+[Ralph Archive] state.premergeChecks.checkedAt: 4 minutes ago (< 30 min threshold)
+[Ralph Archive] ✓ Using cached Phase 7 result — skipping git fetch/merge-base
 
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Archive] ✓ All pre-merge checks passed

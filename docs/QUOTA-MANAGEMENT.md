@@ -22,6 +22,8 @@ Ralph Loop's quota management:
 - ✅ Never starts tasks that won't finish
 - ✅ Configurable limits and thresholds
 
+> **Note:** Fine-grained quota tracking (per-phase token counts, `totalUsed` field) is aspirational — Claude agents cannot introspect their own token usage at runtime, so `state.quota.totalUsed` is always 0. Context cycling at phase boundaries uses **story-completion ratio > 65%** as a practical proxy instead. All other quota-management features (pause/resume, state preservation, configurable thresholds) work as described.
+
 ## How It Works
 
 ### 1. Quota Tracking
