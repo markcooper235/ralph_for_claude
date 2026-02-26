@@ -3800,6 +3800,10 @@ create_nx_project() {
     local nx_cloud="${PROJECT_CONFIG[nx_cloud]:-no}"
     local community="${PROJECT_CONFIG[nx_community]:-none}"
 
+    # Track generated project names for ralph-loop metadata
+    local generated_projects_json=""
+    local project_sep=""
+
     print_info "Creating NX workspace: ${project_name}"
     print_info "  Workspace type : ${ws_type}"
     print_info "  Package manager: ${pm}"
@@ -3903,6 +3907,8 @@ create_nx_project() {
                         ;;
                 esac
                 print_success "Generated ${fw}-app"
+                generated_projects_json+="${project_sep}{\"name\":\"${fw}-app\",\"type\":\"frontend\",\"framework\":\"${fw}\"}"
+                project_sep=","
             else
                 print_warning "Unknown frontend framework: ${fw}, skipping"
             fi
@@ -3938,6 +3944,8 @@ create_nx_project() {
                         ;;
                 esac
                 print_success "Generated ${fw}-api"
+                generated_projects_json+="${project_sep}{\"name\":\"${fw}-api\",\"type\":\"backend\",\"framework\":\"${fw}\"}"
+                project_sep=","
             else
                 print_warning "Unknown backend framework: ${fw}, skipping"
             fi
@@ -3951,12 +3959,20 @@ create_nx_project() {
                 python)
                     print_info "Adding community plugin: @nxlv/python"
                     npx nx add @nxlv/python --no-interactive 2>&1 | tail -3 || true
-                    print_success "Added @nxlv/python (use: nx generate @nxlv/python:poetry-project <name>)"
+                    print_info "Generating python-app..."
+                    npx nx generate @nxlv/python:poetry-project python-app --no-interactive 2>&1 | tail -5 || true
+                    print_success "Generated python-app"
+                    generated_projects_json+="${project_sep}{\"name\":\"python-app\",\"type\":\"community\",\"framework\":\"python\"}"
+                    project_sep=","
                     ;;
                 go)
                     print_info "Adding community plugin: @nx-go/nx-go"
                     npx nx add @nx-go/nx-go --no-interactive 2>&1 | tail -3 || true
-                    print_success "Added @nx-go/nx-go (use: nx generate @nx-go/nx-go:app <name>)"
+                    print_info "Generating go-app..."
+                    npx nx generate @nx-go/nx-go:app go-app --no-interactive 2>&1 | tail -5 || true
+                    print_success "Generated go-app"
+                    generated_projects_json+="${project_sep}{\"name\":\"go-app\",\"type\":\"community\",\"framework\":\"go\"}"
+                    project_sep=","
                     ;;
                 *)
                     print_warning "Unknown community plugin: ${plugin}, skipping"
@@ -3978,7 +3994,8 @@ create_nx_project() {
   "e2e": "${e2e}",
   "frontends": "${frontends}",
   "backends": "${backends}",
-  "community_plugins": "${community}"
+  "community_plugins": "${community}",
+  "projects": [${generated_projects_json}]
 }
 EOF
 
