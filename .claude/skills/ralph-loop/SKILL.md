@@ -109,14 +109,26 @@ Design implementation approach per requirement. Select test tools:
 - unit: jest/pytest/cargo test
 - ui: playwright (only if testRequirements.ui = true)
 - codeQuality: complexity/duplication
+- coverage: command that produces coverage data alongside unit tests
+
+Coverage tool selection by language/framework:
+- Jest (JS/TS): `jest --coverage` — built-in, no extra tool needed
+- Vitest (React/Vite): `vitest run --coverage` — requires @vitest/coverage-v8 (already in package.json)
+- pytest (Python): `pytest --cov=src --cov-report=term-missing` — pytest-cov is in requirements.txt
+- Go: `go test -cover ./...` — built-in, no extra tool needed
+- Rust: `cargo tarpaulin` if `cargo tarpaulin --version` succeeds; otherwise skip coverage
+- Ruby/RSpec with simplecov: `bundle exec rspec` — simplecov auto-reports on exit
+- Angular: `ng test --no-watch --code-coverage`
+Write `testTools.coverage` as the full command string (empty string if not available).
 
 **Python venv:** If `venv/` directory exists in the project root (always present for Ralph-created Python/Flask/Reflex projects), prefix ALL Python tool commands with `venv/bin/`:
 - testTools.unit → `venv/bin/pytest`
+- testTools.coverage → `venv/bin/pytest --cov=src --cov-report=term-missing`
 - testTools.lint → `venv/bin/black` (or `venv/bin/ruff` if ruff is in requirements.txt)
 - Record the full binary path in architecture.json so Phase 4 and ralph-archive use it verbatim — no shell activation needed.
 
 Save ralph/.ralph/architecture.json:
-{{"projectType","techStack":[],"testTools":{{"lint","unit","ui","codeQuality"}},"implementation":{{"REQ-XXX":{{"files":[],"tests":[],"approach":""}}}}}}
+{{"projectType","techStack":[],"testTools":{{"lint","unit","coverage","ui","codeQuality"}},"implementation":{{"REQ-XXX":{{"files":[],"tests":[],"approach":""}}}}}}
 
 For each story, append its implementation section to ralph/.ralph/stories/<ID>-brief.md:
 ```

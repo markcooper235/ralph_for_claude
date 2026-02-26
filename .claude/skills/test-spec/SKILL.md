@@ -120,19 +120,28 @@ fi
 
 ### JavaScript/TypeScript
 ```bash
+# Run specific test (no coverage — fast for per-req validation)
 npm test -- --testNamePattern="REQ-001"
 # or
 npx vitest run -t "REQ-001"
+
+# Run full suite with coverage (for --all flag)
+npm run test:coverage          # Jest: jest --coverage
+npx vitest run --coverage      # Vitest: vitest run --coverage
 ```
 
 ### Go Projects
 ```bash
-go test ./... -run TestReq001
+go test ./... -run TestReq001 -cover
+# Full suite with coverage report:
+go test -cover ./...
 ```
 
 ### Rust Projects
 ```bash
 cargo test req_001 -- --nocapture
+# Full coverage (if cargo-tarpaulin installed):
+cargo tarpaulin
 ```
 
 ## Output Format

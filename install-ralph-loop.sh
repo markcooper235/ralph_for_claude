@@ -1018,6 +1018,12 @@ cargo test -- --nocapture  # Show output
 cargo bench           # Run benchmarks
 ```
 
+### Coverage Commands
+```bash
+cargo tarpaulin                   # Coverage report (install: cargo install cargo-tarpaulin)
+cargo tarpaulin --out Html        # HTML report → tarpaulin-report.html
+```
+
 ### Lint Commands
 ```bash
 cargo fmt             # Format code
@@ -2474,6 +2480,9 @@ EOF
 /target/
 logs/
 *.log
+tarpaulin-report.html
+cobertura.xml
+lcov.info
 EOF
 
     print_info "Running cargo check..."
@@ -2596,6 +2605,9 @@ EOF
 Cargo.lock
 logs/
 *.log
+tarpaulin-report.html
+cobertura.xml
+lcov.info
 EOF
 
     print_info "Building Actix project (downloads dependencies — may take a moment)..."
@@ -2712,6 +2724,9 @@ EOF
 Cargo.lock
 logs/
 *.log
+tarpaulin-report.html
+cobertura.xml
+lcov.info
 EOF
 
     print_info "Building Rocket project (downloads dependencies — may take a moment)..."
@@ -2755,6 +2770,25 @@ create_angular_project() {
         cd "${current_dir}" || { print_warning "Could not cd into ${current_dir}"; return 1; }
         print_success "Angular project scaffolded with latest compatible packages"
         print_info "(All dependencies installed by ng new)"
+
+        # Add test:coverage script to package.json
+        if [ -f "${current_dir}/package.json" ]; then
+            node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+pkg.scripts = pkg.scripts || {};
+if (!pkg.scripts['test:coverage']) {
+    pkg.scripts['test:coverage'] = 'ng test --no-watch --code-coverage';
+}
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+" 2>/dev/null && print_success "Added test:coverage script" || true
+        fi
+
+        # Add coverage/ to .gitignore
+        if [ -f "${current_dir}/.gitignore" ] && ! grep -q '^coverage/' "${current_dir}/.gitignore"; then
+            echo "coverage/" >> "${current_dir}/.gitignore"
+        fi
+
         return 0
     fi
 
@@ -3425,6 +3459,7 @@ source 'https://rubygems.org'
 
 gem 'rspec', '~> 3.13'
 gem 'rubocop', '~> 1.65', require: false
+gem 'simplecov', require: false
 EOF
 
     cat > "${project_dir}/lib/${project_name}.rb" << EOF
@@ -3443,6 +3478,9 @@ puts ${ruby_module_name}.hello
 EOF
 
     cat > "${project_dir}/spec/spec_helper.rb" << 'EOF'
+require 'simplecov'
+SimpleCov.start
+
 require 'rspec'
 
 RSpec.configure do |config|
@@ -3594,6 +3632,14 @@ EOF
         echo "vendor/bundle/" >> "${current_dir}/.gitignore"
     fi
 
+    # Add simplecov to Gemfile (works with both minitest and rspec)
+    cat >> "${current_dir}/Gemfile" << 'EOF'
+
+group :test do
+  gem 'simplecov', require: false
+end
+EOF
+
     # Add RSpec if chosen
     if [ "${test_fw}" = "rspec" ]; then
         # Append rspec-rails to Gemfile development/test group
@@ -3607,6 +3653,32 @@ EOF
             && bundle exec rails generate rspec:install) \
             && print_success "RSpec configured" \
             || print_warning "RSpec setup failed — run: bundle install && rails generate rspec:install"
+
+        # Prepend simplecov config to spec/spec_helper.rb
+        if [ -f "${current_dir}/spec/spec_helper.rb" ]; then
+            python3 -c "
+content = open('spec/spec_helper.rb').read()
+prepend = \"require 'simplecov'\nSimpleCov.start 'rails'\n\n\"
+if 'simplecov' not in content:
+    open('spec/spec_helper.rb', 'w').write(prepend + content)
+" 2>/dev/null && print_success "SimpleCov added to spec_helper.rb" || true
+        fi
+    else
+        # minitest: prepend simplecov to test/test_helper.rb
+        (cd "${current_dir}" && bundle install --quiet) && true || true
+        if [ -f "${current_dir}/test/test_helper.rb" ]; then
+            python3 -c "
+content = open('test/test_helper.rb').read()
+prepend = \"require 'simplecov'\nSimpleCov.start 'rails'\n\n\"
+if 'simplecov' not in content:
+    open('test/test_helper.rb', 'w').write(prepend + content)
+" 2>/dev/null && print_success "SimpleCov added to test_helper.rb" || true
+        fi
+    fi
+
+    # Add coverage/ to Rails .gitignore
+    if ! grep -q '^coverage/' "${current_dir}/.gitignore" 2>/dev/null; then
+        echo "coverage/" >> "${current_dir}/.gitignore"
     fi
 
     print_success "Created Rails project structure"
