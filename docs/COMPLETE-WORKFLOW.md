@@ -2,6 +2,11 @@
 
 ## Overview
 
+> **Note:** This document is a **reference flow diagram**, not a transcript of actual terminal output.
+> The `[Ralph Loop]` and `[Subagent]` lines illustrate the logical sequence of operations and the
+> data that flows between phases. Real output from Claude will vary in format and verbosity.
+> Subagent detail is written to log files (`ralph/.ralph/logs/`), not streamed back to the orchestrator.
+
 This document outlines the **complete end-to-end workflow** from starting a Ralph Loop to final merge and cleanup.
 
 ---
@@ -146,9 +151,9 @@ ralph/specs/prds/user-authentication.stories.json    # Story breakdown
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Ralph Loop v2 Starting
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Specification: ralph/specs/prds/user-authentication.prd.md
 [Ralph Loop] Run ID: user-authentication-20260223152030
@@ -190,9 +195,9 @@ ralph/.ralph/state.json           # Run state
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Phase: Parse Specification
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Launching parse subagent...
 
@@ -233,9 +238,9 @@ ralph/.ralph/stories.json        # All stories with dependencies
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Phase: Architecture Design
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Launching architecture subagent...
 
@@ -266,9 +271,9 @@ ralph/.ralph/stories.json        # All stories with dependencies
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Phase: Implementation (Phase 1 of 4)
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Phase 1: Parallel execution (2 stories, no dependencies)
 [Ralph Loop] - REQ-001: User Login
@@ -278,7 +283,7 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Ralph Loop] Launching 2 parallel subagents...
 
 ╔════════════════════════════════════════════════════╗
-║ Subagent 1: REQ-001 User Login                    ║
+║ Subagent 1: REQ-001 User Login                     ║
 ╚════════════════════════════════════════════════════╝
 
 [Subagent REQ-001] Starting implementation
@@ -293,7 +298,7 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Subagent REQ-001] Files: src/auth/login.ts, tests/auth/login.test.ts
 
 ╔════════════════════════════════════════════════════╗
-║ Subagent 2: REQ-002 Session Management            ║
+║ Subagent 2: REQ-002 Session Management             ║
 ╚════════════════════════════════════════════════════╝
 
 [Subagent REQ-002] Starting implementation
@@ -368,9 +373,9 @@ Commits ahead of main: 2
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Phase: Prove Requirements
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Running comprehensive validation...
 
@@ -391,9 +396,9 @@ Commits ahead of main: 2
 [Ralph Loop] ✓ REQ-007: All 4 criteria met
 [Ralph Loop] ✓ REQ-008: All 5 criteria met
 
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] ALL REQUIREMENTS PROVEN ✓
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Proof report: ralph/.ralph/artifacts/proof-report.md
 [Ralph Loop] Moving to Harvest phase...
@@ -403,9 +408,9 @@ Commits ahead of main: 2
 
 #### Output
 ```
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] Phase: Harvest Feedback
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Collecting artifacts...
 [Ralph Loop] - Test results: 8 files
@@ -424,9 +429,9 @@ Commits ahead of main: 2
 [Ralph Loop] - Total time: 45 minutes
 [Ralph Loop] - Iterations: 3 logic, 1 formatting
 
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Loop] RALPH RUN COMPLETE ✓
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Status: ready_for_archive
 
@@ -912,11 +917,10 @@ T+0:54    Pre-merge validation
 T+0:55    Archive creation
 T+0:56    Merge to main (9 commits total)
 T+0:56    Branch preserved
-T+18:57   Cleanup complete
-T+18:57   DONE - Ready for next run
+T+0:57    Cleanup complete
+T+0:57    DONE - Ready for next run
 
-Total active time: ~47 minutes
-Total elapsed time: ~19 hours (includes 18h pause)
+Total time: ~57 minutes
 ```
 
 ---
