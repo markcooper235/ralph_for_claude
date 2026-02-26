@@ -24,7 +24,7 @@ Load state.json. Check status field.
 
 ### Phase 1: Final Validation (Normal Archive Only)
 
-1. Run full test suite for this project type (detect from architecture.json or codebase)
+1. Read `ralph/.ralph/artifacts/artifacts-index.json` — if `allPassed` is false or the file is missing, display "Some stories failed testing — fix before archiving" and halt. (Tests were already run per-story in Phase 4; trust those results.)
 2. `git status --porcelain` — if output is not empty, commit all remaining changes before proceeding:
    ```bash
    git add -A
@@ -32,8 +32,10 @@ Load state.json. Check status field.
 
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
    ```
-3. `jq '[.stories[] | select(.status != "completed")] | length' ralph/.ralph/stories.json` — must be 0
-4. `git fetch origin && git merge-base --is-ancestor origin/$ORIGIN_BRANCH HEAD` — if fails, attempt `git merge origin/$ORIGIN_BRANCH` and abort on conflict
+3. Check `state.completedStories == state.totalStories` — must be equal (no jq on stories.json needed if state is current).
+4. Check `state.premergeChecks.checkedAt`:
+   - If within the last 30 minutes: skip git fetch + merge-base (Phase 7 already validated, results still fresh).
+   - If older than 30 minutes or missing: re-run `git fetch origin && git merge-base --is-ancestor origin/$ORIGIN_BRANCH HEAD` — if fails, attempt `git merge origin/$ORIGIN_BRANCH` and abort on conflict.
 
 If checks 3 or 4 fail: display reason, exit. Do not proceed.
 

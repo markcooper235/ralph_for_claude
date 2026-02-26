@@ -145,7 +145,7 @@ Return ONE LINE ONLY: "ARCH: OK | <tech> | <test-tools>"
 )
 ```
 
-Update state: status="implementing".
+Read `ralph/.ralph/architecture.json`. Update state: status="implementing", testTools=<architecture.testTools>.
 
 ### Phase 3: Implementation Loop
 
@@ -165,11 +165,12 @@ while stories_remaining(completed):
     phase_stories = select_up_to_3_non_conflicting(ready, conflict_groups)
 
     # ── Context cycle check at phase boundary ──────────────────────────
+    # Note: Claude agents cannot introspect token count; state.quota.totalUsed is
+    # always 0 and never updated. Use story completion ratio as a heuristic proxy.
     remaining_after = [s for s in stories if s.id not in completed and s.id not in [p.id for p in phase_stories]]
     if remaining_after:
-        used = state.quota.totalUsed
-        limit = state.quota.limit
-        if (used / limit) > 0.60:
+        stories_done_ratio = len(completed) / len(all_stories)
+        if stories_done_ratio > 0.65:
             next_story = remaining_after[0].id
             update_state(
                 status="paused_cycle",
@@ -201,13 +202,15 @@ while stories_remaining(completed):
 
 **Impl subagent (launched per story):**
 ```python
+# Orchestrator: read brief once before launching (eliminates subagent file-read startup cost)
+# brief = read_file(f"ralph/.ralph/stories/{story_id}-brief.md")
 Task(
     subagent_type="general-purpose",
     description=f"Implement {story_id}",
     prompt=f"""
-Implement story {story_id}.
+Implement story {story_id} using the following spec:
 
-Read ralph/.ralph/stories/{story_id}-brief.md (includes requirements, acceptance criteria, and implementation approach).
+{brief}
 
 Implement all acceptance criteria. Write tests (one per criterion, named test_{story_id_lower}_N).
 List all files created/modified.
@@ -228,10 +231,10 @@ Return ONE LINE ONLY: "{story_id}: OK|FAIL | <N> files | <M> tests"
 **Test subagent (per story, after impl succeeds):**
 ```python
 Task(
-    subagent_type="Bash",
+    subagent_type="general-purpose",
     description=f"Test {story_id}",
     prompt=f"""
-Run all tests for {story_id}. Load test tools from ralph/.ralph/architecture.json testTools section.
+Run all tests for {story_id}. Test tools (injected from state — no file read needed): lint={testTools['lint']} | unit={testTools['unit']} | coverage={testTools['coverage']} | ui={testTools['ui']} | codeQuality={testTools['codeQuality']}
 
 A. Lint/Format: run linter, auto-fix where possible, max 3 iterations
 B. Unit tests: run tests for this story only, max 5 iterations for logic failures
@@ -364,7 +367,10 @@ jq '[.stories[] | select(.status != "completed")] | length == 0' ralph/.ralph/st
 
 If any check fails: display reason and halt. User fixes, then retries `/ralph-archive`.
 
-Update state: status="ready_for_archive".
+After all checks pass, update state:
+- status="ready_for_archive"
+- premergeChecks={gitClean:true, mergeBaseSafe:true, allStoriesComplete:true, checkedAt:<current-ISO-timestamp>}
+- totalStories=<total story count from stories.json>
 
 Display completion:
 ```
