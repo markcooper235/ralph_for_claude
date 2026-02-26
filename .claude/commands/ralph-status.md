@@ -49,7 +49,7 @@ Based on status:
 - `implementing` → "Stories being implemented — ready: N, in progress: N"
 - `testing` / `proving` → "Running tests / proving requirements"
 - `ready_for_archive` / `complete` → "Run: /ralph-archive"
-- `paused_quota` / `paused_cycle` → "Run: /ralph-resume"
+- `paused_user` / `paused_quota` → "Run: /ralph-resume"
 - `paused_error` → "Fix issue then: /ralph-resume"
 - `failed` → "Fix or abandon: /ralph-archive --abandon"
 
@@ -59,4 +59,3 @@ Check and report:
 - Stories with status "failed" → list them
 - Stories at iteration limit (logic ≥ 5 or formatting ≥ 3) → warn
 - Stories with status "blocked" → list with blockedBy
-- Quota usage if > 75% (from state.quota)

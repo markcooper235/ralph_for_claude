@@ -399,7 +399,7 @@ State is always preserved on failure — no work is lost.
 ### State Persistence
 
 After each phase save:
-- `ralph/.ralph/state.json` — current state + quota usage
+- `ralph/.ralph/state.json` — current state
 - `ralph/.ralph/stories.json` — all stories with status
 - `ralph/.ralph/logs/<phase>.log` — full phase execution log
 - `ralph/.ralph/artifacts/` — all generated artifacts

@@ -115,7 +115,7 @@ Claude will automatically:
 While the loop runs, you can check status:
 
 ```bash
-# View current status, story progress, quota usage
+# View current status and story progress
 /ralph-status
 
 # Test specific requirement
@@ -271,12 +271,12 @@ The first loop might not be perfect. That's OK!
 
 ### Try Advanced Features
 
-**Resume after quota pause or interruption:**
+**Resume after interruption or error:**
 ```bash
 /ralph-resume
 ```
 
-**Check status and quota usage:**
+**Check status:**
 ```bash
 /ralph-status
 ```
@@ -353,7 +353,7 @@ vim .claude/templates/my-project-template.md
 # Main workflow
 /ralph-create-prd <name>             # Create PRD interactively
 /ralph-loop <spec-file>              # Run complete loop
-/ralph-status                        # Check progress and quota
+/ralph-status                        # Check progress
 /ralph-resume                        # Resume paused run
 /ralph-modify-spec                   # Modify spec mid-run
 /ralph-add-requirement "..."         # Quick add requirement
@@ -372,7 +372,6 @@ vim .claude/templates/my-project-template.md
 
 # Utilities
 /feedback-selector                   # Determine test strategy
-/ralph-quota                         # Check quota usage
 ```
 
 ## Example: Complete Flow

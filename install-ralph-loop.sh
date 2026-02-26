@@ -841,7 +841,6 @@ create_ralph_structure() {
     # Copy template/config files into ralph/
     cp "${SCRIPT_DIR}/.ralph-state-template.json" "${project_dir}/ralph/"
     cp "${SCRIPT_DIR}/.ralph-story-template.json" "${project_dir}/ralph/"
-    cp "${SCRIPT_DIR}/.ralph-quota-config.json" "${project_dir}/ralph/"
 
     # Copy Claude templates (stay in .claude/ at root)
     cp "${SCRIPT_DIR}/.claude/templates/prd-template.md" "${project_dir}/.claude/templates/"
@@ -875,7 +874,7 @@ This project uses the Ralph Loop Framework for specification-driven development.
 ```bash
 /ralph-create-prd          # Create a new PRD specification (start here)
 /ralph-loop <spec-file>    # Run the development loop
-/ralph-status              # Check current progress and quota
+/ralph-status              # Check current progress
 /ralph-resume              # Resume a paused run
 /ralph-archive             # Archive and merge completed run
 /ralph-modify-spec         # Modify spec during a run
@@ -1533,10 +1532,9 @@ create_gitignore() {
 # Ralph Loop Framework - Runtime State (never tracked)
 ralph/.ralph/
 
-# Ralph templates/configs are tracked (checked-in defaults)
+# Ralph templates are tracked (checked-in defaults)
 !ralph/.ralph-state-template.json
 !ralph/.ralph-story-template.json
-!ralph/.ralph-quota-config.json
 
 # Checkpoints (can be regenerated)
 .claude/checkpoints/
@@ -1606,7 +1604,7 @@ A ${project_type} project built with the Ralph Loop Framework.
 
 - \`/ralph-create-prd\` - Interactive PRD creation
 - \`/ralph-loop\` - Run full development cycle
-- \`/ralph-status\` - Check progress and quota
+- \`/ralph-status\` - Check progress
 - \`/ralph-resume\` - Resume paused run
 - \`/ralph-archive\` - Archive and merge
 - \`/ralph-modify-spec\` - Modify specifications during run

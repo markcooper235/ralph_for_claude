@@ -1,3 +1,0 @@
-{
-  "_comment": "Ralph quota configuration — NOTE: token-based quota tracking is not implemented at runtime (Claude agents cannot introspect their own token counts). This file is preserved for reference. The orchestrator runs end-to-end in a single session (~40K tokens for a typical 8-story run, well within the 200K budget). Pause/resume for user interruption and errors remains fully functional via /ralph-resume."
-}

@@ -1,6 +1,6 @@
 # Ralph Resume - Resume Paused Ralph Run
 
-Resume a Ralph run that was paused due to quota limits or user interruption.
+Resume a Ralph run that was paused due to user interruption or error.
 
 ## Usage
 
@@ -10,7 +10,7 @@ Resume a Ralph run that was paused due to quota limits or user interruption.
 
 ## Instructions
 
-Resume from saved Ralph state after quota replenishment or interruption.
+Resume from saved Ralph state after interruption or error.
 
 ### 1. Check for Ralph State
 
@@ -113,7 +113,6 @@ echo "[Ralph Resume] State updated, resuming execution..."
 **Invoke ralph-loop:**
 - Ralph-loop will detect `ralph/.ralph/state.json` exists
 - Will load state and continue from current phase
-- Will respect quota limits
 - Will save state on pause
 
 ### 7. Display Resume Info
@@ -133,23 +132,7 @@ echo "[Ralph Resume] State updated, resuming execution..."
 
 ## Resume Scenarios
 
-### Scenario 1: Paused for Quota Warning
-
-```
-Status: paused_quota
-Reason: quota_warning (85% used)
-Resume: Wait for quota reset, then /ralph-resume
-```
-
-### Scenario 2: Paused for Quota Limit
-
-```
-Status: paused_quota
-Reason: quota_limit (approaching 95%)
-Resume: Must wait for quota replenishment
-```
-
-### Scenario 3: User Interruption (Ctrl+C)
+### Scenario 1: User Interruption (Ctrl+C)
 
 ```
 Status: paused_user
@@ -184,13 +167,13 @@ Resume: Fix issue, then /ralph-resume
 
 ## Examples
 
-### Resume after quota replenishment
+### Resume after user interruption (example)
 
 ```bash
 # Check status first
 /ralph-status
 
-# Resume when quota available
+# Resume
 /ralph-resume
 
 # Output:

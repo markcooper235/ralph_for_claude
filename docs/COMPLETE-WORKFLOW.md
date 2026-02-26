@@ -118,8 +118,6 @@ fi
 [Ralph Create PRD]   - REQ-008: 2FA (low, depends on REQ-004)
 [Ralph Create PRD]
 [Ralph Create PRD] Estimated completion: 3-4 hours
-[Ralph Create PRD] Estimated quota: ~145K tokens
-[Ralph Create PRD] May require 1 pause/resume cycle
 [Ralph Create PRD]
 [Ralph Create PRD] ✓ PRD created: ralph/specs/prds/user-authentication.prd.md
 [Ralph Create PRD] ✓ Story breakdown: ralph/specs/prds/user-authentication.stories.json
@@ -186,7 +184,6 @@ Commits: 0 new commits yet
 #### State Files Created
 ```
 ralph/.ralph/state.json           # Run state
-ralph/.ralph/quota-config.json    # Quota configuration
 ```
 
 ### 2.2: Parse Specification (Subagent)
@@ -198,8 +195,6 @@ ralph/.ralph/quota-config.json    # Quota configuration
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Launching parse subagent...
-[Ralph Loop] Estimated cost: 3,000 tokens
-[Ralph Loop] Quota check: 0K + 3K = 3K (1.5%) ✓
 
 [Subagent: Parse] Reading PRD: ralph/specs/prds/user-authentication.prd.md
 [Subagent: Parse] Extracting requirements...
@@ -213,8 +208,6 @@ ralph/.ralph/quota-config.json    # Quota configuration
 [Subagent: Parse] ✓ Parse complete
 
 [Ralph Loop] ✓ Subagent completed
-[Ralph Loop] Actual cost: 2,847 tokens
-[Ralph Loop] Total quota used: 2,847/200,000 (1.4%)
 
 [Ralph Loop] Creating Claude Tasks...
 [Ralph Loop] ✓ Task 1: REQ-001 User Login
@@ -245,8 +238,6 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Launching architecture subagent...
-[Ralph Loop] Estimated cost: 4,000 tokens
-[Ralph Loop] Quota check: 2,847K + 4K = 6,847K (3.4%) ✓
 
 [Subagent: Arch] Analyzing codebase...
 [Subagent: Arch] Project type: Web Frontend (React + TypeScript)
@@ -269,8 +260,6 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Subagent: Arch] Saved: ralph/.ralph/architecture.json
 
 [Ralph Loop] ✓ Subagent completed
-[Ralph Loop] Actual cost: 4,203 tokens
-[Ralph Loop] Total quota used: 7,050/200,000 (3.5%)
 ```
 
 ### 2.4: Implementation Loop - Phase 1
@@ -286,15 +275,6 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Ralph Loop] - REQ-002: Session Management
 
 [Ralph Loop] Estimating costs...
-[Ralph Loop] REQ-001: 12,500 tokens (medium, 4 criteria, auth/login.ts)
-[Ralph Loop] REQ-002: 14,000 tokens (medium, 5 criteria, auth/session.ts)
-[Ralph Loop] Phase total: ~15,000 tokens (parallel max)
-
-[Ralph Loop] Quota check:
-[Ralph Loop] Current: 7,050/200,000 (3.5%)
-[Ralph Loop] After phase: ~22,050/200,000 (11%)
-[Ralph Loop] Status: ✓ Safe to proceed
-
 [Ralph Loop] Launching 2 parallel subagents...
 
 ╔════════════════════════════════════════════════════╗
@@ -311,7 +291,6 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Subagent REQ-001]   - Quality: ✓ Passed (complexity: 4/10)
 [Subagent REQ-001] All tests passed!
 [Subagent REQ-001] Files: src/auth/login.ts, tests/auth/login.test.ts
-[Subagent REQ-001] Cost: 11,823 tokens
 
 ╔════════════════════════════════════════════════════╗
 ║ Subagent 2: REQ-002 Session Management            ║
@@ -327,12 +306,8 @@ ralph/.ralph/stories.json        # All stories with dependencies
 [Subagent REQ-002]   - Quality: ✓ Passed
 [Subagent REQ-002] All tests passed!
 [Subagent REQ-002] Files: src/auth/session.ts, tests/auth/session.test.ts
-[Subagent REQ-002] Cost: 13,456 tokens
 
 [Ralph Loop] ✓ Both subagents completed
-[Ralph Loop] Phase 1 actual cost: 25,279 tokens
-[Ralph Loop] Total quota used: 32,329/200,000 (16.2%)
-
 [Ralph Loop] Committing stories...
 
 [Ralph Loop] Creating commit for REQ-001...
@@ -383,173 +358,9 @@ Commits ahead of main: 2
 ```
 [Ralph Loop] Phase 2 complete: 4/8 stories (REQ-003, REQ-006)
 [Ralph Loop] Phase 3 complete: 7/8 stories (REQ-004, REQ-005, REQ-007)
-[Ralph Loop] Total quota used: 155,234/200,000 (77.6%)
-
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Loop] Phase 4: Starting last story
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[Ralph Loop] REQ-008: Two-Factor Authentication
-[Ralph Loop] Estimated cost: 18,000 tokens
-[Ralph Loop] Quota check:
-[Ralph Loop] Current: 155,234/200,000 (77.6%)
-[Ralph Loop] After task: 173,234/200,000 (86.6%)
-[Ralph Loop] Status: ⚠️  Would exceed safety threshold (85%)
-
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Loop] PAUSING FOR QUOTA
-[Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[Ralph Loop] Reason: quota_safety_threshold
-[Ralph Loop] Current phase: implementing
-[Ralph Loop] Current story: REQ-008 (ready to start, not begun)
-[Ralph Loop]
-[Ralph Loop] Progress saved:
-[Ralph Loop] ✓ 7/8 stories completed and committed
-[Ralph Loop] ⏸ 1/8 stories pending (REQ-008)
-[Ralph Loop]
-[Ralph Loop] Quota Status:
-[Ralph Loop] - Used: 155,234/200,000 (77.6%)
-[Ralph Loop] - Estimated remaining: ~20,000 tokens
-[Ralph Loop] - Safety threshold: 170,000 (85%)
-[Ralph Loop]
-[Ralph Loop] Git Status:
-[Ralph Loop] - Branch: ralph/user-authentication-20260223152030
-[Ralph Loop] - Commits: 7 (all pushed to local branch)
-[Ralph Loop] - All changes committed ✓
-[Ralph Loop]
-[Ralph Loop] All progress preserved! Nothing lost.
-[Ralph Loop]
-[Ralph Loop] To resume after quota replenishment:
-[Ralph Loop]   /ralph-resume
-[Ralph Loop]
-[Ralph Loop] To check status:
-[Ralph Loop]   /ralph-status
-```
-
-#### Git State (Paused)
-```
-Current branch: ralph/user-authentication-20260223152030
-Commits ahead of main: 7
-Status: clean (all changes committed)
-```
-
-#### State Files (Paused)
-```
-ralph/.ralph/state.json:
-  status: "paused_quota"
-  pausedAt: "2026-02-23T16:45:00Z"
-  pauseReason: "quota_safety_threshold"
-  resumePhase: "implementing"
-  currentStory: "REQ-008"
-```
-
----
-
-## Phase 3: Resume After Quota Replenishment
-
-### Check Status First
-
-#### Command
-```bash
-/ralph-status
-```
-
-#### Output
-```
-[Ralph Status] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Status] Current Ralph Run
-[Ralph Status] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[Ralph Status] Run ID: user-authentication-20260223152030
-[Ralph Status] Specification: ralph/specs/prds/user-authentication.prd.md
-[Ralph Status] Status: PAUSED (quota_safety_threshold)
-[Ralph Status] Started: 2026-02-23T15:20:30Z
-[Ralph Status] Paused: 2026-02-23T16:45:00Z
-[Ralph Status] Time paused: 18 hours 30 minutes
-
-[Ralph Status] Git Information:
-[Ralph Status] - Origin: main
-[Ralph Status] - Ralph: ralph/user-authentication-20260223152030
-[Ralph Status] - Commits: 7
-
-[Ralph Status] Progress:
-[Ralph Status] - Total Stories: 8
-[Ralph Status] - Completed: 7 (87.5%)
-[Ralph Status] - In Progress: 0
-[Ralph Status] - Pending: 1 (12.5%)
-
-[Ralph Status] Quota Status:
-[Ralph Status] - Used: 155,234/200,000 (77.6%)
-[Ralph Status] - Estimated remaining need: ~20,000
-[Ralph Status] - Current quota available: 200,000 (reset)
-[Ralph Status] - Status: ✓ Sufficient quota to complete
-
-[Ralph Status] Completed Stories:
-[Ralph Status]   [COMPLETED] REQ-001: User Login
-[Ralph Status]   [COMPLETED] REQ-002: Session Management
-[Ralph Status]   [COMPLETED] REQ-003: Logout
-[Ralph Status]   [COMPLETED] REQ-004: Password Reset
-[Ralph Status]   [COMPLETED] REQ-005: Remember Me
-[Ralph Status]   [COMPLETED] REQ-006: Session Refresh
-[Ralph Status]   [COMPLETED] REQ-007: OAuth Integration
-
-[Ralph Status] Pending Stories:
-[Ralph Status]   [READY] REQ-008: Two-Factor Auth
-
-[Ralph Status] Next Step: Resume execution
-[Ralph Status]   /ralph-resume
-```
-
-### Resume Ralph Loop
-
-#### Command
-```bash
-/ralph-resume
-```
-
-#### Output
-```
-[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Resume] Resuming Ralph Run
-[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[Ralph Resume] Run ID: user-authentication-20260223152030
-[Ralph Resume] Paused at: implementing (REQ-008)
-[Ralph Resume] Pause reason: quota_safety_threshold
-[Ralph Resume] Time paused: 18 hours 30 minutes
-
-[Ralph Resume] Checking quota availability...
-[Ralph Resume] Quota used: 155,234 (from previous session)
-[Ralph Resume] Quota available: 200,000 (reset)
-[Ralph Resume] Quota needed: ~20,000
-[Ralph Resume] Status: ✓ Sufficient quota
-
-[Ralph Resume] Loading state...
-[Ralph Resume] ✓ State loaded from ralph/.ralph/state.json
-[Ralph Resume] ✓ Stories loaded from ralph/.ralph/stories.json
-[Ralph Resume] ✓ Architecture loaded
-
-[Ralph Resume] Resuming execution...
-[Ralph Resume] Phase: implementing
-[Ralph Resume] Story: REQ-008 (Two-Factor Authentication)
-
-[Ralph Resume] Continuing Ralph Loop...
-
-[Ralph Loop] Resumed from pause
-[Ralph Loop] Continuing Phase 4...
-
-[Subagent REQ-008] Starting implementation
-[Subagent REQ-008] ... (implementation process)
-[Subagent REQ-008] All tests passed!
-[Subagent REQ-008] Cost: 17,234 tokens
-
-[Ralph Loop] ✓ REQ-008 completed
-[Ralph Loop] Creating commit...
-[Ralph Loop] ✓ Commit created: i7j8k9l
+[Ralph Loop] Phase 4 complete: 8/8 stories (REQ-008)
 
 [Ralph Loop] All stories complete: 8/8 (100%)
-[Ralph Loop] Total quota used: 172,468/200,000 (86.2%)
 [Ralph Loop] Moving to Prove phase...
 ```
 
@@ -562,8 +373,6 @@ ralph/.ralph/state.json:
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Running comprehensive validation...
-[Ralph Loop] Estimated cost: 6,000 tokens
-[Ralph Loop] Quota check: 172,468K + 6K = 178,468K (89.2%) ✓
 
 [Ralph Loop] Running full test suite...
 [Ralph Loop] - All unit tests: ✓ 42/42 passed
@@ -587,8 +396,6 @@ ralph/.ralph/state.json:
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Ralph Loop] Proof report: ralph/.ralph/artifacts/proof-report.md
-
-[Ralph Loop] Total quota used: 178,651/200,000 (89.3%)
 [Ralph Loop] Moving to Harvest phase...
 ```
 
@@ -614,9 +421,7 @@ ralph/.ralph/state.json:
 [Ralph Loop] - Commits: 8 (one per story)
 [Ralph Loop] - Tests: 42 unit, 8 UI, all passed
 [Ralph Loop] - Coverage: 89%
-[Ralph Loop] - Total time: 2h 45m (includes 18h pause)
-[Ralph Loop] - Active time: 45 minutes
-[Ralph Loop] - Quota used: 178,651/200,000 (89.3%)
+[Ralph Loop] - Total time: 45 minutes
 [Ralph Loop] - Iterations: 3 logic, 1 formatting
 
 [Ralph Loop] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -784,11 +589,6 @@ Working tree: clean
 [Ralph Archive] Testing: Load stories.json
 [Ralph Archive] ✓ All critical files parseable
 
-[Ralph Archive] Check 10: Quota tracking archived
-[Ralph Archive] ✓ Quota usage data: Present (178,651 tokens)
-[Ralph Archive] ✓ Phase breakdown: Present
-[Ralph Archive] ✓ Pause/resume history: Present (1 pause)
-
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Archive] ✓ Archive Completeness: 100%
 [Ralph Archive] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -923,7 +723,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 **Compromise: Keep with auto-cleanup**
 ```json
-// In ralph/.ralph/quota-config.json
+// In ralph/.ralph/config.json (custom, not included by default)
 {
   "archive": {
     "keepRalphBranch": true,        // Default: keep
@@ -1082,7 +882,7 @@ Status: READY FOR NEXT RALPH RUN ✓
 # 3. (Optional) Check status during run
 /ralph-status
 
-# 4. (If paused) Resume after quota
+# 4. (If interrupted) Resume
 /ralph-resume
 
 # 5. Archive and merge
@@ -1102,21 +902,16 @@ T+0:10    /ralph-loop starts
 T+0:15    Phase 1 complete (2 stories, 2 commits)
 T+0:25    Phase 2 complete (2 stories, 4 commits total)
 T+0:40    Phase 3 complete (3 stories, 7 commits total)
-T+0:45    PAUSE (quota threshold, before REQ-008)
+T+0:50    Phase 4 complete (1 story, 8 commits total)
+T+0:52    Prove complete
+T+0:53    Harvest complete
+T+0:53    Status: ready_for_archive
 
-[18 hour pause - quota replenishes]
-
-T+18:45   /ralph-resume
-T+18:50   Phase 4 complete (1 story, 8 commits total)
-T+18:52   Prove complete
-T+18:53   Harvest complete
-T+18:53   Status: ready_for_archive
-
-T+18:54   /ralph-archive starts
-T+18:54   Pre-merge validation
-T+18:55   Archive creation
-T+18:56   Merge to main (9 commits total)
-T+18:56   Branch preserved
+T+0:54    /ralph-archive starts
+T+0:54    Pre-merge validation
+T+0:55    Archive creation
+T+0:56    Merge to main (9 commits total)
+T+0:56    Branch preserved
 T+18:57   Cleanup complete
 T+18:57   DONE - Ready for next run
 
@@ -1172,7 +967,6 @@ Option to delete:
 12. ✓ All logs present (parse, arch, implement, test, prove)
 13. ✓ Archive structure valid (no empty dirs, all files readable)
 14. ✓ Can restore from archive (metadata parseable)
-15. ✓ Quota tracking archived
 
 **Post-Merge Checks (After merge and cleanup):**
 16. ✓ Working tree clean

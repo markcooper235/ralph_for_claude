@@ -1,6 +1,6 @@
 # Ralph Loop Framework for Claude Code
 
-A Claude Code-focused iterative development framework for PRD/OpenSpec-style coding tasks with integrated feedback loops, parallel subagent execution, git branch management, and intelligent quota management.
+A Claude Code-focused iterative development framework for PRD/OpenSpec-style coding tasks with integrated feedback loops, parallel subagent execution, and git branch management.
 
 ## What is Ralph Loop?
 
@@ -9,7 +9,6 @@ The Ralph Loop Framework is a structured approach to software development that c
 - **Parallel subagent execution** (max 3 concurrent, dependency-aware)
 - **Continuous feedback loops** (automated testing and validation)
 - **Git branch management** (feature branches with safe merging)
-- **Quota management** (graceful pause/resume before exhaustion)
 - **Complete archival** (timestamped run history with full audit trail)
 
 The name "Ralph" represents the continuous cycle: **R**equirement → **A**rchitecture → **L**oop → **P**rove → **H**arvest
@@ -133,13 +132,6 @@ See `docs/INSTALLATION.md` for detailed installation guide including:
 - Archive merges to origin branch with regular merge (preserves all commits)
 - Ralph branch preserved for audit trail
 
-### Quota Management
-
-Ralph monitors context quota usage throughout a run:
-- **Warning** (75%): User notified
-- **Safety** (85%): Pauses gracefully BEFORE starting next task
-- **Resume**: `/ralph-resume` continues from exact pause point — nothing is lost
-
 ## Available Skills
 
 ### Core Loop Skills
@@ -147,8 +139,8 @@ Ralph monitors context quota usage throughout a run:
 - **`/ralph-create-prd`** - Interactive PRD creation with story breakdown, dependency detection, execution planning
 - **`/ralph-loop`** - Main orchestrator: parallel implementation (max 3), story commits, prove, harvest
 - **`/ralph-archive`** - Validate, archive artifacts, merge to origin branch, clean state
-- **`/ralph-status`** - Progress monitoring with story statuses and quota usage
-- **`/ralph-resume`** - Resume after quota pause or interruption
+- **`/ralph-status`** - Progress monitoring with story statuses
+- **`/ralph-resume`** - Resume after interruption or error
 
 ### Spec Modification Skills
 
@@ -187,7 +179,6 @@ project/
 │   ├── docs/                       # Ralph documentation
 │   ├── tests/browser/              # Playwright tests
 │   ├── feedback/                   # Test results
-│   ├── .ralph-quota-config.json    # Quota config template
 │   ├── .ralph-state-template.json  # State template
 │   └── .ralph-story-template.json  # Story template
 ├── CLAUDE.md                       # Claude guidance
@@ -215,8 +206,7 @@ Skills are installed as subdirectories; commands as flat files:
 ├── ralph-resume.md
 ├── ralph-modify-spec.md
 ├── ralph-add-requirement.md
-├── ralph-loop-v2.md
-└── ralph-quota.md
+└── ralph-loop-v2.md
 ```
 
 ## Example Workflows
@@ -250,7 +240,7 @@ cd my-api
 # 3. Check progress anytime
 /ralph-status
 
-# 4. If quota paused, resume later
+# 4. Resume if interrupted
 /ralph-resume
 
 # 5. Archive when ready
@@ -342,7 +332,7 @@ Phase 3 (parallel, deps satisfied):
 
 1. **Always use `/ralph-create-prd`** for new specs — ensures proper story breakdown, detects dependencies
 2. **5-10 requirements per spec** — larger features → multiple specs for better parallelization
-3. **Check status regularly** with `/ralph-status` — monitor progress, track quota usage
+3. **Check status regularly** with `/ralph-status` — monitor progress, identify blockers early
 4. **Review archives** in `ralph/archive/*/summary.md` — learn from each run
 5. **Write testable acceptance criteria** — "response time < 200ms" beats "must be fast"
 6. **Let parallel execution work** — trust dependency resolution, don't intervene unless necessary
@@ -390,7 +380,7 @@ The Ralph Loop Framework is built on these principles:
 
 1. **Specification-Driven**: Clear requirements lead to clear implementations
 2. **Parallel by Default**: Max throughput with dependency-aware scheduling
-3. **Never Lose Work**: Quota-aware execution with graceful pause/resume
+3. **Never Lose Work**: State-preserving execution with graceful pause/resume
 4. **Traceable**: Every story = one commit, every run = one archive
 5. **Iterative Refinement**: Each loop improves based on feedback
 
@@ -399,7 +389,6 @@ The Ralph Loop Framework is built on these principles:
 - `docs/QUICKSTART.md` - 5-minute getting started
 - `docs/INSTALLATION.md` - Detailed installation guide with all project types
 - `docs/COMPLETE-WORKFLOW.md` - End-to-end workflow with full command output examples
-- `docs/QUOTA-MANAGEMENT.md` - Quota management guide
 - `docs/SPEC-MODIFICATIONS.md` - Modifying specs during a run
 - `ralph/archive/*/summary.md` - Per-run summaries (after running)
 

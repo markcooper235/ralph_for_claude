@@ -2,7 +2,7 @@
   "_comment": "Template for ralph/.ralph/state.json — runtime state, not tracked in git",
   "runId": "spec-name-timestamp",
   "specFile": "ralph/specs/prds/example.prd.md",
-  "status": "parsing|architecture|implementing|proving|ready_for_archive|paused_quota|paused_user|paused_error|failed",
+  "status": "parsing|architecture|implementing|proving|ready_for_archive|paused_user|paused_error|failed",
   "createdAt": "2026-02-23T14:50:23Z",
   "iter": 1,
   "completedStories": 0,

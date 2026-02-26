@@ -252,15 +252,13 @@ project/
 │   ├── docs/
 │   │   ├── QUICKSTART.md
 │   │   ├── COMPLETE-WORKFLOW.md
-│   │   ├── QUOTA-MANAGEMENT.md
 │   │   ├── SPEC-MODIFICATIONS.md
 │   │   └── ralph-loop-guide.md
 │   ├── tests/
 │   │   └── browser/                  # Browser tests
 │   ├── feedback/                     # Test results
 │   ├── .ralph-state-template.json    # State template
-│   ├── .ralph-story-template.json    # Story template
-│   └── .ralph-quota-config.json      # Quota config
+│   └── .ralph-story-template.json    # Story template
 ├── CLAUDE.md                         # Claude guidance
 └── README.md                         # Project readme
 ```
@@ -284,10 +282,9 @@ Commands are installed as flat files (e.g., `~/.claude/commands/ralph-archive.md
 9. `ralph-archive` - Archive, validate, and merge
 10. `ralph-status` - Progress monitoring
 11. `ralph-resume` - Resume paused runs
-12. `ralph-quota` - Quota management utilities
-13. `ralph-modify-spec` - Full spec modification
-14. `ralph-add-requirement` - Quick requirement addition
-15. `ralph-loop-v2` - Alias for ralph-loop
+12. `ralph-modify-spec` - Full spec modification
+13. `ralph-add-requirement` - Quick requirement addition
+14. `ralph-loop-v2` - Alias for ralph-loop
 
 ---
 
@@ -662,7 +659,6 @@ ralph-resume.md
 │   ├── archive/
 │   ├── docs/
 │   ├── specs/
-│   └── .ralph-quota-config.json
 ├── CLAUDE.md
 └── README.md
 ```
