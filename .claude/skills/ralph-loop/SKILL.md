@@ -22,16 +22,20 @@ When this skill is invoked:
 ### Phase 0: Initialization
 
 Check for existing run:
+- If `ralph/.ralph/state.json` **exists**:
+  - Read `STATUS=$(jq -r '.status' ralph/.ralph/state.json)`
+  - If status starts with `paused_`: **Resume mode** — load state; build `completed` set from stories.json (all stories with status="completed"); set `ITER` from `state.iter` (default 1); skip directly to the phase in `state.resumePhase` (typically Phase 3)
+  - Otherwise: exit with "Error: Ralph run in progress (status: ${STATUS}). Use /ralph-archive to complete or abandon."
+- If `ralph/.ralph/state.json` **does not exist**: Fresh run — proceed:
+
 ```bash
-[ -f ralph/.ralph/state.json ] && echo "Error: Ralph run in progress. Use /ralph-archive to complete or abandon." && exit 1
 mkdir -p ralph/.ralph/{logs,artifacts,stories}
 ```
 
-Initialize `ralph/.ralph/state.json` from `ralph/.ralph-state-template.json`:
-- runId: `<spec-name>-<timestamp>`
-- specFile: path provided
-- status: "parsing"
-- createdAt: current timestamp
+Initialize `ralph/.ralph/state.json` (use `ralph/.ralph-state-template.json` if it exists, otherwise create inline):
+```json
+{"runId":"<spec-name>-<timestamp>","specFile":"<path>","status":"parsing","createdAt":"<ISO>","completedStories":0,"totalStories":0,"iter":1,"git":{"commits":[]}}
+```
 
 Create git branch:
 ```bash
@@ -67,7 +71,7 @@ UI test flag — set testRequirements.ui = true if ANY of the following are pres
 Rule: ui defaults to false; any signal above sets it to true. Keyword absence must never override explicit metadata.
 
 Save ralph/.ralph/stories.json:
-{{"stories":[{{"id","title","description","priority","acceptanceCriteria":[],"dependencies":[],"codeImpact":{{"files":[]}}}}],"testRequirements":{{"unit":true,"lint":true,"codeQuality":true,"ui":false,"integration":true}}}}
+{{"stories":[{{"id","title","description","priority","status":"pending","acceptanceCriteria":[],"dependencies":[],"codeImpact":{{"files":[]}}}}],"testRequirements":{{"unit":true,"lint":true,"codeQuality":true,"ui":false}}}}
 
 For each story, write ralph/.ralph/stories/<ID>-brief.md:
 ```
@@ -107,7 +111,7 @@ Load ralph/.ralph/stories.json. Analyze the codebase (structure, patterns, tech 
 Design implementation approach per requirement. Select test tools:
 - lint: eslint/black/clippy (by language)
 - unit: jest/pytest/cargo test
-- ui: playwright (only if testRequirements.ui = true)
+- ui: playwright command (e.g. `npx playwright test`) if testRequirements.ui = true, otherwise empty string ""
 - codeQuality: complexity/duplication
 - coverage: command that produces coverage data alongside unit tests
 
@@ -167,8 +171,9 @@ while stories_remaining(completed):
     # ── Context cycle check at phase boundary ──────────────────────────
     # Note: Claude agents cannot introspect token count; state.quota.totalUsed is
     # always 0 and never updated. Use story completion ratio as a heuristic proxy.
+    # Skip for small specs (≤5 stories) — context cycling not needed.
     remaining_after = [s for s in stories if s.id not in completed and s.id not in [p.id for p in phase_stories]]
-    if remaining_after:
+    if remaining_after and len(all_stories) >= 6:
         stories_done_ratio = len(completed) / len(all_stories)
         if stories_done_ratio > 0.65:
             next_story = remaining_after[0].id
@@ -176,7 +181,8 @@ while stories_remaining(completed):
                 status="paused_cycle",
                 pauseType="cycle",
                 resumePhase="implementing",
-                currentStory=next_story
+                currentStory=next_story,
+                iter=ITER
             )
             print("[Ralph] Context cycling at phase boundary — all progress saved.")
             print("[Ralph] Run /ralph-resume to continue with fresh context.")
@@ -190,7 +196,18 @@ while stories_remaining(completed):
     for story, result in zip(phase_stories, subagents):
         if "FAIL" in result:
             detail = read(f"ralph/.ralph/logs/progress-{story.id}-{ITER}.log")
-            handle_impl_failure(story, detail, ITER)  # see Error Handling
+            # handle_impl_failure: max 2 retries before pausing for user
+            impl_iter = state.impl_iterations.get(story.id, 0) + 1
+            update_state(impl_iterations={story.id: impl_iter})
+            if impl_iter <= 2:
+                # Re-run impl with failure context injected
+                brief = read_file(f"ralph/.ralph/stories/{story.id}-brief.md")
+                retry_prompt = f"{brief}\n\n## Previous Attempt Failed\n{detail}\n\nFix the issues and implement correctly."
+                # re-launch impl subagent with retry_prompt (same Task structure, prompt=retry_prompt)
+            else:
+                update_state(status="paused_error")
+                log_error(f"{story.id} impl failed after 2 retries — user intervention required")
+                exit()
         else:
             run_tests(story, ITER)       # Phase 4
             commit_story(story)          # Phase 5
@@ -237,7 +254,7 @@ Task(
 Run all tests for {story_id}. Test tools (injected from state — no file read needed): lint={testTools['lint']} | unit={testTools['unit']} | coverage={testTools['coverage']} | ui={testTools['ui']} | codeQuality={testTools['codeQuality']}
 
 A. Lint/Format: run linter, auto-fix where possible, max 3 iterations
-B. Unit tests: run tests for this story only, max 5 iterations for logic failures
+B. Unit tests: scope to this story only — filter pattern is the story ID lowercased with hyphens→underscores (REQ-001 → `test_req_001`). Use `-k test_req_001` for pytest, `--testNamePattern test_req_001` for jest, equivalent for other frameworks. Max 5 iterations for logic failures
 C. Code quality: complexity and duplication checks
 D. UI tests (only if testTools.ui set): playwright, max 5 iterations — before running Playwright, ensure the dev server is running: check `curl -s -o /dev/null -w "%{http_code}" <BASE_URL>` and start it in background if not responsive (see browser-test skill server table for commands/ports by project type)
 
@@ -264,9 +281,7 @@ Return ONE LINE ONLY: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s>"
 
 For each story that passes testing:
 ```bash
-FILES=$(jq -r '.files[]' ralph/.ralph/artifacts/${STORY_ID}-impl.json)
-TEST_FILES=$(jq -r '.tests[]' ralph/.ralph/artifacts/${STORY_ID}-impl.json)
-git add $FILES $TEST_FILES
+jq -r '.files[], .tests[]' ralph/.ralph/artifacts/${STORY_ID}-impl.json | xargs -d '\n' git add --
 git commit -m "$(cat <<EOF
 ${STORY_ID}: ${STORY_TITLE}
 
@@ -315,33 +330,38 @@ if all_passed:
 
 else:
     # Some stories failed — run full prove subagent
+    prove_iter = state.get("proveIterations", 0) + 1
+    update_state(proveIterations=prove_iter)
+    if prove_iter > 5:
+        update_state(status="paused_error")
+        display("Prove failed after 5 iterations — user intervention required")
+        exit()
+
     result = Task(
         subagent_type="general-purpose",
         description="Prove all requirements",
         prompt="""
 Load ralph/.ralph/stories.json and ralph/.ralph/artifacts-index.json.
+Load testTools from ralph/.ralph/architecture.json.
 
 For each story where index shows status != "passed":
 - Read ralph/.ralph/artifacts/{story_id}-tests.json for details
 - Verify implementation files exist
-- Re-run tests
+- Re-run unit tests using testTools.unit scoped to this story
 - Check each acceptance criterion from the story brief file
-
-Run full integration test suite across all stories.
 
 Save ralph/.ralph/artifacts/proof-report.json:
 {{"status":"passed|failed","stories":{{"REQ-XXX":{{"status","gaps":[]}}}},"coverage":0,"failedStories":[]}}
 Save ralph/.ralph/artifacts/proof-report.md (human-readable summary).
 
-Write full prove log to ralph/.ralph/logs/prove-1.log
+Write full prove log to ralph/.ralph/logs/prove-{prove_iter}.log
 Return ONE LINE ONLY: "PROVE: PASS|FAIL | <N>/<total> requirements verified"
 """
     )
 
     if "FAIL" in result:
-        detail = read("ralph/.ralph/logs/prove-1.log")
+        detail = read(f"ralph/.ralph/logs/prove-{prove_iter}.log")
         # Create fix tasks for failing stories, return to Phase 3
-        # Max 5 total prove iterations before user intervention
 ```
 
 ### Phase 7: Harvest & Pre-Merge Validation

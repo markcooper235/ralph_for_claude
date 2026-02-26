@@ -64,39 +64,13 @@ case "$STATUS" in
 esac
 ```
 
-### 4. Check Quota Available (if paused for quota)
+### 4. Notify if Paused for Quota
 
-```bash
-if [ "$PAUSE_REASON" = "quota_warning" ] || [ "$PAUSE_REASON" = "quota_limit" ]; then
-  echo "[Ralph Resume] Checking quota availability..."
+If `PAUSE_REASON` contains "quota": display a reminder that token counts are not tracked automatically — the user should verify context headroom in the Claude Code UI before continuing. Proceed regardless (no automated check possible).
 
-  # Load quota state
-  QUOTA_USED=$(jq -r '.quota.totalUsed' ralph/.ralph/state.json)
-  QUOTA_LIMIT=$(jq -r '.quota.limit' ralph/.ralph/state.json)
-  QUOTA_AVAILABLE=$((QUOTA_LIMIT - QUOTA_USED))
-
-  echo "[Ralph Resume] Quota used: ${QUOTA_USED}/${QUOTA_LIMIT}"
-  echo "[Ralph Resume] Quota available: ${QUOTA_AVAILABLE}"
-
-  # Check if enough quota to continue
-  MIN_REQUIRED=$(jq -r '.quota.estimatedRemaining' ralph/.ralph/state.json)
-
-  if [ "$QUOTA_AVAILABLE" -lt "$MIN_REQUIRED" ]; then
-    echo "[Ralph Resume] Warning: Insufficient quota available"
-    echo "[Ralph Resume] Required: ~${MIN_REQUIRED}"
-    echo "[Ralph Resume] Available: ${QUOTA_AVAILABLE}"
-    echo "[Ralph Resume]"
-    echo "[Ralph Resume] Options:"
-    echo "[Ralph Resume] 1. Wait for quota replenishment"
-    echo "[Ralph Resume] 2. Use --force to try anyway (may pause again)"
-
-    if [ "$FORCE" != "true" ]; then
-      exit 1
-    fi
-
-    echo "[Ralph Resume] Forcing resume..."
-  fi
-fi
+```
+[Ralph Resume] Note: Paused for quota — verify context headroom in Claude Code UI before continuing.
+[Ralph Resume] Use --force to suppress this reminder.
 ```
 
 ### 5. Resume from Saved Phase
@@ -235,7 +209,7 @@ Resume: Fix issue, then /ralph-resume
 
 ```
 Status: paused_cycle
-Reason: context usage exceeded 60% threshold at phase boundary
+Reason: story completion > 65% at phase boundary (context cycling heuristic)
 Resume: /ralph-resume immediately — no waiting required
 Note: All work committed, fresh context starts from next story
 ```

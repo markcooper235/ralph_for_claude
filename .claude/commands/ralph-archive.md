@@ -95,7 +95,15 @@ Archive: ${ARCHIVE_DIR}
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
 
-Record merge commit hash to `archive/git-info/branch-info.txt`.
+Record merge commit and write to archive, then commit:
+```bash
+MERGE_COMMIT=$(git rev-parse HEAD)
+echo "Merge commit: ${MERGE_COMMIT}" > "${ARCHIVE_DIR}/git-info/branch-info.txt"
+git add "${ARCHIVE_DIR}/git-info/branch-info.txt"
+git commit -m "chore: record merge commit hash for ${RUN_ID}
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
 
 ### Phase 7: Cleanup
 
