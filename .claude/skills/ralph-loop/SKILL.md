@@ -119,6 +119,7 @@ Coverage tool selection by language/framework:
 - Rust: `cargo tarpaulin` if `cargo tarpaulin --version` succeeds; otherwise skip coverage
 - Ruby/RSpec with simplecov: `bundle exec rspec` — simplecov auto-reports on exit
 - Angular: `ng test --no-watch --code-coverage`
+- .NET: `dotnet test --collect:"XPlat Code Coverage"` — coverlet.collector is pre-installed in the xUnit template
 Write `testTools.coverage` as the full command string (empty string if not available).
 
 **Python venv:** If `venv/` directory exists in the project root (always present for Ralph-created Python/Flask/Reflex projects), prefix ALL Python tool commands with `venv/bin/`:

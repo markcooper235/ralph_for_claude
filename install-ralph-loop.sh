@@ -1312,7 +1312,22 @@ dotnet run --project <name>.csproj  # Explicit project
 ```bash
 dotnet test               # Run all tests (from solution or test project)
 dotnet test --logger "console;verbosity=detailed"
+dotnet test --collect:"XPlat Code Coverage"  # Run with coverage (Cobertura XML → TestResults/)
+```
+
+### Coverage Commands
+```bash
+# Step 1 — run tests and collect coverage data
 dotnet test --collect:"XPlat Code Coverage"
+
+# Step 2 — generate HTML report from the Cobertura XML
+dotnet tool run reportgenerator -- \
+  -reports:"**/TestResults/**/coverage.cobertura.xml" \
+  -targetdir:"coverage-report" \
+  -reporttypes:Html
+
+# Open report: coverage-report/index.html
+# Note: coverlet.collector is pre-installed in the xUnit test project template
 ```
 
 ### Package Management
@@ -3734,6 +3749,21 @@ EOF
     (cd "${project_dir}" && dotnet restore --verbosity quiet) \
         && print_success "NuGet packages restored" \
         || print_warning "dotnet restore failed — run: cd ${project_dir} && dotnet restore"
+
+    # Install ReportGenerator as a local dotnet tool for HTML coverage reports
+    print_info "Installing ReportGenerator (coverage HTML reports)..."
+    (cd "${project_dir}" && dotnet new tool-manifest --force 2>/dev/null) || true
+    (cd "${project_dir}" && dotnet tool install dotnet-reportgenerator-globaltool --verbosity quiet 2>/dev/null) \
+        && print_success "ReportGenerator installed (local tool)" \
+        || print_warning "ReportGenerator install failed — run: cd ${project_dir} && dotnet tool install dotnet-reportgenerator-globaltool"
+
+    # Ensure coverage output dirs are gitignored (dotnet new gitignore covers TestResults/ but not coverage-report/)
+    if ! grep -q '^coverage-report/' "${project_dir}/.gitignore" 2>/dev/null; then
+        echo "coverage-report/" >> "${project_dir}/.gitignore"
+    fi
+    if ! grep -q 'TestResults/' "${project_dir}/.gitignore" 2>/dev/null; then
+        echo "TestResults/" >> "${project_dir}/.gitignore"
+    fi
 
     print_success "Created .NET ${template} project structure"
 }

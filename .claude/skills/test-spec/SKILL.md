@@ -144,6 +144,16 @@ cargo test req_001 -- --nocapture
 cargo tarpaulin
 ```
 
+### .NET Projects
+```bash
+# Run specific test
+dotnet test --filter "DisplayName~Req001"
+# Full suite with coverage (coverlet.collector pre-installed in xUnit template):
+dotnet test --collect:"XPlat Code Coverage"
+# Generate HTML report (ReportGenerator installed as local tool):
+dotnet tool run reportgenerator -- -reports:"**/TestResults/**/coverage.cobertura.xml" -targetdir:"coverage-report" -reporttypes:Html
+```
+
 ## Output Format
 
 ```
