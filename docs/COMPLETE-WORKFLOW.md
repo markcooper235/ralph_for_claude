@@ -942,8 +942,6 @@ Benefits of keeping:
 
 Option to delete:
 - Manual: `git branch -d ralph/...`
-- Auto-cleanup: Configure in settings
-- Keep last N branches
 
 ### Cleanup Checks
 
