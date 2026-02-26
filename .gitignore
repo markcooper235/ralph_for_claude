@@ -6,14 +6,14 @@
 # Ralph templates are tracked (they're templates, not runtime state)
 !.ralph-state-template.json
 !.ralph-story-template.json
-!.ralph-quota-config.json
 
 # Checkpoints (can be regenerated)
 .claude/checkpoints/
 
 # Feedback results (can be regenerated)
-feedback/
+feedback/*
 !feedback/.gitkeep
+!feedback/README.md
 
 # Auto-generated feedback configs (can be regenerated)
 .claude/feedback-configs/*.json
