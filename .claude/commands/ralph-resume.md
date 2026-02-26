@@ -46,7 +46,7 @@ PAUSE_REASON=$(jq -r '.pauseReason // "unknown"' ralph/.ralph/state.json)
 
 ```bash
 case "$STATUS" in
-  "paused_quota"|"paused_user"|"paused_error"|"paused_cycle")
+  "paused_quota"|"paused_user"|"paused_error")
     echo "[Ralph Resume] Run is resumable"
     ;;
   "complete"|"ready_for_archive")
@@ -118,22 +118,6 @@ echo "[Ralph Resume] State updated, resuming execution..."
 
 ### 7. Display Resume Info
 
-**If pause type is `cycle` (context cycling):**
-```
-[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Resume] Context Cycle Resume — Fresh Context
-[Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[Ralph Resume]
-[Ralph Resume] Run ID: ${RUN_ID}
-[Ralph Resume] All prior work committed and preserved
-[Ralph Resume] Resuming from: ${RESUME_PHASE} / ${CURRENT_STORY}
-[Ralph Resume] Stories completed so far: ${COMPLETED}/${TOTAL}
-[Ralph Resume]
-[Ralph Resume] Continuing with fresh context...
-[Ralph Resume] Use /ralph-status to monitor progress
-```
-
-**Otherwise (quota/user/error pause):**
 ```
 [Ralph Resume] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [Ralph Resume] Ralph Run Resumed
@@ -141,35 +125,11 @@ echo "[Ralph Resume] State updated, resuming execution..."
 [Ralph Resume]
 [Ralph Resume] Run ID: ${RUN_ID}
 [Ralph Resume] Resumed Phase: ${RESUME_PHASE}
-[Ralph Resume] Time paused: ${TIME_PAUSED}
-[Ralph Resume]
-[Ralph Resume] Progress before pause:
-[Ralph Resume] - Stories completed: X/Y
-[Ralph Resume] - Tests passed: A/B
-[Ralph Resume] - Quota used: ${QUOTA_USED}
+[Ralph Resume] Stories completed: ${COMPLETED}/${TOTAL}
 [Ralph Resume]
 [Ralph Resume] Continuing execution...
 [Ralph Resume] Use /ralph-status to monitor progress
 ```
-
-## Quota Management During Resume
-
-**Monitor quota throughout execution:**
-
-1. **Before each task:**
-   - Estimate task cost
-   - Check available quota
-   - Skip task if insufficient (pause instead)
-
-2. **During task execution:**
-   - Track actual usage
-   - Compare to estimate
-   - Adjust future estimates
-
-3. **After each task:**
-   - Update quota usage in state
-   - Check if approaching limit
-   - Pause if needed
 
 ## Resume Scenarios
 
@@ -205,15 +165,6 @@ Reason: test_failure (exceeded max iterations)
 Resume: Fix issue, then /ralph-resume
 ```
 
-### Scenario 5: Context Cycling (automatic at phase boundary)
-
-```
-Status: paused_cycle
-Reason: story completion > 65% at phase boundary (context cycling heuristic)
-Resume: /ralph-resume immediately — no waiting required
-Note: All work committed, fresh context starts from next story
-```
-
 ## State Preservation
 
 **What's preserved:**
@@ -221,7 +172,6 @@ Note: All work committed, fresh context starts from next story
 - ✅ All completed stories with commits
 - ✅ In-progress story state
 - ✅ Test results and iteration counts
-- ✅ Quota usage
 - ✅ Git branch and commits
 - ✅ Architecture decisions
 - ✅ All artifacts
@@ -245,7 +195,7 @@ Note: All work committed, fresh context starts from next story
 
 # Output:
 # [Ralph Resume] Found paused Ralph run
-# [Ralph Resume] Quota available: 180000/200000
+# [Ralph Resume] Run ID: my-feature-20260223145023
 # [Ralph Resume] Resuming from phase: implementing
 # [Ralph Resume] Continuing with REQ-004...
 ```
@@ -265,16 +215,14 @@ Note: All work committed, fresh context starts from next story
 # [Ralph Resume] Continuing where we left off...
 ```
 
-### Force resume (ignore warnings)
+### Force resume (bypass status check)
 
 ```bash
 /ralph-resume --force
 
 # Output:
-# [Ralph Resume] Warning: Only 15000 quota remaining
-# [Ralph Resume] Estimated need: 25000
-# [Ralph Resume] Forcing resume anyway...
-# [Ralph Resume] May pause again if quota exhausted
+# [Ralph Resume] Warning: Run status is failed
+# [Ralph Resume] Forcing resume...
 ```
 
 ## Integration with Ralph Loop
@@ -292,19 +240,17 @@ if [ -f ralph/.ralph/state.json ]; then
 fi
 ```
 
-## Quota Safety
+## Safety
 
 **Ralph Resume ensures:**
 - ✅ No work is lost on pause
 - ✅ Can resume multiple times
-- ✅ Quota checked before continuing
-- ✅ User notified of quota status
-- ✅ Graceful handling of quota exhaustion
+- ✅ User notified of pause reason
+- ✅ All state preserved until `/ralph-archive`
 
 ## Notes
 
 - Use `/ralph-status` to check if run is paused
-- Quota resets daily (check Claude Code limits)
 - Each resume continues from exact pause point
 - Multiple pause/resume cycles supported
 - All state preserved until `/ralph-archive`

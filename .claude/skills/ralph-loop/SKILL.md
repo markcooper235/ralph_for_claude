@@ -91,7 +91,8 @@ Files: <file list>
 ```
 
 Write full parse details to ralph/.ralph/logs/parse-1.log
-Return ONE LINE ONLY: "PARSE: OK | <N> stories | <first-ID> to <last-ID>"
+All analysis and details go to the log — NOT returned to the orchestrator.
+Return ONE LINE ONLY to the orchestrator: "PARSE: OK | <N> stories | <first-ID> to <last-ID>"
 """
 )
 ```
@@ -144,7 +145,8 @@ Approach: <implementation.REQ-XXX.approach>
 ```
 
 Write full architecture details to ralph/.ralph/logs/architecture-1.log
-Return ONE LINE ONLY: "ARCH: OK | <tech> | <test-tools>"
+All analysis and details go to the log — NOT returned to the orchestrator.
+Return ONE LINE ONLY to the orchestrator: "ARCH: OK | <tech> | <test-tools>"
 """
 )
 ```
@@ -167,27 +169,6 @@ while stories_remaining(completed):
 
     # Take up to 3 non-conflicting stories for this phase
     phase_stories = select_up_to_3_non_conflicting(ready, conflict_groups)
-
-    # ── Context cycle check at phase boundary ──────────────────────────
-    # Note: Claude agents cannot introspect token count; state.quota.totalUsed is
-    # always 0 and never updated. Use story completion ratio as a heuristic proxy.
-    # Skip for small specs (≤5 stories) — context cycling not needed.
-    remaining_after = [s for s in stories if s.id not in completed and s.id not in [p.id for p in phase_stories]]
-    if remaining_after and len(all_stories) >= 6:
-        stories_done_ratio = len(completed) / len(all_stories)
-        if stories_done_ratio > 0.65:
-            next_story = remaining_after[0].id
-            update_state(
-                status="paused_cycle",
-                pauseType="cycle",
-                resumePhase="implementing",
-                currentStory=next_story,
-                iter=ITER
-            )
-            print("[Ralph] Context cycling at phase boundary — all progress saved.")
-            print("[Ralph] Run /ralph-resume to continue with fresh context.")
-            exit()
-    # ───────────────────────────────────────────────────────────────────
 
     # Launch parallel impl subagents (max 3)
     subagents = [launch_impl(story, ITER) for story in phase_stories]
@@ -238,7 +219,8 @@ Save ralph/.ralph/artifacts/{story_id}-impl.json:
 Do NOT commit (commits happen after testing).
 
 Write full implementation log to ralph/.ralph/logs/progress-{story_id}-{ITER}.log
-Return ONE LINE ONLY: "{story_id}: OK|FAIL | <N> files | <M> tests"
+All code decisions, file changes, and working notes go to the log — NOT returned to the orchestrator.
+Return ONE LINE ONLY to the orchestrator: "{story_id}: OK|FAIL | <N> files | <M> tests"
 """
 )
 ```
@@ -268,7 +250,8 @@ Update ralph/.ralph/artifacts-index.json:
 - Update avgCoverage: mean of all coverage values across stories in the index
 
 Write full test log to ralph/.ralph/logs/test-{story_id}-{ITER}.log
-Return ONE LINE ONLY: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s>"
+All test output, error details, and fix iterations go to the log — NOT returned to the orchestrator.
+Return ONE LINE ONLY to the orchestrator: "{story_id}: PASS|FAIL | lint:<s> unit:<s> quality:<s>"
 """
 )
 ```
@@ -355,7 +338,8 @@ Save ralph/.ralph/artifacts/proof-report.json:
 Save ralph/.ralph/artifacts/proof-report.md (human-readable summary).
 
 Write full prove log to ralph/.ralph/logs/prove-{prove_iter}.log
-Return ONE LINE ONLY: "PROVE: PASS|FAIL | <N>/<total> requirements verified"
+All verification details and gap analysis go to the log — NOT returned to the orchestrator.
+Return ONE LINE ONLY to the orchestrator: "PROVE: PASS|FAIL | <N>/<total> requirements verified"
 """
     )
 
