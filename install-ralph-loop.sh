@@ -744,7 +744,7 @@ ask_project_questions() {
             # Community language plugins
             echo
             print_info "Community language plugins (space-separated, or 'none'):"
-            echo "  Options: python go"
+            echo "  Options: python go terraform"
             echo "  [none]:"
             read -r community_choice || true
             PROJECT_CONFIG[nx_community]="${community_choice:-none}"
@@ -3972,6 +3972,19 @@ create_nx_project() {
                     npx nx generate @nx-go/nx-go:app go-app --no-interactive 2>&1 | tail -5 || true
                     print_success "Generated go-app"
                     generated_projects_json+="${project_sep}{\"name\":\"go-app\",\"type\":\"community\",\"framework\":\"go\"}"
+                    project_sep=","
+                    ;;
+                terraform)
+                    if ! command -v terraform > /dev/null 2>&1; then
+                        print_warning "terraform CLI not found — install from https://developer.hashicorp.com/terraform/install"
+                        print_warning "Continuing with plugin install; run 'terraform init' manually once CLI is available"
+                    fi
+                    print_info "Adding community plugin: @nx-extend/terraform"
+                    npx nx add @nx-extend/terraform --no-interactive 2>&1 | tail -3 || true
+                    print_info "Generating terraform-infra project..."
+                    npx nx generate @nx-extend/terraform:init terraform-infra --no-interactive 2>&1 | tail -5 || true
+                    print_success "Generated terraform-infra"
+                    generated_projects_json+="${project_sep}{\"name\":\"terraform-infra\",\"type\":\"community\",\"framework\":\"terraform\"}"
                     project_sep=","
                     ;;
                 *)
