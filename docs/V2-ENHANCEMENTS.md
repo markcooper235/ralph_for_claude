@@ -292,7 +292,7 @@ pending → ready → in_progress → testing → completed
 - Per-story brief files: `ralph/.ralph/stories/<ID>-brief.md` contains requirements + impl approach; orchestrator reads each brief once and injects content inline into the impl subagent prompt (no subagent disk read needed)
 - Architecture testTools written to `state.json` after Phase 2; Phase 4 test subagents receive test tool commands injected inline (no `architecture.json` read per subagent)
 - Artifact index: `ralph/.ralph/artifacts-index.json` updated after each test; prove pre-check reads 1 file instead of N artifact files; archive Phase 1 also uses this index instead of re-running the full test suite
-- **Context cycling**: at phase boundaries where > 65% of stories are complete, state is saved and loop exits cleanly. `/ralph-resume` continues with fresh context. (Note: Claude agents cannot introspect actual token counts, so story-completion ratio is used as a proxy heuristic.)
+- **Single-session execution**: the orchestrator's context footprint is ~40K tokens for a typical 8-story run — well within the 200K budget. Context cycling was removed; the run completes in one session without user-initiated pauses.
 
 **Token savings per 8-story run:**
 - File logging pattern: ~40,000 tokens
@@ -387,7 +387,7 @@ Total: ~44 minutes (33% faster)
 
 ## Updated Commands
 
-- `/ralph-loop` - Now uses subagents, git, state management, context cycling
+- `/ralph-loop` - Now uses subagents, git, state management, single-session execution
 
 ## Configuration
 

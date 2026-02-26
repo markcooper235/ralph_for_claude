@@ -22,7 +22,7 @@ Ralph Loop's quota management:
 - ✅ Never starts tasks that won't finish
 - ✅ Configurable limits and thresholds
 
-> **Note:** Fine-grained quota tracking (per-phase token counts, `totalUsed` field) is aspirational — Claude agents cannot introspect their own token usage at runtime, so `state.quota.totalUsed` is always 0. Context cycling at phase boundaries uses **story-completion ratio > 65%** as a practical proxy instead. All other quota-management features (pause/resume, state preservation, configurable thresholds) work as described.
+> **Note:** Fine-grained quota tracking (per-phase token counts, `totalUsed` field) is aspirational — Claude agents cannot introspect their own token usage at runtime. Context cycling has been removed: the orchestrator's context footprint is ~40K tokens on a typical 8-story run, well within the 200K budget, so cycling is unnecessary. Pause/resume (for user interruption or errors), state preservation, and `/ralph-resume` all work as described.
 
 ## How It Works
 
@@ -354,10 +354,6 @@ ralph/.ralph/state.json:
 ├── pauseReason: "quota_safety_threshold"
 ├── resumePhase: "implementing"
 ├── currentStory: "REQ-004"
-├── quota:
-│   ├── totalUsed: 170000
-│   ├── estimatedRemaining: 85000
-│   └── phaseUsage: {...}
 └── All completed work preserved
 
 Git commits:

@@ -442,9 +442,6 @@ ralph/.ralph/state.json:
   pauseReason: "quota_safety_threshold"
   resumePhase: "implementing"
   currentStory: "REQ-008"
-  quota:
-    totalUsed: 155234
-    estimatedRemaining: 20000
 ```
 
 ---
