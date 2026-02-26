@@ -320,11 +320,14 @@ Without a balanced solution, users waste time with overly complex tools or miss 
 To use this PRD with the Ralph Loop Framework:
 
 ```bash
-# Parse the PRD
-/parse-prd examples/example-todo-app.prd.md
+# Copy to your project's specs directory
+cp examples/example-todo-app.prd.md ralph/specs/prds/todo-app.prd.md
 
 # Run the complete loop
-/ralph-loop examples/example-todo-app.prd.md
+/ralph-loop ralph/specs/prds/todo-app.prd.md
+
+# Check progress
+/ralph-status
 
 # Or test specific requirements
 /test-spec REQ-001
@@ -334,5 +337,8 @@ To use this PRD with the Ralph Loop Framework:
 /browser-test src/components/TodoList.tsx --visual-regression --a11y
 
 # Prove all requirements
-/prove-requirements examples/example-todo-app.prd.md
+/prove-requirements ralph/specs/prds/todo-app.prd.md
+
+# Archive when complete
+/ralph-archive
 ```
