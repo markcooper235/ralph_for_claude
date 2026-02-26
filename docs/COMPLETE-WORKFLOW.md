@@ -726,16 +726,9 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 - Cleaner branch list
 - Less clutter in git UI
 
-**Compromise: Keep with auto-cleanup**
-```json
-// In ralph/.ralph/config.json (custom, not included by default)
-{
-  "archive": {
-    "keepRalphBranch": true,        // Default: keep
-    "autoDeleteAfterDays": 30,      // Optional: auto-delete after 30 days
-    "keepLastN": 10                 // Optional: keep only last 10 Ralph branches
-  }
-}
+To delete manually after archiving:
+```bash
+git branch -d ralph/user-authentication-20260223152030
 ```
 
 ### 4.6: Cleanup Ralph State
