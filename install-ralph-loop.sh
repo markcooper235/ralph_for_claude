@@ -573,7 +573,52 @@ ask_project_questions() {
                     ;;
                 adk)
                     PROJECT_CONFIG[test_framework]="pytest"
-                    PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+                    echo "ADK model provider? (gemini/anthropic/openai/other) [gemini]:"
+                    echo "  gemini:    Google Gemini (direct, no extra deps)"
+                    echo "  anthropic: Claude via LiteLLM (adds google-adk[extensions])"
+                    echo "  openai:    GPT via LiteLLM (adds google-adk[extensions])"
+                    echo "  other:     any LiteLLM-supported model (you specify model + env var)"
+                    read -r prov_choice || true
+                    PROJECT_CONFIG[adk_provider]="${prov_choice:-gemini}"
+                    case "${PROJECT_CONFIG[adk_provider]}" in
+                        gemini)
+                            echo "Model ID? [gemini-flash-latest]:"
+                            read -r model_choice || true
+                            PROJECT_CONFIG[adk_model]="${model_choice:-gemini-flash-latest}"
+                            PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+                            PROJECT_CONFIG[adk_uses_litellm]="false"
+                            ;;
+                        anthropic)
+                            echo "Model ID? [anthropic/claude-3-5-sonnet-latest]:"
+                            read -r model_choice || true
+                            PROJECT_CONFIG[adk_model]="${model_choice:-anthropic/claude-3-5-sonnet-latest}"
+                            PROJECT_CONFIG[adk_env_var]="ANTHROPIC_API_KEY"
+                            PROJECT_CONFIG[adk_uses_litellm]="true"
+                            ;;
+                        openai)
+                            echo "Model ID? [openai/gpt-4o]:"
+                            read -r model_choice || true
+                            PROJECT_CONFIG[adk_model]="${model_choice:-openai/gpt-4o}"
+                            PROJECT_CONFIG[adk_env_var]="OPENAI_API_KEY"
+                            PROJECT_CONFIG[adk_uses_litellm]="true"
+                            ;;
+                        other)
+                            echo "LiteLLM model string? (e.g. groq/llama-3.1-70b-versatile):"
+                            read -r model_choice || true
+                            PROJECT_CONFIG[adk_model]="${model_choice:-groq/llama-3.1-70b-versatile}"
+                            echo "API key env var name? (e.g. GROQ_API_KEY):"
+                            read -r env_choice || true
+                            PROJECT_CONFIG[adk_env_var]="${env_choice:-PROVIDER_API_KEY}"
+                            PROJECT_CONFIG[adk_uses_litellm]="true"
+                            ;;
+                        *)
+                            print_warning "Unknown provider '${PROJECT_CONFIG[adk_provider]}' — defaulting to gemini"
+                            PROJECT_CONFIG[adk_provider]="gemini"
+                            PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+                            PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+                            PROJECT_CONFIG[adk_uses_litellm]="false"
+                            ;;
+                    esac
                     ;;
                 *)  # basic
                     local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
@@ -781,10 +826,15 @@ ask_project_questions() {
 
         adk-python)
             # Direct shortcut — equivalent to --type python with framework=adk
+            # Defaults to Gemini; use `--type python` then `adk` for the interactive
+            # provider menu (anthropic / openai / other).
             PROJECT_CONFIG[python_framework]="adk"
             PROJECT_CONFIG[package_manager]="pip"
             PROJECT_CONFIG[test_framework]="pytest"
+            PROJECT_CONFIG[adk_provider]="gemini"
             PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+            PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+            PROJECT_CONFIG[adk_uses_litellm]="false"
             ;;
 
         *)
@@ -1501,8 +1551,47 @@ venv/bin/flake8 .                  # Linting
 ### Editing the Agent
 - Tools: add functions in `<agent_module>/agent.py` and list them in `tools=[...]`.
 - Instructions: edit the `instruction=` parameter on `root_agent`.
-- Model: change the `model=` parameter (e.g. `gemini-flash-latest`, `gemini-pro`).
+- Model: see "Switching Models" below.
 - Multi-agent setups: see https://adk.dev/ for sub-agents, workflows, agent teams.
+
+### Switching Models
+
+ADK speaks Gemini natively and routes other providers through LiteLLM.
+Four things change together when you swap models:
+
+1. `<agent_module>/agent.py` — the `model=` argument on `root_agent`
+2. `.env` — the API key env var name
+3. `requirements.txt` — `google-adk[extensions]` is needed for LiteLLM-routed models
+4. `tests/test_agent.py` — the assertion `_model_id(agent.root_agent) == "..."`
+
+**Gemini** (current default — no LiteLLM needed):
+```python
+# agent.py
+root_agent = Agent(model="gemini-flash-latest", ...)
+# .env: GOOGLE_API_KEY="..."
+```
+
+**Anthropic Claude** (via LiteLLM):
+```python
+# agent.py
+from google.adk.models.lite_llm import LiteLlm
+root_agent = Agent(model=LiteLlm("anthropic/claude-3-5-sonnet-latest"), ...)
+# .env: ANTHROPIC_API_KEY="..."
+# requirements.txt: replace `google-adk` with `google-adk[extensions]`
+```
+
+**OpenAI GPT** (via LiteLLM):
+```python
+# agent.py
+from google.adk.models.lite_llm import LiteLlm
+root_agent = Agent(model=LiteLlm("openai/gpt-4o"), ...)
+# .env: OPENAI_API_KEY="..."
+# requirements.txt: replace `google-adk` with `google-adk[extensions]`
+```
+
+**Any LiteLLM-supported provider** (Groq, Together, Cohere, Bedrock, Ollama, etc.):
+Use the `provider/model-name` string format. See
+https://docs.litellm.ai/docs/providers for the full list and required env vars.
 
 EOF
             ;;
@@ -3550,12 +3639,33 @@ create_python_adk_project() {
     # Fallback if name was empty/all-invalid
     [ -z "${agent_module}" ] && agent_module="my_agent"
 
+    # Model / provider config (set by ask_project_questions or shortcut defaults)
+    local provider="${PROJECT_CONFIG[adk_provider]:-gemini}"
+    local model_id="${PROJECT_CONFIG[adk_model]:-gemini-flash-latest}"
+    local env_var="${PROJECT_CONFIG[adk_env_var]:-GOOGLE_API_KEY}"
+    local uses_litellm="${PROJECT_CONFIG[adk_uses_litellm]:-false}"
+
+    # Friendly description for the .env comment and final warning.
+    # provider_display: proper-cased name for human-facing strings.
+    # article: grammatically correct "a"/"an".
+    local provider_display="${provider}"
+    local article="a"
+    local key_url=""
+    case "${provider}" in
+        gemini)    provider_display="Gemini";    key_url="https://aistudio.google.com/app/apikey" ;;
+        anthropic) provider_display="Anthropic"; article="an"; key_url="https://console.anthropic.com/settings/keys" ;;
+        openai)    provider_display="OpenAI";    article="an"; key_url="https://platform.openai.com/api-keys" ;;
+        *)         provider_display="${provider}"; key_url="your model provider's API key dashboard" ;;
+    esac
+
     mkdir -p "${project_dir}/${agent_module}"
     mkdir -p "${project_dir}/tests"
 
-    # requirements.txt — no version pins; pip selects latest compatible
-    cat > "${project_dir}/requirements.txt" << 'EOF'
-google-adk
+    # requirements.txt — google-adk[extensions] for LiteLLM-routed providers
+    local adk_dep="google-adk"
+    [ "${uses_litellm}" = "true" ] && adk_dep="google-adk[extensions]"
+    cat > "${project_dir}/requirements.txt" << EOF
+${adk_dep}
 pytest
 pytest-cov
 pytest-asyncio
@@ -3568,8 +3678,35 @@ EOF
 from . import agent  # noqa: F401  -- required for ADK agent discovery
 EOF
 
-    # agent.py — from the ADK Python quickstart (formatted black-clean)
-    cat > "${project_dir}/${agent_module}/agent.py" << 'EOF'
+    # agent.py — formatted black-clean. Two code shapes:
+    #   - Gemini:        Agent(model="gemini-flash-latest", ...)
+    #   - Other (via LiteLLM): Agent(model=LiteLlm("provider/model"), ...)
+    if [ "${uses_litellm}" = "true" ]; then
+        cat > "${project_dir}/${agent_module}/agent.py" << EOF
+"""Root ADK agent. Edit this file to change the agent's behavior."""
+
+from google.adk.agents.llm_agent import Agent
+from google.adk.models.lite_llm import LiteLlm
+
+
+def get_current_time(city: str) -> dict:
+    """Returns the current time in a specified city."""
+    return {"status": "success", "city": city, "time": "10:30 AM"}
+
+
+root_agent = Agent(
+    model=LiteLlm("${model_id}"),
+    name="root_agent",
+    description="Tells the current time in a specified city.",
+    instruction=(
+        "You are a helpful assistant that tells the current time in cities. "
+        "Use the 'get_current_time' tool for this purpose."
+    ),
+    tools=[get_current_time],
+)
+EOF
+    else
+        cat > "${project_dir}/${agent_module}/agent.py" << EOF
 """Root ADK agent. Edit this file to change the agent's behavior."""
 
 from google.adk.agents.llm_agent import Agent
@@ -3581,7 +3718,7 @@ def get_current_time(city: str) -> dict:
 
 
 root_agent = Agent(
-    model="gemini-flash-latest",
+    model="${model_id}",
     name="root_agent",
     description="Tells the current time in a specified city.",
     instruction=(
@@ -3591,18 +3728,21 @@ root_agent = Agent(
     tools=[get_current_time],
 )
 EOF
+    fi
 
-    # .env — placeholder; user must replace before running the agent
-    cat > "${project_dir}/.env" << 'EOF'
-# Get a Gemini API key from https://aistudio.google.com/app/apikey
-GOOGLE_API_KEY="REPLACE_WITH_YOUR_GEMINI_API_KEY"
+    # .env — placeholder API key; user must replace before running the agent
+    cat > "${project_dir}/.env" << EOF
+# Get ${article} ${provider_display} API key from ${key_url}
+${env_var}="REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
 EOF
 
     # tests/__init__.py
     touch "${project_dir}/tests/__init__.py"
 
-    # tests/test_agent.py — hermetic: tests the tool function and agent config,
-    # does NOT call the model (no API key needed to run tests)
+    # tests/test_agent.py — hermetic: exercises the tool function and agent config,
+    # does NOT call the model (no API key needed to run tests). The model
+    # comparison uses _model_id() so it works for both plain-string and
+    # LiteLlm-wrapped models (LiteLlm stores the model string at .model.model).
     cat > "${project_dir}/tests/test_agent.py" << EOF
 """Hermetic tests for the ADK agent. Does not call the model."""
 
@@ -3614,6 +3754,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from ${agent_module} import agent  # noqa: E402  -- import after sys.path setup
 
 
+def _model_id(a):
+    """Return the model string for both plain (Gemini) and LiteLlm-wrapped agents."""
+    return getattr(a.model, "model", a.model)
+
+
 def test_get_current_time_returns_success():
     result = agent.get_current_time("Tokyo")
     assert result["status"] == "success"
@@ -3623,7 +3768,7 @@ def test_get_current_time_returns_success():
 def test_root_agent_is_configured():
     assert agent.root_agent is not None
     assert agent.root_agent.name == "root_agent"
-    assert agent.root_agent.model == "gemini-flash-latest"
+    assert _model_id(agent.root_agent) == "${model_id}"
 
 
 def test_root_agent_has_tool():
@@ -3674,7 +3819,7 @@ EOF
         && print_success "venv created at venv/" \
         || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
 
-    print_info "Installing google-adk + test dependencies into venv (this may take a minute)..."
+    print_info "Installing ${adk_dep} + test dependencies into venv (this may take a minute)..."
     (cd "${project_dir}" && venv/bin/pip install -r requirements.txt -q) \
         && print_success "pip install complete" \
         || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
@@ -3691,10 +3836,10 @@ EOF
         && print_success "Tests passed" \
         || print_warning "Tests failed — run manually: cd ${project_dir} && venv/bin/pytest tests/"
 
-    print_success "Created Python ADK project structure"
+    print_success "Created Python ADK project structure (provider: ${provider}, model: ${model_id})"
     echo
-    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
-    print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
+    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+    print_warning "Get a key from ${key_url} (the agent will not run without it)"
 }
 
 create_ruby_project() {
