@@ -57,10 +57,11 @@ OPTIONS:
     --install-global            Install skills to ~/.claude/skills/ and commands to ~/.claude/commands/
     --new-project <name>        Create new project with Ralph framework
     --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, go, dotnet, rust, ruby, nx)
-                                  Python sub-types:  python (prompts basic/flask/reflex), or direct: flask, reflex
+                                  Python sub-types:  python (prompts basic/flask/reflex/adk), or direct: flask, reflex, adk-python
                                   Ruby sub-types:    ruby (prompts basic/rails), or direct: rails
                                   Rust sub-types:    rust (prompts basic/actix/rocket), or direct: actix, rocket
                                   .NET sub-types:    dotnet (prompts webapi/mvc/blazorwasm/blazor)
+                                  ADK agents:        adk-python (Google Agent Development Kit, Gemini)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -297,9 +298,11 @@ detect_project_type() {
         return
     fi
 
-    # Python / Flask
+    # Python / Flask / ADK
     if [ -f "${project_dir}/setup.py" ] || [ -f "${project_dir}/pyproject.toml" ] || [ -f "${project_dir}/requirements.txt" ]; then
-        if grep -qi "flask" "${project_dir}/requirements.txt" 2>/dev/null; then
+        if grep -qi "google-adk" "${project_dir}/requirements.txt" 2>/dev/null; then
+            echo "adk-python"
+        elif grep -qi "flask" "${project_dir}/requirements.txt" 2>/dev/null; then
             echo "flask"
         else
             echo "python"
@@ -363,7 +366,7 @@ detect_tools() {
             fi
             ;;
 
-        python|flask)
+        python|flask|adk-python)
             # Test framework
             if [ -f "${project_dir}/pytest.ini" ] || grep -q "pytest" "${project_dir}/requirements.txt" 2>/dev/null; then
                 echo "test_framework=pytest"
@@ -539,7 +542,7 @@ ask_project_questions() {
 
         python)
             # Sub-framework selection
-            echo "Python framework? (basic/flask/reflex) [basic]:"
+            echo "Python framework? (basic/flask/reflex/adk) [basic]:"
             read -r py_fw_choice || true
             PROJECT_CONFIG[python_framework]="${py_fw_choice:-basic}"
 
@@ -567,6 +570,10 @@ ask_project_questions() {
                     echo "Use type checking? (mypy/pyright/none) [none]:"
                     read -r type_choice || true
                     PROJECT_CONFIG[type_checker]="${type_choice:-none}"
+                    ;;
+                adk)
+                    PROJECT_CONFIG[test_framework]="pytest"
+                    PROJECT_CONFIG[adk_model]="gemini-flash-latest"
                     ;;
                 *)  # basic
                     local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
@@ -770,6 +777,14 @@ ask_project_questions() {
             echo "Use type checking? (mypy/pyright/none) [none]:"
             read -r type_choice || true
             PROJECT_CONFIG[type_checker]="${type_choice:-none}"
+            ;;
+
+        adk-python)
+            # Direct shortcut — equivalent to --type python with framework=adk
+            PROJECT_CONFIG[python_framework]="adk"
+            PROJECT_CONFIG[package_manager]="pip"
+            PROJECT_CONFIG[test_framework]="pytest"
+            PROJECT_CONFIG[adk_model]="gemini-flash-latest"
             ;;
 
         *)
@@ -1438,6 +1453,60 @@ venv/bin/mypy .               # Type checking (if configured)
 EOF
             ;;
 
+        adk-python)
+            cat >> "${claude_md}" << 'EOF'
+
+## ADK Python Agent Specific
+
+This project is a Google Agent Development Kit (ADK) agent. The agent code lives
+in the `<agent_module>/` directory (the directory containing `agent.py` and
+`__init__.py`). The agent uses Gemini via the `GOOGLE_API_KEY` in `.env`.
+
+### Setup (First Time)
+```bash
+# venv is created automatically by the install script and google-adk is installed
+source venv/bin/activate           # Activate (Linux/Mac)
+# venv/Scripts/activate            # Activate (Windows)
+
+# REQUIRED before running the agent:
+#   Edit .env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY with a real key.
+#   Get one from https://aistudio.google.com/app/apikey
+```
+
+### Run the Agent
+```bash
+# CLI mode — interactive conversation in the terminal:
+venv/bin/adk run <agent_module>
+
+# Web UI — run from the PARENT of the agent module directory:
+venv/bin/adk web --port 8000       # http://localhost:8000
+```
+
+### Test Commands
+```bash
+venv/bin/pytest tests/             # Unit tests for tool functions + agent config
+venv/bin/pytest -v tests/
+venv/bin/pytest --cov tests/
+```
+
+Tests are hermetic: they exercise the tool functions and verify agent
+configuration without calling Gemini, so they run without an API key.
+
+### Lint Commands
+```bash
+venv/bin/black .                   # Code formatting
+venv/bin/flake8 .                  # Linting
+```
+
+### Editing the Agent
+- Tools: add functions in `<agent_module>/agent.py` and list them in `tools=[...]`.
+- Instructions: edit the `instruction=` parameter on `root_agent`.
+- Model: change the `model=` parameter (e.g. `gemini-flash-latest`, `gemini-pro`).
+- Multi-agent setups: see https://adk.dev/ for sub-agents, workflows, agent teams.
+
+EOF
+            ;;
+
         nx)
             cat >> "${claude_md}" << 'EOF'
 
@@ -1776,14 +1845,14 @@ initialize_existing_project() {
     if [ "${project_type}" = "unknown" ]; then
         print_warning "Could not auto-detect project type from existing files"
         while true; do
-            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/reflex/go/dotnet/rust/ruby/rails/actix/rocket/nx) [typescript]:"
+            echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/flask/reflex/adk-python/go/dotnet/rust/ruby/rails/actix/rocket/nx) [typescript]:"
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -1834,16 +1903,16 @@ create_new_project() {
     if [ -z "${project_type}" ] || [ "${project_type}" = "unknown" ]; then
         while true; do
             echo "Project type? (typescript/javascript/angular/react/nextjs/express/python/go/dotnet/rust/ruby/nx) [typescript]:"
-            echo "  Python sub-types: python (asks basic/flask/reflex), or direct: flask, reflex"
+            echo "  Python sub-types: python (asks basic/flask/reflex/adk), or direct: flask, reflex, adk-python"
             echo "  Ruby sub-types:   ruby (asks basic/rails), or direct: rails"
             echo "  Rust sub-types:   rust (asks basic/actix/rocket), or direct: actix, rocket"
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -1931,6 +2000,7 @@ create_new_project() {
             case "${PROJECT_CONFIG[python_framework]:-basic}" in
                 flask)  create_flask_project "." "${project_name}"; project_type="flask" ;;
                 reflex) create_reflex_project ".";                  project_type="reflex" ;;
+                adk)    create_python_adk_project "." "${project_name}"; project_type="adk-python" ;;
                 *)      create_python_project "." ;;
             esac
             ;;
@@ -1939,6 +2009,9 @@ create_new_project() {
             ;;
         reflex)
             create_reflex_project "."
+            ;;
+        adk-python)
+            create_python_adk_project "." "${project_name}"
             ;;
         ruby)
             case "${PROJECT_CONFIG[ruby_framework]:-basic}" in
@@ -3465,6 +3538,161 @@ EOF
     print_success "Created Reflex project structure"
 }
 
+create_python_adk_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    # Python module name: hyphens → underscores (project_name may be "my-agent",
+    # but `adk run` and `adk web` need a valid Python package directory)
+    local agent_module="${project_name//-/_}"
+    # Strip any non-identifier leading chars and any remaining invalid chars
+    agent_module="$(echo "${agent_module}" | sed 's/[^a-zA-Z0-9_]/_/g')"
+    # Fallback if name was empty/all-invalid
+    [ -z "${agent_module}" ] && agent_module="my_agent"
+
+    mkdir -p "${project_dir}/${agent_module}"
+    mkdir -p "${project_dir}/tests"
+
+    # requirements.txt — no version pins; pip selects latest compatible
+    cat > "${project_dir}/requirements.txt" << 'EOF'
+google-adk
+pytest
+pytest-cov
+pytest-asyncio
+black
+flake8
+EOF
+
+    # Agent package __init__.py — required for `adk run`/`adk web` discovery
+    cat > "${project_dir}/${agent_module}/__init__.py" << 'EOF'
+from . import agent
+EOF
+
+    # agent.py — verbatim from the ADK Python quickstart
+    cat > "${project_dir}/${agent_module}/agent.py" << 'EOF'
+"""Root ADK agent. Edit this file to change the agent's behavior."""
+from google.adk.agents.llm_agent import Agent
+
+
+def get_current_time(city: str) -> dict:
+    """Returns the current time in a specified city."""
+    return {"status": "success", "city": city, "time": "10:30 AM"}
+
+
+root_agent = Agent(
+    model='gemini-flash-latest',
+    name='root_agent',
+    description="Tells the current time in a specified city.",
+    instruction=(
+        "You are a helpful assistant that tells the current time in cities. "
+        "Use the 'get_current_time' tool for this purpose."
+    ),
+    tools=[get_current_time],
+)
+EOF
+
+    # .env — placeholder; user must replace before running the agent
+    cat > "${project_dir}/.env" << 'EOF'
+# Get a Gemini API key from https://aistudio.google.com/app/apikey
+GOOGLE_API_KEY="REPLACE_WITH_YOUR_GEMINI_API_KEY"
+EOF
+
+    # tests/__init__.py
+    touch "${project_dir}/tests/__init__.py"
+
+    # tests/test_agent.py — hermetic: tests the tool function and agent config,
+    # does NOT call the model (no API key needed to run tests)
+    cat > "${project_dir}/tests/test_agent.py" << EOF
+"""Hermetic tests for the ADK agent. Does not call the model."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from ${agent_module} import agent
+
+
+def test_get_current_time_returns_success():
+    result = agent.get_current_time("Tokyo")
+    assert result["status"] == "success"
+    assert result["city"] == "Tokyo"
+
+
+def test_root_agent_is_configured():
+    assert agent.root_agent is not None
+    assert agent.root_agent.name == "root_agent"
+    assert agent.root_agent.model == "gemini-flash-latest"
+
+
+def test_root_agent_has_tool():
+    tool_names = [getattr(t, "__name__", getattr(t, "name", "")) for t in agent.root_agent.tools]
+    assert "get_current_time" in tool_names
+EOF
+
+    cat > "${project_dir}/pytest.ini" << EOF
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+addopts = --cov=${agent_module} --cov-report=term-missing
+EOF
+
+    cat > "${project_dir}/.flake8" << 'EOF'
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .venv,venv,__pycache__,.git
+EOF
+
+    # .gitignore — venv/ and .env are NOT committed (API key safety)
+    cat > "${project_dir}/.gitignore" << 'EOF'
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+logs/
+*.log
+EOF
+
+    print_info "Creating Python virtual environment..."
+    (cd "${project_dir}" && python3 -m venv venv) \
+        && print_success "venv created at venv/" \
+        || print_warning "venv creation failed — run manually: cd ${project_dir} && python3 -m venv venv"
+
+    print_info "Installing google-adk + test dependencies into venv (this may take a minute)..."
+    (cd "${project_dir}" && venv/bin/pip install -r requirements.txt -q) \
+        && print_success "pip install complete" \
+        || print_warning "pip install failed — run manually: cd ${project_dir} && source venv/bin/activate && pip install -r requirements.txt"
+
+    # Verify the `adk` CLI landed on PATH inside the venv
+    if [ -x "${project_dir}/venv/bin/adk" ]; then
+        print_success "adk CLI installed at venv/bin/adk"
+    else
+        print_warning "adk CLI not found at venv/bin/adk — google-adk may have failed to install"
+    fi
+
+    print_info "Running tests..."
+    (cd "${project_dir}" && venv/bin/pytest tests/ -q 2>&1) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && venv/bin/pytest tests/"
+
+    print_success "Created Python ADK project structure"
+    echo
+    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
+    print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
+}
+
 create_ruby_project() {
     local project_dir="$1"
     local project_name="$2"
@@ -4046,10 +4274,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
                         exit 1
                         ;;
                 esac

@@ -61,8 +61,9 @@ UI test flag — set testRequirements.ui = true if ANY of the following are pres
 Rule: ui defaults to false; any signal above sets it to true. Keyword absence must never override explicit metadata.
 
 Integration test flag — set testRequirements.integration = true if ANY of the following are present:
-1. projectType is a server/API type: express, nextjs, flask, python, reflex, go, actix, rocket, rails, ruby, dotnet (webapi/mvc/blazor sub-types only)
+1. projectType is a server/API type: express, nextjs, flask, python, reflex, adk-python, go, actix, rocket, rails, ruby, dotnet (webapi/mvc/blazor sub-types only)
 2. OR PRD text contains API keywords: "API", "endpoint", "REST", "route", "POST", "GET", "PUT", "DELETE", "CRUD", "HTTP", "middleware", "authentication", "authorization"
+3. OR projectType is adk-python (ADK agents always benefit from end-to-end conversation tests)
 Never set true for: react, angular, dotnet blazorwasm, nx.
 
 Save ralph/.ralph/stories.json:
@@ -115,6 +116,7 @@ Design implementation approach per requirement. Select test tools:
   express / nextjs / typescript / javascript: `npx jest --testPathPattern=tests/integration`
   flask:                                      `venv/bin/pytest tests/integration/ -v`
   python / reflex:                            `venv/bin/pytest tests/integration/ -v`
+  adk-python:                                 `venv/bin/pytest tests/integration/ -v` (in-process agent invocation; do NOT call Gemini — mock the model or use ADK test harness)
   go:                                         `go test -run TestIntegration ./...`
   actix / rocket:                             `cargo test --test integration`
   rust (basic):                               `cargo test --test integration`
@@ -134,7 +136,7 @@ Coverage tool selection by language/framework:
 - .NET: `dotnet test --collect:"XPlat Code Coverage"` — coverlet.collector is pre-installed in the xUnit template
 Write `testTools.coverage` as the full command string (empty string if not available).
 
-**Python venv:** If `venv/` directory exists in the project root (always present for Ralph-created Python/Flask/Reflex projects), prefix ALL Python tool commands with `venv/bin/`:
+**Python venv:** If `venv/` directory exists in the project root (always present for Ralph-created Python/Flask/Reflex/ADK-Python projects), prefix ALL Python tool commands with `venv/bin/`:
 - testTools.unit → `venv/bin/pytest`
 - testTools.coverage → `venv/bin/pytest --cov=src --cov-report=term-missing`
 - testTools.lint → `venv/bin/black` (or `venv/bin/ruff` if ruff is in requirements.txt)

@@ -47,9 +47,10 @@ cd /path/to/existing/project
 | `react` | React + Vite + Vitest (via create-vite) |
 | `nextjs` | Next.js App Router + TypeScript (via create-next-app) |
 | `angular` | Angular 19 workspace (via @angular/cli) |
-| `python` | Python basic/flask/reflex (prompted) |
+| `python` | Python basic/flask/reflex/adk (prompted) |
 | `flask` | Flask + pytest + venv (shortcut) |
 | `reflex` | Python Reflex + pytest + venv (shortcut) |
+| `adk-python` | Google Agent Development Kit Python agent + Gemini + pytest + venv (shortcut) |
 | `go` | Go module + standard testing |
 | `ruby` | Ruby basic/rails (prompted) |
 | `rails` | Ruby on Rails + SQLite3 (shortcut) |
@@ -60,7 +61,7 @@ cd /path/to/existing/project
 | `nx` | Nx monorepo workspace |
 
 **Sub-type groupings:** When using the parent type (`python`, `ruby`, `rust`), the installer asks which framework:
-- `--type python` → asks: basic / flask / reflex
+- `--type python` → asks: basic / flask / reflex / adk
 - `--type ruby` → asks: basic / rails
 - `--type rust` → asks: basic / actix / rocket
 

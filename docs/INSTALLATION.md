@@ -12,7 +12,7 @@ The Ralph Loop Framework installation script (`install-ralph-loop.sh`) provides 
 ✅ **Auto-Detection** - Detects project type and existing tools
 ✅ **Interactive Configuration** - Asks about preferences (package manager, test framework, etc.)
 ✅ **Safe Backups** - Backs up any files before replacing
-✅ **Multi-Language Support** - TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
+✅ **Multi-Language Support** - TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby, ADK Python (Google Agent Development Kit)
 
 ## Installation Methods
 
@@ -76,9 +76,10 @@ The project is ready to build, test, and lint immediately after creation — no 
 | `react` | React + Vite + Vitest (via create-vite) |
 | `nextjs` | Next.js App Router + TypeScript (via create-next-app) |
 | `angular` | Angular 19 workspace (via @angular/cli) |
-| `python` | Python with sub-type prompt: basic / flask / reflex |
+| `python` | Python with sub-type prompt: basic / flask / reflex / adk |
 | `flask` | Flask + pytest + venv (direct shortcut) |
 | `reflex` | Python Reflex + pytest + venv (direct shortcut) |
+| `adk-python` | Google Agent Development Kit Python agent + Gemini + pytest + venv (direct shortcut) |
 | `go` | Go module + standard testing |
 | `ruby` | Ruby with sub-type prompt: basic / rails |
 | `rails` | Ruby on Rails + SQLite3 (direct shortcut) |
@@ -89,7 +90,7 @@ The project is ready to build, test, and lint immediately after creation — no 
 | `nx` | Nx monorepo workspace |
 
 **Sub-type groupings:**
-- `--type python` → asks: `basic` / `flask` / `reflex` [basic]
+- `--type python` → asks: `basic` / `flask` / `reflex` / `adk` [basic]
 - `--type ruby` → asks: `basic` / `rails` [basic]
 - `--type rust` → asks: `basic` / `actix` / `rocket` [basic]
 
@@ -778,7 +779,7 @@ The Ralph Loop installation script provides:
 ✅ **Auto-detection** - Detects project type and tools
 ✅ **Interactive configuration** - Tailored questions by project type
 ✅ **Safe backups** - Never lose existing work
-✅ **Multi-language support** - TypeScript, JavaScript, Python, Flask, Reflex, Go, Rust, Actix, Rocket, Angular, React, Next.js, Express, Ruby, Rails, .NET, Nx (18 project types)
+✅ **Multi-language support** - TypeScript, JavaScript, Python, Flask, Reflex, ADK-Python, Go, Rust, Actix, Rocket, Angular, React, Next.js, Express, Ruby, Rails, .NET, Nx (19 project types)
 ✅ **Flexible modes** - New projects or existing projects
 ✅ **Complete setup** - Documentation, templates, configs
 

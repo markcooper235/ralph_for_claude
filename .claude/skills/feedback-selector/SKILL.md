@@ -38,6 +38,7 @@ When this skill is invoked:
    - **Desktop App**: Electron, Tauri, native apps
    - **Data Pipeline**: ETL, data processing
    - **Machine Learning**: Model training, inference services
+   - **LLM Agent**: ADK (Python/Go/TS/Java), LangChain, agent frameworks
 
 3. **Analyze Requirements**
    - Load active specification
@@ -106,6 +107,14 @@ When this skill is invoked:
    - Unit tests for logic
    - Visual regression for screens
    - Performance profiling (React Native Profiler)
+
+   **LLM Agent (ADK / agent frameworks)**
+   - Unit tests for tool functions (pure functions, no model call)
+   - Agent configuration tests (name, model, tools registered)
+   - Integration tests via in-process agent invocation:
+     - ADK Python: import `root_agent` and invoke directly, or use ADK test harness
+   - For full conversation evals: `adk eval` with evalsets (separate from CI loop)
+   - Do NOT call the live model in CI tests — mock the model or restrict to tool/config tests
 
    **Data Pipeline**
    - Data quality tests (Great Expectations)

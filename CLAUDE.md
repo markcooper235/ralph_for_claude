@@ -88,7 +88,7 @@ cd /path/to/project
 - Auto-detects existing project type and tools
 - Interactive configuration (package manager, test framework, etc.)
 - Backs up existing files before modifying
-- Supports TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby
+- Supports TypeScript, Python, Go, Rust, Angular, React, Next.js, Express, Flask, Ruby, ADK Python (Google Agent Development Kit)
 - Creates complete project structure with documentation
 
 See `docs/INSTALLATION.md` for detailed installation guide.
