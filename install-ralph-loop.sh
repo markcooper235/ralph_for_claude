@@ -3565,12 +3565,13 @@ EOF
 
     # Agent package __init__.py — required for `adk run`/`adk web` discovery
     cat > "${project_dir}/${agent_module}/__init__.py" << 'EOF'
-from . import agent
+from . import agent  # noqa: F401  -- required for ADK agent discovery
 EOF
 
-    # agent.py — verbatim from the ADK Python quickstart
+    # agent.py — from the ADK Python quickstart (formatted black-clean)
     cat > "${project_dir}/${agent_module}/agent.py" << 'EOF'
 """Root ADK agent. Edit this file to change the agent's behavior."""
+
 from google.adk.agents.llm_agent import Agent
 
 
@@ -3580,8 +3581,8 @@ def get_current_time(city: str) -> dict:
 
 
 root_agent = Agent(
-    model='gemini-flash-latest',
-    name='root_agent',
+    model="gemini-flash-latest",
+    name="root_agent",
     description="Tells the current time in a specified city.",
     instruction=(
         "You are a helpful assistant that tells the current time in cities. "
@@ -3604,12 +3605,13 @@ EOF
     # does NOT call the model (no API key needed to run tests)
     cat > "${project_dir}/tests/test_agent.py" << EOF
 """Hermetic tests for the ADK agent. Does not call the model."""
+
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from ${agent_module} import agent
+from ${agent_module} import agent  # noqa: E402  -- import after sys.path setup
 
 
 def test_get_current_time_returns_success():
@@ -3625,7 +3627,9 @@ def test_root_agent_is_configured():
 
 
 def test_root_agent_has_tool():
-    tool_names = [getattr(t, "__name__", getattr(t, "name", "")) for t in agent.root_agent.tools]
+    tool_names = [
+        getattr(t, "__name__", getattr(t, "name", "")) for t in agent.root_agent.tools
+    ]
     assert "get_current_time" in tool_names
 EOF
 

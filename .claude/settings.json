@@ -72,12 +72,21 @@
       "Write(/tmp/**)",
       "Bash(mkdir -p /tmp/*)",
       "Bash(rm -rf /tmp/*)",
+      "Bash(rm -rf /tmp/**)",
+      "Bash(rm -r /tmp/*)",
+      "Bash(rm /tmp/*)",
+      "Bash(rm /tmp/**)",
       "Bash(/tmp/**)",
+      "Bash(* /tmp/*)",
+      "Bash(* /tmp/**)",
+      "Bash(*/tmp/**)",
       "Read(/usr/local/**)",
       "Read(/opt/**)",
       "Read(/Library/**)",
       "WebFetch(domain:adk.dev)",
-      "WebFetch(domain:google.github.io)"
+      "WebFetch(domain:google.github.io)",
+      "Bash(/usr/local/bin/bash --version)",
+      "Bash(/Users/mcooper/projects/ralph_for_claude/install-ralph-loop.sh --new-project adk-fresh-1778787127 --type adk-python --parent-dir /tmp)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -87,6 +96,10 @@
       "Bash(curl * | sh)",
       "Bash(wget * | bash)",
       "Bash(wget * | sh)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/private/tmp"
     ]
   }
 }
