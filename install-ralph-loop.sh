@@ -58,10 +58,11 @@ OPTIONS:
     --new-project <name>        Create new project with Ralph framework
     --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, go, dotnet, rust, ruby, nx)
                                   Python sub-types:  python (prompts basic/flask/reflex/adk), or direct: flask, reflex, adk-python
+                                  Go sub-types:      go (prompts basic/adk), or direct: adk-go
                                   Ruby sub-types:    ruby (prompts basic/rails), or direct: rails
                                   Rust sub-types:    rust (prompts basic/actix/rocket), or direct: actix, rocket
                                   .NET sub-types:    dotnet (prompts webapi/mvc/blazorwasm/blazor)
-                                  ADK agents:        adk-python (Google Agent Development Kit, Gemini)
+                                  ADK agents:        adk-python, adk-go (Google Agent Development Kit)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -322,9 +323,13 @@ detect_project_type() {
         return
     fi
 
-    # Go
+    # Go (with optional ADK detection)
     if [ -f "${project_dir}/go.mod" ]; then
-        echo "go"
+        if grep -q "google.golang.org/adk" "${project_dir}/go.mod" 2>/dev/null; then
+            echo "adk-go"
+        else
+            echo "go"
+        fi
         return
     fi
 
@@ -393,7 +398,7 @@ detect_tools() {
             fi
             ;;
 
-        go)
+        go|adk-go)
             echo "test_framework=testing"
             echo "package_manager=go"
             ;;
@@ -699,9 +704,38 @@ ask_project_questions() {
             PROJECT_CONFIG[package_manager]="go"
             PROJECT_CONFIG[test_framework]="testing"
 
-            echo "Use additional test framework? (testify/ginkgo/none) [none]:"
-            read -r test_choice || true
-            PROJECT_CONFIG[additional_test]="${test_choice:-none}"
+            # Sub-framework selection (basic Go project vs. ADK agent)
+            echo "Go framework? (basic/adk) [basic]:"
+            echo "  basic: standard Go project (testing package)"
+            echo "  adk:   Google Agent Development Kit agent (Gemini, requires go 1.24+)"
+            read -r go_fw_choice || true
+            PROJECT_CONFIG[go_framework]="${go_fw_choice:-basic}"
+
+            case "${PROJECT_CONFIG[go_framework]}" in
+                adk)
+                    # adk-go is Gemini-only — no provider menu needed, just model ID
+                    echo "Gemini model ID? [gemini-flash-latest]:"
+                    read -r model_choice || true
+                    PROJECT_CONFIG[adk_provider]="gemini"
+                    PROJECT_CONFIG[adk_model]="${model_choice:-gemini-flash-latest}"
+                    PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+                    ;;
+                *)  # basic
+                    echo "Use additional test framework? (testify/ginkgo/none) [none]:"
+                    read -r test_choice || true
+                    PROJECT_CONFIG[additional_test]="${test_choice:-none}"
+                    ;;
+            esac
+            ;;
+
+        adk-go)
+            # Direct shortcut — equivalent to --type go with framework=adk
+            PROJECT_CONFIG[go_framework]="adk"
+            PROJECT_CONFIG[package_manager]="go"
+            PROJECT_CONFIG[test_framework]="testing"
+            PROJECT_CONFIG[adk_provider]="gemini"
+            PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+            PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
             ;;
 
         rust)
@@ -1596,6 +1630,78 @@ https://docs.litellm.ai/docs/providers for the full list and required env vars.
 EOF
             ;;
 
+        adk-go)
+            cat >> "${claude_md}" << 'EOF'
+
+## ADK Go Agent Specific
+
+This project is a Google Agent Development Kit (ADK) agent written in Go.
+The agent factory lives in `agent.go` (`NewAgent`). The launcher (`adk run`
+CLI / `adk web` UI) is invoked from `main()`.
+
+### Setup (First Time)
+```bash
+# go.mod + go.sum were created and `go mod tidy` was run during install.
+# REQUIRED before running the agent:
+#   Edit .env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY with a real key.
+#   Get one from https://aistudio.google.com/app/apikey
+source .env                     # exports GOOGLE_API_KEY into the shell
+```
+
+### Run the Agent
+```bash
+# CLI mode — interactive conversation in the terminal:
+go run .
+
+# Web UI — same binary, different subcommand:
+go run . web api webui          # http://localhost:8080
+```
+
+### Test Commands
+```bash
+go test ./...                   # Hermetic unit tests (do NOT call Gemini)
+go test -v ./...                # Verbose
+go test -cover ./...            # With coverage
+```
+
+Tests are hermetic: they construct the agent with a fake API key and
+inspect its configuration without making any network calls. They pass
+without a real `GOOGLE_API_KEY`.
+
+### Lint Commands
+```bash
+go vet ./...                    # Standard Go vet
+go fmt ./...                    # Format code (gofmt)
+```
+
+### Editing the Agent
+- Tools: add to the `Tools:` slice in `agent.go`. Built-in `geminitool.*`
+  helpers ship with the SDK; for custom function tools see the ADK docs.
+- Instructions: edit the `Instruction:` field in `NewAgent`.
+- Model: edit the literal passed to `NewAgent(...)` in `main()`, or change
+  the constant in `agent_test.go` if you also want the test assertion to
+  follow.
+
+### Other Model Providers (third-party)
+
+**adk-go ships Gemini-only first-party.** The `google.golang.org/adk`
+module includes `model/gemini` and `model/apigee` but no Anthropic / OpenAI
+adapters. Two community options exist:
+
+- **Anthropic Claude:** `github.com/Alcova-AI/adk-anthropic-go` implements
+  the `model.LLM` interface for Claude. Add it to `go.mod`, replace the
+  `gemini.NewModel(...)` call in `NewAgent` with `adkanthropic.NewModel(...)`,
+  and switch the env var to `ANTHROPIC_API_KEY`.
+- **Other providers:** implement the `model.LLM` interface yourself, or
+  watch the ADK Go releases for first-party additions.
+
+If you need broad multi-provider support today, the Python ADK
+(`--type adk-python`) has a first-party LiteLLM bridge that covers
+Anthropic, OpenAI, Groq, Together, Cohere, Bedrock, Ollama, and more.
+
+EOF
+            ;;
+
         nx)
             cat >> "${claude_md}" << 'EOF'
 
@@ -1938,10 +2044,10 @@ initialize_existing_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -1998,10 +2104,10 @@ create_new_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -2112,7 +2218,13 @@ create_new_project() {
             create_rails_project "." "${project_name}"
             ;;
         go)
-            create_go_project "." "${project_name}"
+            case "${PROJECT_CONFIG[go_framework]:-basic}" in
+                adk) create_go_adk_project "." "${project_name}"; project_type="adk-go" ;;
+                *)   create_go_project "." "${project_name}" ;;
+            esac
+            ;;
+        adk-go)
+            create_go_adk_project "." "${project_name}"
             ;;
         dotnet)
             create_dotnet_project "$(pwd)" "${project_name}"
@@ -2611,6 +2723,172 @@ EOF
     (cd "${project_dir}" && go mod tidy) && print_success "go mod tidy complete" || print_warning "go mod tidy failed — run manually: cd ${project_dir} && go mod tidy"
 
     print_success "Created Go project structure"
+}
+
+create_go_adk_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    # Model config (set by ask_project_questions or shortcut defaults)
+    local model_id="${PROJECT_CONFIG[adk_model]:-gemini-flash-latest}"
+    local env_var="${PROJECT_CONFIG[adk_env_var]:-GOOGLE_API_KEY}"
+
+    # Detect installed Go major.minor (adk-go needs 1.24+)
+    local go_version
+    go_version=$(go version 2>/dev/null | grep -oE 'go[0-9]+\.[0-9]+' | head -1 | sed 's/go//')
+    go_version="${go_version:-1.24}"
+
+    # go.mod — module + go directive; go mod tidy below pulls all adk-go deps
+    cat > "${project_dir}/go.mod" << EOF
+module ${project_name}
+
+go ${go_version}
+EOF
+
+    # agent.go — adk-go agent factory + main() launcher.
+    # NewAgent is extracted so tests can build the agent with a fake API key
+    # (gemini.NewModel does not validate the key at construction time, so the
+    # agent struct can be inspected without ever calling Gemini).
+    cat > "${project_dir}/agent.go" << EOF
+// Package main is the entry point for the ADK agent.
+//
+// Edit NewAgent() to change the agent's name, instruction, model, or tools.
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+
+	"google.golang.org/adk/agent"
+	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/cmd/launcher"
+	"google.golang.org/adk/cmd/launcher/full"
+	"google.golang.org/adk/model/gemini"
+	"google.golang.org/adk/tool"
+	"google.golang.org/adk/tool/geminitool"
+	"google.golang.org/genai"
+)
+
+// NewAgent builds the root agent. Extracted so tests can construct the agent
+// with a fake API key — gemini.NewModel does not make network calls at
+// construction time, so the agent struct can be inspected hermetically.
+func NewAgent(ctx context.Context, apiKey, modelID string) (agent.Agent, error) {
+	model, err := gemini.NewModel(ctx, modelID, &genai.ClientConfig{
+		APIKey: apiKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return llmagent.New(llmagent.Config{
+		Name:        "hello_time_agent",
+		Model:       model,
+		Description: "Tells the current time in a specified city.",
+		Instruction: "You are a helpful assistant that tells the current time " +
+			"in a specified city. Use the available tools.",
+		Tools: []tool.Tool{geminitool.GoogleSearch{}},
+	})
+}
+
+func main() {
+	ctx := context.Background()
+
+	rootAgent, err := NewAgent(ctx, os.Getenv("${env_var}"), "${model_id}")
+	if err != nil {
+		log.Fatalf("Failed to create agent: %v", err)
+	}
+
+	l := full.NewLauncher()
+	l.Execute(ctx, &launcher.Config{
+		AgentLoader: agent.NewSingleLoader(rootAgent),
+	}, os.Args[1:])
+}
+EOF
+
+    # agent_test.go — hermetic test that does NOT call Gemini
+    cat > "${project_dir}/agent_test.go" << EOF
+package main
+
+import (
+	"context"
+	"testing"
+)
+
+const expectedModel = "${model_id}"
+
+func TestNewAgent_BuildsWithoutAPICall(t *testing.T) {
+	ctx := context.Background()
+	a, err := NewAgent(ctx, "fake-test-key-do-not-call", expectedModel)
+	if err != nil {
+		t.Fatalf("NewAgent failed: %v", err)
+	}
+	if a == nil {
+		t.Fatal("agent is nil")
+	}
+}
+
+func TestAgent_Name(t *testing.T) {
+	ctx := context.Background()
+	a, _ := NewAgent(ctx, "fake-test-key", expectedModel)
+	if a.Name() != "hello_time_agent" {
+		t.Errorf("agent name = %q, want hello_time_agent", a.Name())
+	}
+}
+
+func TestAgent_Description(t *testing.T) {
+	ctx := context.Background()
+	a, _ := NewAgent(ctx, "fake-test-key", expectedModel)
+	want := "Tells the current time in a specified city."
+	if a.Description() != want {
+		t.Errorf("agent description = %q, want %q", a.Description(), want)
+	}
+}
+EOF
+
+    # .env — placeholder API key; user must replace before running the agent
+    cat > "${project_dir}/.env" << EOF
+# Get a Gemini API key from https://aistudio.google.com/app/apikey
+${env_var}="REPLACE_WITH_YOUR_GEMINI_API_KEY"
+EOF
+
+    # .gitignore — keep .env out of git (API key safety)
+    cat > "${project_dir}/.gitignore" << 'EOF'
+# Compiled binaries
+*.exe
+*.out
+/dist/
+/build/
+
+# Environment (contains API key)
+.env
+
+# Test/coverage
+/tmp/
+coverage.out
+coverage.html
+logs/
+*.log
+EOF
+
+    print_info "Running go mod tidy (downloads adk-go + transitive deps, may take a minute)..."
+    (cd "${project_dir}" && go mod tidy 2>&1 | tail -5) \
+        && print_success "go mod tidy complete" \
+        || print_warning "go mod tidy failed — run manually: cd ${project_dir} && go mod tidy"
+
+    print_info "Running go vet..."
+    (cd "${project_dir}" && go vet ./... 2>&1) \
+        && print_success "go vet passed" \
+        || print_warning "go vet found issues — see output above"
+
+    print_info "Running tests (hermetic — does not call Gemini)..."
+    (cd "${project_dir}" && go test ./... 2>&1 | tail -5) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && go test ./..."
+
+    print_success "Created Go ADK project structure (provider: gemini, model: ${model_id})"
+    echo
+    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
+    print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
 }
 
 create_rust_project() {
@@ -4423,10 +4701,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
                         exit 1
                         ;;
                 esac
