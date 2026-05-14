@@ -61,9 +61,9 @@ UI test flag — set testRequirements.ui = true if ANY of the following are pres
 Rule: ui defaults to false; any signal above sets it to true. Keyword absence must never override explicit metadata.
 
 Integration test flag — set testRequirements.integration = true if ANY of the following are present:
-1. projectType is a server/API type: express, nextjs, flask, python, reflex, adk-python, go, adk-go, actix, rocket, rails, ruby, dotnet (webapi/mvc/blazor sub-types only)
+1. projectType is a server/API type: express, nextjs, flask, python, reflex, adk-python, go, adk-go, adk-ts, actix, rocket, rails, ruby, dotnet (webapi/mvc/blazor sub-types only)
 2. OR PRD text contains API keywords: "API", "endpoint", "REST", "route", "POST", "GET", "PUT", "DELETE", "CRUD", "HTTP", "middleware", "authentication", "authorization"
-3. OR projectType is adk-python or adk-go (ADK agents always benefit from end-to-end conversation tests)
+3. OR projectType is adk-python, adk-go, or adk-ts (ADK agents always benefit from end-to-end conversation tests)
 Never set true for: react, angular, dotnet blazorwasm, nx.
 
 Save ralph/.ralph/stories.json:
@@ -118,6 +118,7 @@ Design implementation approach per requirement. Select test tools:
   python / reflex:                            `venv/bin/pytest tests/integration/ -v`
   adk-python:                                 `venv/bin/pytest tests/integration/ -v` (in-process agent invocation; do NOT call Gemini — mock the model or use ADK test harness)
   adk-go:                                     `go test -run TestIntegration ./...` (use the NewAgent factory with a fake API key; do NOT call Gemini)
+  adk-ts:                                     `npx vitest run tests/integration` (import rootAgent and assert config; do NOT call Gemini)
   go:                                         `go test -run TestIntegration ./...`
   actix / rocket:                             `cargo test --test integration`
   rust (basic):                               `cargo test --test integration`

@@ -59,10 +59,11 @@ OPTIONS:
     --type <language>           Project type (typescript, javascript, angular, react, nextjs, express, python, go, dotnet, rust, ruby, nx)
                                   Python sub-types:  python (prompts basic/flask/reflex/adk), or direct: flask, reflex, adk-python
                                   Go sub-types:      go (prompts basic/adk), or direct: adk-go
+                                  TypeScript:        typescript (prompts basic/adk), or direct: adk-ts
                                   Ruby sub-types:    ruby (prompts basic/rails), or direct: rails
                                   Rust sub-types:    rust (prompts basic/actix/rocket), or direct: actix, rocket
                                   .NET sub-types:    dotnet (prompts webapi/mvc/blazorwasm/blazor)
-                                  ADK agents:        adk-python, adk-go (Google Agent Development Kit)
+                                  ADK agents:        adk-python, adk-go, adk-ts (Google Agent Development Kit)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -283,7 +284,9 @@ detect_project_type() {
 
     # Framework-specific detection (check before generic JS/TS)
     if [ -f "${project_dir}/package.json" ]; then
-        if grep -q '"@angular/core"' "${project_dir}/package.json" 2>/dev/null; then
+        if grep -q '"@google/adk"' "${project_dir}/package.json" 2>/dev/null; then
+            echo "adk-ts"
+        elif grep -q '"@angular/core"' "${project_dir}/package.json" 2>/dev/null; then
             echo "angular"
         elif grep -q '"next"' "${project_dir}/package.json" 2>/dev/null; then
             echo "nextjs"
@@ -347,7 +350,7 @@ detect_tools() {
     local project_dir="$2"
 
     case "${project_type}" in
-        typescript|javascript|angular|react|nextjs|express)
+        typescript|javascript|angular|react|nextjs|express|adk-ts)
             # Package manager
             if [ -f "${project_dir}/yarn.lock" ]; then
                 echo "package_manager=yarn"
@@ -443,30 +446,62 @@ ask_project_questions() {
 
     case "${project_type}" in
         typescript|javascript)
-            # Package manager
-            local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
-            if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
-                default_pm="npm"
+            # For TypeScript only: offer the ADK sub-framework choice up front
+            if [ "${project_type}" = "typescript" ]; then
+                echo "TypeScript framework? (basic/adk) [basic]:"
+                echo "  basic: standard TypeScript project (Jest/Vitest, ESLint)"
+                echo "  adk:   Google Agent Development Kit agent (Gemini, requires Node 18+)"
+                read -r ts_fw_choice || true
+                PROJECT_CONFIG[ts_framework]="${ts_fw_choice:-basic}"
+            else
+                PROJECT_CONFIG[ts_framework]="basic"
             fi
 
-            echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
-            read -r pm_choice || true
-            PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+            if [ "${PROJECT_CONFIG[ts_framework]}" = "adk" ]; then
+                # adk-ts is Gemini-only — no provider menu, just model ID
+                PROJECT_CONFIG[package_manager]="npm"
+                PROJECT_CONFIG[test_framework]="vitest"
+                echo "Gemini model ID? [gemini-flash-latest]:"
+                read -r model_choice || true
+                PROJECT_CONFIG[adk_provider]="gemini"
+                PROJECT_CONFIG[adk_model]="${model_choice:-gemini-flash-latest}"
+                PROJECT_CONFIG[adk_env_var]="GEMINI_API_KEY"
+            else
+                # Package manager
+                local default_pm=$(echo "${detected_tools}" | grep "package_manager=" | cut -d= -f2)
+                if [ -z "${default_pm}" ] || [ "${default_pm}" = "unknown" ]; then
+                    default_pm="npm"
+                fi
 
-            # Test framework
-            local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
-            if [ -z "${default_test}" ] || [ "${default_test}" = "unknown" ]; then
-                default_test="jest"
+                echo "Package manager? (npm/yarn/pnpm/bun) [${default_pm}]:"
+                read -r pm_choice || true
+                PROJECT_CONFIG[package_manager]="${pm_choice:-$default_pm}"
+
+                # Test framework
+                local default_test=$(echo "${detected_tools}" | grep "test_framework=" | cut -d= -f2)
+                if [ -z "${default_test}" ] || [ "${default_test}" = "unknown" ]; then
+                    default_test="jest"
+                fi
+
+                echo "Test framework? (jest/vitest/mocha) [${default_test}]:"
+                read -r test_choice || true
+                PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
+
+                # Build tool
+                echo "Use build tool? (none/webpack/vite/esbuild) [vite]:"
+                read -r build_choice || true
+                PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
             fi
+            ;;
 
-            echo "Test framework? (jest/vitest/mocha) [${default_test}]:"
-            read -r test_choice || true
-            PROJECT_CONFIG[test_framework]="${test_choice:-$default_test}"
-
-            # Build tool
-            echo "Use build tool? (none/webpack/vite/esbuild) [vite]:"
-            read -r build_choice || true
-            PROJECT_CONFIG[build_tool]="${build_choice:-vite}"
+        adk-ts)
+            # Direct shortcut — equivalent to --type typescript with framework=adk
+            PROJECT_CONFIG[ts_framework]="adk"
+            PROJECT_CONFIG[package_manager]="npm"
+            PROJECT_CONFIG[test_framework]="vitest"
+            PROJECT_CONFIG[adk_provider]="gemini"
+            PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+            PROJECT_CONFIG[adk_env_var]="GEMINI_API_KEY"
             ;;
 
         angular)
@@ -1702,6 +1737,82 @@ Anthropic, OpenAI, Groq, Together, Cohere, Bedrock, Ollama, and more.
 EOF
             ;;
 
+        adk-ts)
+            cat >> "${claude_md}" << 'EOF'
+
+## ADK TypeScript Agent Specific
+
+This project is a Google Agent Development Kit (ADK) agent written in
+TypeScript. `agent.ts` exports `rootAgent` — that's what `adk run` and
+`adk web` discover. Tools are defined as `FunctionTool` instances with
+Zod parameter schemas.
+
+### Setup (First Time)
+```bash
+# node_modules/ was populated and `npm install` was run during install.
+# REQUIRED before running the agent:
+#   Edit .env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY with a real key.
+#   Get one from https://aistudio.google.com/app/apikey
+```
+
+### Run the Agent
+```bash
+npm start                       # CLI mode — interactive conversation
+npm run web                     # Web UI on http://localhost:8000
+# Or directly:
+npx adk run agent.ts
+npx adk web
+```
+
+### Test Commands
+```bash
+npm test                        # Run all tests (vitest)
+npm run test:watch              # Watch mode
+```
+
+Tests are hermetic: the `LlmAgent` constructor does not call the model
+at construction time, so `rootAgent` can be imported and inspected
+without a `GEMINI_API_KEY`.
+
+### Lint / Format / Typecheck
+```bash
+npm run typecheck               # tsc --noEmit
+npm run format                  # prettier --write .
+npm run format:check            # prettier --check .
+```
+
+### Editing the Agent
+- Tools: define new `FunctionTool({...})` instances and add them to the
+  `tools:` array on `rootAgent`.
+- Instructions: edit the `instruction:` field on `rootAgent`.
+- Model: change the `model:` string in `agent.ts` (e.g.
+  `gemini-flash-latest`, `gemini-2.5-pro`).
+
+### Other Model Providers (third-party)
+
+**adk-ts ships Gemini-only first-party.** The `@google/adk` package
+exports `Gemini`, `ApigeeLlm`, and `BaseLlm` — no `LiteLlm`, no
+`AnthropicLlm`, no `OpenAiLlm`. The official Anthropic example page on
+adk.dev shows Python and Java only.
+
+Two options if you need non-Gemini in TypeScript:
+
+1. **Third-party bridge:** `adk-llm-bridge`
+   (https://github.com/pailat/adk-llm-bridge) routes through Vercel AI
+   Gateway / OpenRouter. Add to `package.json`, replace the `model:`
+   string in `agent.ts` with `Anthropic("claude-sonnet-4-5")` (or
+   equivalent), switch the env var.
+2. **Custom BaseLlm subclass:** extend `BaseLlm` from `@google/adk` and
+   implement the abstract methods against the SDK of your chosen
+   provider.
+
+For broad multi-provider support today, the Python ADK
+(`--type adk-python`) has a first-party LiteLLM bridge that covers
+Anthropic, OpenAI, Groq, Together, Cohere, Bedrock, Ollama, and more.
+
+EOF
+            ;;
+
         nx)
             cat >> "${claude_md}" << 'EOF'
 
@@ -2044,10 +2155,10 @@ initialize_existing_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -2104,10 +2215,10 @@ create_new_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -2174,7 +2285,13 @@ create_new_project() {
     # Create basic project structure based on type
     case "${project_type}" in
         typescript)
-            create_typescript_project "."
+            case "${PROJECT_CONFIG[ts_framework]:-basic}" in
+                adk) create_typescript_adk_project "." "${project_name}"; project_type="adk-ts" ;;
+                *)   create_typescript_project "." ;;
+            esac
+            ;;
+        adk-ts)
+            create_typescript_adk_project "." "${project_name}"
             ;;
         javascript)
             create_javascript_project "."
@@ -2886,6 +3003,196 @@ EOF
         || print_warning "Tests failed — run manually: cd ${project_dir} && go test ./..."
 
     print_success "Created Go ADK project structure (provider: gemini, model: ${model_id})"
+    echo
+    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
+    print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
+}
+
+create_typescript_adk_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    # Model config (set by ask_project_questions or shortcut defaults)
+    local model_id="${PROJECT_CONFIG[adk_model]:-gemini-flash-latest}"
+    local env_var="${PROJECT_CONFIG[adk_env_var]:-GEMINI_API_KEY}"
+
+    # package.json — ESM + tsx for running .ts directly + vitest for tests
+    cat > "${project_dir}/package.json" << EOF
+{
+  "name": "${project_name}",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "agent.ts",
+  "scripts": {
+    "start": "npx adk run agent.ts",
+    "web": "npx adk web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@google/adk": "*",
+    "zod": "*"
+  },
+  "devDependencies": {
+    "@google/adk-devtools": "*",
+    "typescript": "*",
+    "tsx": "*",
+    "vitest": "*",
+    "prettier": "*"
+  }
+}
+EOF
+
+    # tsconfig.json — modern ESM target, suitable for tsx + vitest
+    cat > "${project_dir}/tsconfig.json" << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
+EOF
+
+    # agent.ts — verbatim shape from the ADK TypeScript quickstart, with the
+    # model ID parameterized. LlmAgent constructor is hermetic (no API call
+    # at construction time), so tests can import rootAgent directly.
+    cat > "${project_dir}/agent.ts" << EOF
+import { FunctionTool, LlmAgent } from "@google/adk";
+import { z } from "zod";
+
+const getCurrentTime = new FunctionTool({
+  name: "get_current_time",
+  description: "Returns the current time in a specified city.",
+  parameters: z.object({
+    city: z
+      .string()
+      .describe("The name of the city for which to retrieve the current time."),
+  }),
+  execute: ({ city }) => {
+    return {
+      status: "success",
+      report: \`The current time in \${city} is 10:30 AM\`,
+    };
+  },
+});
+
+export const rootAgent = new LlmAgent({
+  name: "hello_time_agent",
+  model: "${model_id}",
+  description: "Tells the current time in a specified city.",
+  instruction: \`You are a helpful assistant that tells the current time in a city.
+                Use the 'getCurrentTime' tool for this purpose.\`,
+  tools: [getCurrentTime],
+});
+EOF
+
+    # agent.test.ts — vitest. Hermetic: LlmAgent does not call the model at
+    # construction time, so the tests run without GEMINI_API_KEY.
+    cat > "${project_dir}/agent.test.ts" << EOF
+import { describe, it, expect } from "vitest";
+import { rootAgent } from "./agent.js";
+
+describe("rootAgent (ADK Gemini agent)", () => {
+  it("is constructed without an API key", () => {
+    expect(rootAgent).toBeDefined();
+  });
+
+  it("has the expected name", () => {
+    expect(rootAgent.name).toBe("hello_time_agent");
+  });
+
+  it("uses the configured model", () => {
+    expect(rootAgent.model).toBe("${model_id}");
+  });
+
+  it("has the get_current_time tool registered", () => {
+    const toolNames = rootAgent.tools.map((t: any) => t.name);
+    expect(toolNames).toContain("get_current_time");
+  });
+});
+EOF
+
+    # .env — placeholder API key; user must replace before running the agent
+    cat > "${project_dir}/.env" << EOF
+# Get a Gemini API key from https://aistudio.google.com/app/apikey
+${env_var}="REPLACE_WITH_YOUR_GEMINI_API_KEY"
+EOF
+
+    # .prettierrc — match Python's black-equivalent: opinionated, no config
+    cat > "${project_dir}/.prettierrc.json" << 'EOF'
+{
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "printWidth": 80
+}
+EOF
+
+    # .prettierignore — skip node_modules and lockfiles
+    cat > "${project_dir}/.prettierignore" << 'EOF'
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+dist/
+.vitest/
+EOF
+
+    # .gitignore — keep node_modules and .env out of git
+    cat > "${project_dir}/.gitignore" << 'EOF'
+node_modules/
+dist/
+build/
+
+# Environment (contains API key)
+.env
+.env.local
+
+# Test/coverage
+coverage/
+.vitest/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+EOF
+
+    print_info "Installing @google/adk + test dependencies (this may take a minute)..."
+    (cd "${project_dir}" && npm install --silent 2>&1 | tail -5) \
+        && print_success "npm install complete" \
+        || print_warning "npm install failed — run manually: cd ${project_dir} && npm install"
+
+    print_info "Running typecheck..."
+    (cd "${project_dir}" && npx tsc --noEmit 2>&1 | tail -5) \
+        && print_success "tsc clean" \
+        || print_warning "tsc found type errors — run manually: cd ${project_dir} && npx tsc --noEmit"
+
+    print_info "Running prettier --check..."
+    (cd "${project_dir}" && npx prettier --check . 2>&1 | tail -3) \
+        && print_success "prettier clean" \
+        || print_warning "prettier check failed — run: cd ${project_dir} && npx prettier --write ."
+
+    print_info "Running tests (hermetic — does not call Gemini)..."
+    (cd "${project_dir}" && npx vitest run 2>&1 | tail -10) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && npx vitest run"
+
+    print_success "Created TypeScript ADK project structure (provider: gemini, model: ${model_id})"
     echo
     print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
     print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
@@ -4701,10 +5008,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, dotnet, rust, ruby, rails, actix, rocket, nx"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
                         exit 1
                         ;;
                 esac
