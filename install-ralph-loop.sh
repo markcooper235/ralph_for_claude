@@ -63,7 +63,9 @@ OPTIONS:
                                   Ruby sub-types:    ruby (prompts basic/rails), or direct: rails
                                   Rust sub-types:    rust (prompts basic/actix/rocket), or direct: actix, rocket
                                   .NET sub-types:    dotnet (prompts webapi/mvc/blazorwasm/blazor)
-                                  ADK agents:        adk-python, adk-go, adk-ts (Google Agent Development Kit)
+                                  ADK agents:        adk-python (full LiteLLM bridge: gemini/anthropic/openai/other)
+                                                     adk-go, adk-ts (Gemini-only; third-party adapters documented)
+                                                     adk-java (gemini + anthropic native)
     --parent-dir <path>         Directory where project will be created (default: current directory)
     --init                      Add Ralph framework to existing project (current directory)
     --backup-dir <path>         Custom backup directory (default: .ralph-backups/)
@@ -342,6 +344,14 @@ detect_project_type() {
         return
     fi
 
+    # Java ADK (Maven pom.xml with google-adk dependency)
+    if [ -f "${project_dir}/pom.xml" ]; then
+        if grep -q "com.google.adk" "${project_dir}/pom.xml" 2>/dev/null; then
+            echo "adk-java"
+            return
+        fi
+    fi
+
     echo "unknown"
 }
 
@@ -404,6 +414,11 @@ detect_tools() {
         go|adk-go)
             echo "test_framework=testing"
             echo "package_manager=go"
+            ;;
+
+        adk-java)
+            echo "test_framework=junit5"
+            echo "package_manager=maven"
             ;;
 
         rust)
@@ -502,6 +517,37 @@ ask_project_questions() {
             PROJECT_CONFIG[adk_provider]="gemini"
             PROJECT_CONFIG[adk_model]="gemini-flash-latest"
             PROJECT_CONFIG[adk_env_var]="GEMINI_API_KEY"
+            ;;
+
+        adk-java)
+            # adk-java natively supports Gemini + Anthropic Claude (no LiteLLM bridge)
+            PROJECT_CONFIG[package_manager]="maven"
+            PROJECT_CONFIG[test_framework]="junit5"
+            echo "ADK model provider? (gemini/anthropic) [gemini]:"
+            echo "  gemini:    Google Gemini (string model arg, GOOGLE_API_KEY)"
+            echo "  anthropic: Claude via native com.google.adk.models.Claude (ANTHROPIC_API_KEY)"
+            read -r prov_choice || true
+            PROJECT_CONFIG[adk_provider]="${prov_choice:-gemini}"
+            case "${PROJECT_CONFIG[adk_provider]}" in
+                gemini)
+                    echo "Gemini model ID? [gemini-flash-latest]:"
+                    read -r model_choice || true
+                    PROJECT_CONFIG[adk_model]="${model_choice:-gemini-flash-latest}"
+                    PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+                    ;;
+                anthropic)
+                    echo "Claude model ID? [claude-sonnet-4-5]:"
+                    read -r model_choice || true
+                    PROJECT_CONFIG[adk_model]="${model_choice:-claude-sonnet-4-5}"
+                    PROJECT_CONFIG[adk_env_var]="ANTHROPIC_API_KEY"
+                    ;;
+                *)
+                    print_warning "Unknown provider '${PROJECT_CONFIG[adk_provider]}' — defaulting to gemini"
+                    PROJECT_CONFIG[adk_provider]="gemini"
+                    PROJECT_CONFIG[adk_model]="gemini-flash-latest"
+                    PROJECT_CONFIG[adk_env_var]="GOOGLE_API_KEY"
+                    ;;
+            esac
             ;;
 
         angular)
@@ -1813,6 +1859,93 @@ Anthropic, OpenAI, Groq, Together, Cohere, Bedrock, Ollama, and more.
 EOF
             ;;
 
+        adk-java)
+            cat >> "${claude_md}" << 'EOF'
+
+## ADK Java Agent Specific
+
+This project is a Google Agent Development Kit (ADK) agent written in
+Java (Maven, JUnit 5). The agent factory lives in
+`src/main/java/com/example/agent/HelloTimeAgent.java` (`buildAgent()`).
+`AgentCliRunner` wires the agent into an `InMemoryRunner` with a
+Scanner loop for CLI mode.
+
+### Setup (First Time)
+```bash
+# Maven dependencies were resolved during install (mvn compile).
+# REQUIRED before running the agent: edit .env and replace the
+# placeholder API key. The exact env var depends on the model provider:
+#   - Gemini:    GOOGLE_API_KEY    → https://aistudio.google.com/app/apikey
+#   - Anthropic: ANTHROPIC_API_KEY → https://console.anthropic.com/settings/keys
+source .env                     # exports the API key into the shell
+```
+
+### Run the Agent
+```bash
+# CLI mode — interactive conversation in the terminal:
+mvn compile exec:java -Dexec.mainClass=com.example.agent.AgentCliRunner
+
+# Web UI (ADK ships its own server):
+mvn compile exec:java \
+  -Dexec.mainClass=com.google.adk.web.AdkWebServer \
+  -Dexec.args="--adk.agents.source-dir=target --server.port=8000"
+```
+
+### Test Commands
+```bash
+mvn test                        # JUnit 5 tests (hermetic — no API call)
+mvn -Dtest=HelloTimeAgentTest test   # Single test class
+mvn surefire-report:report      # HTML report at target/site/surefire-report.html
+```
+
+Tests are hermetic: `buildAgent()` is called with a fake API key (for
+Anthropic) or just uses a model-name string (for Gemini); neither path
+contacts the model provider, so tests run without `GOOGLE_API_KEY` or
+`ANTHROPIC_API_KEY` set.
+
+### Editing the Agent
+- Tools: add `@Schema`-annotated static methods to `HelloTimeAgent` and
+  register them with `FunctionTool.create(HelloTimeAgent.class, "methodName")`
+  in `buildAgent()`.
+- Instructions: edit the `.instruction(...)` argument in `buildAgent()`.
+- Model: change `MODEL_ID`, then update the test assertion if needed.
+
+### Switching Model Providers
+
+ADK Java natively supports two providers (no LiteLLM bridge in Java):
+
+**Gemini** (default — string model arg):
+```java
+return LlmAgent.builder()
+    .model("gemini-flash-latest")    // or "gemini-2.5-pro" etc.
+    ...
+```
+- `.env`: `GOOGLE_API_KEY="..."`
+- pom.xml: no changes (Gemini support ships in `google-adk`)
+
+**Anthropic Claude** (native `com.google.adk.models.Claude`):
+```java
+AnthropicClient client = AnthropicOkHttpClient.builder()
+    .apiKey(System.getenv("ANTHROPIC_API_KEY"))
+    .build();
+return LlmAgent.builder()
+    .model(new Claude("claude-sonnet-4-5", client))
+    ...
+```
+- `.env`: `ANTHROPIC_API_KEY="..."`
+- pom.xml: no extra dep needed (anthropic-java comes transitively with
+  `google-adk` 1.2.0)
+
+**Other providers (OpenAI, Groq, etc.):** no first-party Java support.
+You would need to implement a `BaseLlm` subclass against the SDK of your
+chosen provider. There is no LiteLLM bridge in Java.
+
+For the broadest multi-provider support, use Python ADK
+(`--type adk-python`) — it has a first-party LiteLLM bridge.
+
+EOF
+            ;;
+
         nx)
             cat >> "${claude_md}" << 'EOF'
 
@@ -2155,10 +2288,10 @@ initialize_existing_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|adk-java|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, adk-java, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -2215,10 +2348,10 @@ create_new_project() {
             read -r type_choice
             project_type="${type_choice:-typescript}"
             case "${project_type}" in
-                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
+                typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|adk-java|dotnet|rust|ruby|rails|actix|rocket|nx) break ;;
                 *)
                     print_error "Unknown project type: '${project_type}'"
-                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
+                    print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, adk-java, dotnet, rust, ruby, rails, actix, rocket, nx"
                     ;;
             esac
         done
@@ -2292,6 +2425,9 @@ create_new_project() {
             ;;
         adk-ts)
             create_typescript_adk_project "." "${project_name}"
+            ;;
+        adk-java)
+            create_java_adk_project "." "${project_name}"
             ;;
         javascript)
             create_javascript_project "."
@@ -3196,6 +3332,366 @@ EOF
     echo
     print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
     print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
+}
+
+create_java_adk_project() {
+    local project_dir="$1"
+    local project_name="$2"
+
+    # Model config (set by ask_project_questions or shortcut defaults)
+    local provider="${PROJECT_CONFIG[adk_provider]:-gemini}"
+    local model_id="${PROJECT_CONFIG[adk_model]:-gemini-flash-latest}"
+    local env_var="${PROJECT_CONFIG[adk_env_var]:-GOOGLE_API_KEY}"
+
+    # Friendly description for the .env comment and final warning
+    local provider_display="${provider}"
+    local article="a"
+    local key_url=""
+    case "${provider}" in
+        gemini)    provider_display="Gemini";    key_url="https://aistudio.google.com/app/apikey" ;;
+        anthropic) provider_display="Anthropic"; article="an"; key_url="https://console.anthropic.com/settings/keys" ;;
+        *)         provider_display="${provider}"; key_url="your model provider's API key dashboard" ;;
+    esac
+
+    # Maven artifactId: lowercased, allows dashes (java-adk1234 valid).
+    # Force lowercase; replace any non-[a-z0-9-] with dash.
+    local artifact_id
+    artifact_id="$(echo "${project_name}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')"
+    [ -z "${artifact_id}" ] && artifact_id="adk-agent"
+
+    # Java package — fixed at com.example.agent (matches the ADK quickstart);
+    # users rename if they want their own namespace.
+    local pkg_path="src/main/java/com/example/agent"
+    local test_pkg_path="src/test/java/com/example/agent"
+    mkdir -p "${project_dir}/${pkg_path}"
+    mkdir -p "${project_dir}/${test_pkg_path}"
+
+    # pom.xml — google-adk + google-adk-dev (for adk web), JUnit 5 for tests,
+    # surefire 3.x picks up *Test.java automatically.
+    cat > "${project_dir}/pom.xml" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>${artifact_id}</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <adk.version>1.2.0</adk.version>
+        <junit.version>5.10.0</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.adk</groupId>
+            <artifactId>google-adk</artifactId>
+            <version>\${adk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.adk</groupId>
+            <artifactId>google-adk-dev</artifactId>
+            <version>\${adk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>\${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+EOF
+
+    # HelloTimeAgent.java — provider-specific model construction. The agent
+    # is exposed via a static ROOT_AGENT field so InMemoryRunner can find it,
+    # AND a builder method buildAgent() so tests can construct it explicitly
+    # with a fake API key. Both Gemini (string model) and Anthropic Claude
+    # (Claude object via Anthropic SDK) are hermetic at construction time.
+    if [ "${provider}" = "anthropic" ]; then
+        cat > "${project_dir}/${pkg_path}/HelloTimeAgent.java" << EOF
+package com.example.agent;
+
+import com.anthropic.client.AnthropicClient;
+import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.google.adk.agents.BaseAgent;
+import com.google.adk.agents.LlmAgent;
+import com.google.adk.models.Claude;
+import com.google.adk.tools.Annotations.Schema;
+import com.google.adk.tools.FunctionTool;
+import java.util.Map;
+
+/** Root ADK agent. Edit buildAgent() to change the agent's behavior. */
+public class HelloTimeAgent {
+
+    public static final String MODEL_ID = "${model_id}";
+
+    public static final BaseAgent ROOT_AGENT = buildAgent(System.getenv("${env_var}"));
+
+    /** Build the agent. Extracted so tests can pass a fake API key. */
+    public static BaseAgent buildAgent(String apiKey) {
+        AnthropicClient client = AnthropicOkHttpClient.builder()
+            .apiKey(apiKey == null ? "" : apiKey)
+            .build();
+        Claude model = new Claude(MODEL_ID, client);
+        return LlmAgent.builder()
+            .name("hello_time_agent")
+            .description("Tells the current time in a specified city.")
+            .instruction(
+                "You are a helpful assistant that tells the current time in a city. "
+                    + "Use the 'getCurrentTime' tool for this purpose.")
+            .model(model)
+            .tools(FunctionTool.create(HelloTimeAgent.class, "getCurrentTime"))
+            .build();
+    }
+
+    @Schema(description = "Get the current time for a given city.")
+    public static Map<String, String> getCurrentTime(
+        @Schema(name = "city", description = "Name of the city.") String city) {
+        return Map.of("status", "success", "city", city, "time", "10:30 AM");
+    }
+}
+EOF
+    else
+        cat > "${project_dir}/${pkg_path}/HelloTimeAgent.java" << EOF
+package com.example.agent;
+
+import com.google.adk.agents.BaseAgent;
+import com.google.adk.agents.LlmAgent;
+import com.google.adk.tools.Annotations.Schema;
+import com.google.adk.tools.FunctionTool;
+import java.util.Map;
+
+/** Root ADK agent. Edit buildAgent() to change the agent's behavior. */
+public class HelloTimeAgent {
+
+    public static final String MODEL_ID = "${model_id}";
+
+    public static final BaseAgent ROOT_AGENT = buildAgent();
+
+    /** Build the agent. The Gemini model is referenced by string, so the
+     *  constructor does not call the model and tests are hermetic. */
+    public static BaseAgent buildAgent() {
+        return LlmAgent.builder()
+            .name("hello_time_agent")
+            .description("Tells the current time in a specified city.")
+            .instruction(
+                "You are a helpful assistant that tells the current time in a city. "
+                    + "Use the 'getCurrentTime' tool for this purpose.")
+            .model(MODEL_ID)
+            .tools(FunctionTool.create(HelloTimeAgent.class, "getCurrentTime"))
+            .build();
+    }
+
+    @Schema(description = "Get the current time for a given city.")
+    public static Map<String, String> getCurrentTime(
+        @Schema(name = "city", description = "Name of the city.") String city) {
+        return Map.of("status", "success", "city", city, "time", "10:30 AM");
+    }
+}
+EOF
+    fi
+
+    # AgentCliRunner.java — InMemoryRunner + Scanner loop (the production
+    # CLI runner from the ADK quickstart). Loads ROOT_AGENT and pipes
+    # stdin lines through the agent.
+    cat > "${project_dir}/${pkg_path}/AgentCliRunner.java" << 'EOF'
+package com.example.agent;
+
+import com.google.adk.events.Event;
+import com.google.adk.runner.InMemoryRunner;
+import com.google.adk.sessions.Session;
+import com.google.genai.types.Content;
+import com.google.genai.types.Part;
+import io.reactivex.rxjava3.core.Flowable;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.UUID;
+
+/** Run the agent interactively in the terminal. */
+public class AgentCliRunner {
+    public static void main(String[] args) throws Exception {
+        InMemoryRunner runner = new InMemoryRunner(HelloTimeAgent.ROOT_AGENT);
+        String userId = "user-" + UUID.randomUUID();
+        Session session = runner
+            .sessionService()
+            .createSession(runner.appName(), userId, /*state=*/ Map.of(), /*sessionId=*/ null)
+            .blockingGet();
+
+        try (Scanner in = new Scanner(System.in)) {
+            System.out.println("Type a message (Ctrl+D to exit):");
+            while (in.hasNextLine()) {
+                String userText = in.nextLine();
+                Content message = Content.fromParts(Part.fromText(userText));
+                Flowable<Event> events =
+                    runner.runAsync(userId, session.id(), message);
+                events.blockingForEach(e -> {
+                    if (e.finalResponse()) {
+                        String text = e.stringifyContent();
+                        if (text != null && !text.isEmpty()) {
+                            System.out.println(text);
+                        }
+                    }
+                });
+            }
+        }
+    }
+}
+EOF
+
+    # HelloTimeAgentTest.java — hermetic JUnit 5 tests.
+    if [ "${provider}" = "anthropic" ]; then
+        cat > "${project_dir}/${test_pkg_path}/HelloTimeAgentTest.java" << EOF
+package com.example.agent;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.google.adk.agents.BaseAgent;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
+/** Hermetic tests for HelloTimeAgent. Does NOT call the model API. */
+class HelloTimeAgentTest {
+
+    @Test
+    void buildAgent_doesNotCallApi() {
+        // Anthropic builder is lazy: fake key does not trigger a network call.
+        BaseAgent agent = HelloTimeAgent.buildAgent("sk-ant-fake-test-key");
+        assertNotNull(agent);
+    }
+
+    @Test
+    void agent_hasExpectedName() {
+        BaseAgent agent = HelloTimeAgent.buildAgent("fake-key");
+        assertEquals("hello_time_agent", agent.name());
+    }
+
+    @Test
+    void agent_hasExpectedDescription() {
+        BaseAgent agent = HelloTimeAgent.buildAgent("fake-key");
+        assertEquals("Tells the current time in a specified city.", agent.description());
+    }
+
+    @Test
+    void getCurrentTime_returnsSuccessMap() {
+        Map<String, String> result = HelloTimeAgent.getCurrentTime("Paris");
+        assertEquals("success", result.get("status"));
+        assertEquals("Paris", result.get("city"));
+    }
+
+    @Test
+    void modelId_matchesConfig() {
+        assertEquals("${model_id}", HelloTimeAgent.MODEL_ID);
+    }
+}
+EOF
+    else
+        cat > "${project_dir}/${test_pkg_path}/HelloTimeAgentTest.java" << EOF
+package com.example.agent;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.google.adk.agents.BaseAgent;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
+/** Hermetic tests for HelloTimeAgent. Does NOT call the model API. */
+class HelloTimeAgentTest {
+
+    @Test
+    void buildAgent_doesNotCallApi() {
+        // Gemini model is a string; no API call happens at build time.
+        BaseAgent agent = HelloTimeAgent.buildAgent();
+        assertNotNull(agent);
+    }
+
+    @Test
+    void agent_hasExpectedName() {
+        BaseAgent agent = HelloTimeAgent.buildAgent();
+        assertEquals("hello_time_agent", agent.name());
+    }
+
+    @Test
+    void agent_hasExpectedDescription() {
+        BaseAgent agent = HelloTimeAgent.buildAgent();
+        assertEquals("Tells the current time in a specified city.", agent.description());
+    }
+
+    @Test
+    void getCurrentTime_returnsSuccessMap() {
+        Map<String, String> result = HelloTimeAgent.getCurrentTime("Paris");
+        assertEquals("success", result.get("status"));
+        assertEquals("Paris", result.get("city"));
+    }
+
+    @Test
+    void modelId_matchesConfig() {
+        assertEquals("${model_id}", HelloTimeAgent.MODEL_ID);
+    }
+}
+EOF
+    fi
+
+    # .env — placeholder API key; user must replace before running the agent
+    cat > "${project_dir}/.env" << EOF
+# Get ${article} ${provider_display} API key from ${key_url}
+${env_var}="REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+EOF
+
+    # .gitignore — keep .env and Maven outputs out of git
+    cat > "${project_dir}/.gitignore" << 'EOF'
+# Maven outputs
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Environment (contains API key)
+.env
+
+# Logs
+logs/
+*.log
+EOF
+
+    print_info "Running mvn compile (downloads google-adk + transitive deps, may take a minute)..."
+    # set -o pipefail so the subshell exit reflects mvn's exit, not tail's
+    (cd "${project_dir}" && set -o pipefail; mvn -q compile 2>&1 | tail -10) \
+        && print_success "mvn compile passed" \
+        || print_warning "mvn compile failed — run manually: cd ${project_dir} && mvn compile"
+
+    print_info "Running mvn test (hermetic — does not call the model)..."
+    (cd "${project_dir}" && set -o pipefail; mvn -q test 2>&1 | tail -15) \
+        && print_success "Tests passed" \
+        || print_warning "Tests failed — run manually: cd ${project_dir} && mvn test"
+
+    print_success "Created Java ADK project structure (provider: ${provider}, model: ${model_id})"
+    echo
+    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+    print_warning "Get a key from ${key_url} (the agent will not run without it)"
 }
 
 create_rust_project() {
@@ -5008,10 +5504,10 @@ main() {
             --type)
                 project_type="$2"
                 case "${project_type}" in
-                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
+                    typescript|javascript|angular|react|nextjs|express|python|flask|reflex|adk-python|go|adk-go|adk-ts|adk-java|dotnet|rust|ruby|rails|actix|rocket|nx) ;;
                     *)
                         print_error "Unknown project type: '${project_type}'"
-                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, dotnet, rust, ruby, rails, actix, rocket, nx"
+                        print_info "Valid types: typescript, javascript, angular, react, nextjs, express, python, flask, reflex, adk-python, go, adk-go, adk-ts, adk-java, dotnet, rust, ruby, rails, actix, rocket, nx"
                         exit 1
                         ;;
                 esac
