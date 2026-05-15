@@ -2108,6 +2108,10 @@ ralph/feedback/
 # Auto-generated feedback configs
 .claude/feedback-configs/*.json
 
+# Claude Code runtime artifacts (locks, scheduled-task state)
+.claude/*.lock
+.claude/scheduled_tasks*
+
 # Ralph backups (from installation)
 .ralph-backups/
 EOF
@@ -3164,6 +3168,9 @@ EOF
 # Environment (contains API key)
 .env
 
+# ADK CLI runtime cache (session DB, etc.)
+.adk/
+
 # Test/coverage
 /tmp/
 coverage.out
@@ -3369,6 +3376,9 @@ build/
 # Environment (contains API key)
 .env
 .env.local
+
+# ADK CLI runtime cache (session DB, etc.)
+.adk/
 
 # Test/coverage
 coverage/
@@ -3748,6 +3758,9 @@ target/
 
 # Environment (contains API key)
 .env
+
+# ADK CLI runtime cache (session DB, etc.)
+.adk/
 
 # Logs
 logs/
@@ -5217,6 +5230,9 @@ htmlcov/
 .mypy_cache/
 logs/
 *.log
+
+# ADK CLI runtime cache (session DB, etc.)
+.adk/
 EOF
 
     print_info "Creating Python virtual environment..."
