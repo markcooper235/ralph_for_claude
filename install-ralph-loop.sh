@@ -1627,22 +1627,18 @@ This project is a Google Agent Development Kit (ADK) agent. Layout:
 
 ```
 project-root/
-├── agents/                        ← what `adk web agents/` scans
-│   └── <agent_module>/
-│       ├── __init__.py            # `from . import agent` (required for discovery)
-│       ├── agent.py               # defines `root_agent`
-│       └── .env                   # API key (canonical per-agent location)
-├── tests/                         # pytest — OUTSIDE agents/ so adk web ignores
+├── agents/                        ← the agent Python package
+│   ├── __init__.py                # `from . import agent` (required for discovery)
+│   ├── agent.py                   # defines `root_agent`
+│   └── .env                       # API key (loaded by ADK at runtime)
+├── tests/                         # pytest — outside agents/
 ├── requirements.txt
 ├── pytest.ini
-└── venv/                          # OUTSIDE agents/ so adk web ignores
+└── venv/
 ```
 
-**Important:** anything that isn't an agent must live OUTSIDE `agents/`.
-`adk web agents/` treats every subdirectory of `agents/` as a candidate
-agent — if you put `venv/`, `tests/`, or `ralph/` there, they'll all
-appear in the agent picker UI and clicking them produces "no agent flow
-defined". Keep `agents/` clean.
+The `agents/` directory IS the agent Python package. `root_agent` is
+defined in `agents/agent.py` and re-exported via `agents/__init__.py`.
 
 ### Setup (First Time)
 ```bash
@@ -1651,17 +1647,17 @@ source venv/bin/activate           # Activate (Linux/Mac)
 # venv/Scripts/activate            # Activate (Windows)
 
 # REQUIRED before running the agent:
-#   Edit agents/<agent_module>/.env and replace REPLACE_WITH_YOUR_<PROVIDER>_API_KEY
+#   Edit agents/.env and replace REPLACE_WITH_YOUR_<PROVIDER>_API_KEY
 #   Get a Gemini key from https://aistudio.google.com/app/apikey
 ```
 
 ### Run the Agent
 ```bash
 # CLI mode — interactive conversation in the terminal:
-venv/bin/adk run agents/<agent_module>
+venv/bin/adk run agents/
 
-# Web UI — pass the agents/ dir so only your agent appears in the picker:
-venv/bin/adk web agents/ --port 8000      # http://localhost:8000
+# Web UI:
+venv/bin/adk web . --port 8000             # http://localhost:8000
 ```
 
 ### Test Commands
@@ -1681,28 +1677,29 @@ venv/bin/flake8 .                  # Linting
 ```
 
 ### Editing the Agent
-- Tools: add functions in `agents/<agent_module>/agent.py` and list them in `tools=[...]`.
+- Tools: add functions in `agents/agent.py` and list them in `tools=[...]`.
   Each tool function needs type hints on parameters and a docstring (becomes
   the LLM schema). Return a dict with a `status` key.
 - Instructions: edit the `instruction=` parameter on `root_agent`.
 - Sub-agents: pass `sub_agents=[child_agent]` on the parent `Agent` — compose
-  in Python, NOT via separate top-level agent dirs.
+  in Python.
 - Workflow agents: `SequentialAgent`, `ParallelAgent`, `LoopAgent` (deterministic
   pipelines) — see https://adk.dev/agents/workflow-agents/.
 - Callbacks: `before_model_callback`, `after_model_callback`, `before_tool_callback`,
   etc. — all optional kwargs on `Agent`. See https://adk.dev/callbacks/.
 - Model: see "Switching Models" below.
-- Adding more agents: create a sibling dir under `agents/` (e.g.
-  `agents/another_agent/`) with its own `__init__.py` + `agent.py` + `.env`.
-  `adk web agents/` will show both in the picker.
+- Adding more agents: convert this single-agent layout into a multi-agent one
+  by moving `agents/agent.py` + `agents/__init__.py` into `agents/<name>/` and
+  adding more `agents/<other>/` sibling dirs. Then `adk web agents/` shows all
+  of them in the picker.
 
 ### Switching Models
 
 ADK speaks Gemini natively and routes other providers through LiteLLM.
 Four things change together when you swap models:
 
-1. `<agent_module>/agent.py` — the `model=` argument on `root_agent`
-2. `.env` — the API key env var name
+1. `agents/agent.py` — the `model=` argument on `root_agent`
+2. `agents/.env` — the API key env var name
 3. `requirements.txt` — `google-adk[extensions]` is needed for LiteLLM-routed models
 4. `tests/test_agent.py` — the assertion `_model_id(agent.root_agent) == "..."`
 
@@ -4809,19 +4806,20 @@ create_python_adk_project() {
         *)         provider_display="${provider}"; key_url="your model provider's API key dashboard" ;;
     esac
 
-    # Canonical ADK Python layout (from `adk create` + docs):
+    # Single-agent layout — agent files live directly under agents/:
     #   project_dir/
-    #     agents/<agent_module>/        ← what `adk web agents/` scans
+    #     agents/
     #       __init__.py
     #       agent.py
-    #       .env                        ← canonical per-agent .env location
-    #     tests/                        ← outside agents/ so adk web ignores it
+    #       .env                        ← per-agent env (ADK walks UP from here)
+    #     tests/                        ← outside agents/ to keep the package clean
     #     pytest.ini
     #     requirements.txt
-    #     venv/                         ← outside agents/ so adk web ignores it
-    # This isolation matters: `adk web` treats every subdir of its target as a
-    # candidate agent, so anything that isn't an agent must live OUTSIDE agents/.
-    local agents_dir="${project_dir}/agents/${agent_module}"
+    #     venv/                         ← outside agents/
+    # The agents/ directory is itself the agent Python package; root_agent is
+    # defined in agents/agent.py. Add more agents later by promoting this
+    # layout back into agents/<sub>/agent.py per-agent subdirs if needed.
+    local agents_dir="${project_dir}/agents"
     mkdir -p "${agents_dir}"
     mkdir -p "${project_dir}/tests"
 
@@ -4918,16 +4916,17 @@ EOF
     # does NOT call the model (no API key needed to run tests). The model
     # comparison uses _model_id() so it works for both plain-string and
     # LiteLlm-wrapped models (LiteLlm stores the model string at .model.model).
-    # sys.path is extended with the agents/ dir so `from <agent_module>` resolves.
+    # sys.path is extended with the project root so `from agents import agent`
+    # resolves (agents/ is the agent Python package).
     cat > "${project_dir}/tests/test_agent.py" << EOF
 """Hermetic tests for the ADK agent. Does not call the model."""
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agents"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from ${agent_module} import agent  # noqa: E402  -- import after sys.path setup
+from agents import agent  # noqa: E402  -- import after sys.path setup
 
 
 def _model_id(a):
@@ -4960,7 +4959,7 @@ testpaths = tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
-addopts = --cov=agents/${agent_module} --cov-report=term-missing
+addopts = --cov=agents --cov-report=term-missing
 EOF
 
     cat > "${project_dir}/.flake8" << 'EOF'
@@ -5014,13 +5013,13 @@ EOF
 
     print_success "Created Python ADK project structure (provider: ${provider}, model: ${model_id})"
     echo
-    print_warning "REQUIRED: Edit ${project_dir}/agents/${agent_module}/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+    print_warning "REQUIRED: Edit ${project_dir}/agents/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
     print_warning "Get a key from ${key_url} (the agent will not run without it)"
     echo
     print_info "To run the agent:"
     print_info "  cd ${project_dir}"
-    print_info "  venv/bin/adk run agents/${agent_module}       # interactive CLI"
-    print_info "  venv/bin/adk web agents/ --port 8000          # web UI at http://localhost:8000"
+    print_info "  venv/bin/adk run agents/                     # interactive CLI"
+    print_info "  venv/bin/adk web .                            # web UI at http://localhost:8000"
 }
 
 create_ruby_project() {
