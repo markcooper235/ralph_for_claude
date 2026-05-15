@@ -1641,14 +1641,24 @@ The `agents/` directory IS the agent Python package. `root_agent` is
 defined in `agents/agent.py` and re-exported via `agents/__init__.py`.
 
 ### Setup (First Time)
-```bash
-# venv is created automatically by the install script and google-adk is installed
-source venv/bin/activate           # Activate (Linux/Mac)
-# venv/Scripts/activate            # Activate (Windows)
 
-# REQUIRED before running the agent:
-#   Edit agents/.env and replace REPLACE_WITH_YOUR_<PROVIDER>_API_KEY
-#   Get a Gemini key from https://aistudio.google.com/app/apikey
+The installer created `venv/` and installed `google-adk` + test deps into
+it. The commands below call the venv binaries directly (`venv/bin/...`),
+which works without activating the venv — copy-paste safe in any shell.
+
+Before running the agent, replace the placeholder API key:
+```bash
+# Edit agents/.env: replace REPLACE_WITH_YOUR_<PROVIDER>_API_KEY
+# Get a Gemini key from https://aistudio.google.com/app/apikey
+```
+
+**Optional:** for interactive development you can activate the venv once
+per shell, then drop the `venv/bin/` prefix from every command below:
+```bash
+source venv/bin/activate          # Linux/Mac
+# venv\Scripts\activate           # Windows
+adk run agents/                   # `adk` resolves via $PATH after activate
+deactivate                        # when done
 ```
 
 ### Run the Agent
