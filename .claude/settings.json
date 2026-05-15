@@ -74,7 +74,10 @@
       "Read(/Library/**)",
       "WebFetch(domain:adk.dev)",
       "WebFetch(domain:google.github.io)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(lsof -ti:8000)",
+      "Bash(xargs kill -9)",
+      "Bash(lsof -ti:8000 -ti:8080)"
     ],
     "deny": [
       "Bash(rm -rf /)",
