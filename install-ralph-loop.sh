@@ -4838,6 +4838,8 @@ create_python_adk_project() {
     [ "${uses_litellm}" = "true" ] && adk_dep="google-adk[extensions]"
     cat > "${project_dir}/requirements.txt" << EOF
 ${adk_dep}
+geopy
+timezonefinder
 pytest
 pytest-cov
 pytest-asyncio
@@ -4857,13 +4859,90 @@ EOF
         cat > "${agents_dir}/agent.py" << EOF
 """Root ADK agent. Edit this file to change the agent's behavior."""
 
+from datetime import datetime, timezone
+from typing import Optional, Tuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from geopy.geocoders import Nominatim
 from google.adk.agents.llm_agent import Agent
 from google.adk.models.lite_llm import LiteLlm
+from timezonefinder import TimezoneFinder
+
+_TIMEZONE_FINDER = TimezoneFinder()
+_GEOCODER = Nominatim(user_agent="adk-time-agent")
 
 
-def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city."""
-    return {"status": "success", "city": city, "time": "10:30 AM"}
+def _geocode_city(city: str) -> Optional[Tuple[float, float]]:
+    """Resolve a city name to (latitude, longitude) via Nominatim.
+
+    Returns None if the city cannot be geocoded.
+    """
+    location = _GEOCODER.geocode(city, exactly_one=True, timeout=10)
+    if location is None:
+        return None
+    return (location.latitude, location.longitude)
+
+
+def _offset_for_coords(
+    latitude: float, longitude: float
+) -> Optional[Tuple[str, float]]:
+    """Return (IANA timezone, current UTC offset in hours) for given coords.
+
+    Returns None if no timezone is defined for the coordinates.
+    """
+    tz_name = _TIMEZONE_FINDER.timezone_at(lat=latitude, lng=longitude)
+    if tz_name is None:
+        return None
+    try:
+        tz = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return None
+    offset = datetime.now(tz).utcoffset()
+    return (tz_name, offset.total_seconds() / 3600)
+
+
+def get_timezone_offset(city: str) -> dict:
+    """Returns the UTC offset in hours for the specified city.
+
+    Geocodes the city name to coordinates via OpenStreetMap, then looks up
+    the IANA timezone for those coordinates and returns its current offset
+    from UTC (DST-aware).
+    """
+    coords = _geocode_city(city)
+    if coords is None:
+        return {
+            "status": "error",
+            "error_message": f"Could not geocode city: {city!r}",
+        }
+    latitude, longitude = coords
+    result = _offset_for_coords(latitude, longitude)
+    if result is None:
+        return {
+            "status": "error",
+            "error_message": (
+                f"Could not determine timezone for {city!r} "
+                f"at ({latitude}, {longitude})"
+            ),
+        }
+    tz_name, offset_hours = result
+    return {
+        "status": "success",
+        "city": city,
+        "timezone": tz_name,
+        "offset_hours": offset_hours,
+        "latitude": latitude,
+        "longitude": longitude,
+    }
+
+
+def get_current_utc_time() -> dict:
+    """Returns the current time in UTC as an ISO-8601 string."""
+    now = datetime.now(timezone.utc)
+    return {
+        "status": "success",
+        "utc_time": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "iso": now.isoformat(),
+    }
 
 
 root_agent = Agent(
@@ -4871,22 +4950,106 @@ root_agent = Agent(
     name="root_agent",
     description="Tells the current time in a specified city.",
     instruction=(
-        "You are a helpful assistant that tells the current time in cities. "
-        "Use the 'get_current_time' tool for this purpose."
+        "You are a helpful assistant that tells the current local time in a city. "
+        "To answer, follow these steps:\n"
+        "1. Call 'get_timezone_offset' with the city name to obtain its "
+        "UTC offset in hours.\n"
+        "2. Call 'get_current_utc_time' to obtain the current UTC time.\n"
+        "3. Add the offset to the UTC time to compute the city's local time, and "
+        "report it to the user in a clear, human-readable format (e.g. "
+        "'3:42 PM on Tuesday, May 15') along with the timezone name.\n"
+        "If 'get_timezone_offset' returns an error, relay the error to the user."
     ),
-    tools=[get_current_time],
+    tools=[get_timezone_offset, get_current_utc_time],
 )
 EOF
     else
         cat > "${agents_dir}/agent.py" << EOF
 """Root ADK agent. Edit this file to change the agent's behavior."""
 
+from datetime import datetime, timezone
+from typing import Optional, Tuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from geopy.geocoders import Nominatim
 from google.adk.agents.llm_agent import Agent
+from timezonefinder import TimezoneFinder
+
+_TIMEZONE_FINDER = TimezoneFinder()
+_GEOCODER = Nominatim(user_agent="adk-time-agent")
 
 
-def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city."""
-    return {"status": "success", "city": city, "time": "10:30 AM"}
+def _geocode_city(city: str) -> Optional[Tuple[float, float]]:
+    """Resolve a city name to (latitude, longitude) via Nominatim.
+
+    Returns None if the city cannot be geocoded.
+    """
+    location = _GEOCODER.geocode(city, exactly_one=True, timeout=10)
+    if location is None:
+        return None
+    return (location.latitude, location.longitude)
+
+
+def _offset_for_coords(
+    latitude: float, longitude: float
+) -> Optional[Tuple[str, float]]:
+    """Return (IANA timezone, current UTC offset in hours) for given coords.
+
+    Returns None if no timezone is defined for the coordinates.
+    """
+    tz_name = _TIMEZONE_FINDER.timezone_at(lat=latitude, lng=longitude)
+    if tz_name is None:
+        return None
+    try:
+        tz = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError:
+        return None
+    offset = datetime.now(tz).utcoffset()
+    return (tz_name, offset.total_seconds() / 3600)
+
+
+def get_timezone_offset(city: str) -> dict:
+    """Returns the UTC offset in hours for the specified city.
+
+    Geocodes the city name to coordinates via OpenStreetMap, then looks up
+    the IANA timezone for those coordinates and returns its current offset
+    from UTC (DST-aware).
+    """
+    coords = _geocode_city(city)
+    if coords is None:
+        return {
+            "status": "error",
+            "error_message": f"Could not geocode city: {city!r}",
+        }
+    latitude, longitude = coords
+    result = _offset_for_coords(latitude, longitude)
+    if result is None:
+        return {
+            "status": "error",
+            "error_message": (
+                f"Could not determine timezone for {city!r} "
+                f"at ({latitude}, {longitude})"
+            ),
+        }
+    tz_name, offset_hours = result
+    return {
+        "status": "success",
+        "city": city,
+        "timezone": tz_name,
+        "offset_hours": offset_hours,
+        "latitude": latitude,
+        "longitude": longitude,
+    }
+
+
+def get_current_utc_time() -> dict:
+    """Returns the current time in UTC as an ISO-8601 string."""
+    now = datetime.now(timezone.utc)
+    return {
+        "status": "success",
+        "utc_time": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "iso": now.isoformat(),
+    }
 
 
 root_agent = Agent(
@@ -4894,10 +5057,17 @@ root_agent = Agent(
     name="root_agent",
     description="Tells the current time in a specified city.",
     instruction=(
-        "You are a helpful assistant that tells the current time in cities. "
-        "Use the 'get_current_time' tool for this purpose."
+        "You are a helpful assistant that tells the current local time in a city. "
+        "To answer, follow these steps:\n"
+        "1. Call 'get_timezone_offset' with the city name to obtain its "
+        "UTC offset in hours.\n"
+        "2. Call 'get_current_utc_time' to obtain the current UTC time.\n"
+        "3. Add the offset to the UTC time to compute the city's local time, and "
+        "report it to the user in a clear, human-readable format (e.g. "
+        "'3:42 PM on Tuesday, May 15') along with the timezone name.\n"
+        "If 'get_timezone_offset' returns an error, relay the error to the user."
     ),
-    tools=[get_current_time],
+    tools=[get_timezone_offset, get_current_utc_time],
 )
 EOF
     fi
@@ -4929,10 +5099,12 @@ EOF
     # sys.path is extended with the project root so `from agents import agent`
     # resolves (agents/ is the agent Python package).
     cat > "${project_dir}/tests/test_agent.py" << EOF
-"""Hermetic tests for the ADK agent. Does not call the model."""
+"""Hermetic tests for the ADK agent. Does not call the model or hit the network."""
 
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -4944,10 +5116,57 @@ def _model_id(a):
     return getattr(a.model, "model", a.model)
 
 
-def test_get_current_time_returns_success():
-    result = agent.get_current_time("Tokyo")
+# --- _offset_for_coords: timezonefinder + zoneinfo, fully offline ---
+
+
+def test_offset_for_coords_tokyo():
+    result = agent._offset_for_coords(35.6762, 139.6503)
+    assert result is not None
+    tz_name, offset_hours = result
+    assert tz_name == "Asia/Tokyo"
+    # Tokyo is UTC+9 year-round (no DST).
+    assert offset_hours == 9.0
+
+
+def test_offset_for_coords_new_york():
+    result = agent._offset_for_coords(40.7128, -74.0060)
+    assert result is not None
+    tz_name, _ = result
+    assert tz_name == "America/New_York"
+
+
+# --- get_timezone_offset: mock the geocoder, exercise the rest ---
+
+
+def test_get_timezone_offset_known_city():
+    with patch.object(agent, "_geocode_city", return_value=(35.6762, 139.6503)):
+        result = agent.get_timezone_offset("Tokyo")
     assert result["status"] == "success"
     assert result["city"] == "Tokyo"
+    assert result["timezone"] == "Asia/Tokyo"
+    assert result["offset_hours"] == 9.0
+    assert result["latitude"] == 35.6762
+    assert result["longitude"] == 139.6503
+
+
+def test_get_timezone_offset_unknown_city():
+    with patch.object(agent, "_geocode_city", return_value=None):
+        result = agent.get_timezone_offset("Atlantis")
+    assert result["status"] == "error"
+    assert "Atlantis" in result["error_message"]
+
+
+# --- get_current_utc_time ---
+
+
+def test_get_current_utc_time_returns_iso():
+    result = agent.get_current_utc_time()
+    assert result["status"] == "success"
+    parsed = datetime.fromisoformat(result["iso"])
+    assert parsed.utcoffset() == timedelta(0)
+
+
+# --- root agent config ---
 
 
 def test_root_agent_is_configured():
@@ -4956,11 +5175,12 @@ def test_root_agent_is_configured():
     assert _model_id(agent.root_agent) == "${model_id}"
 
 
-def test_root_agent_has_tool():
+def test_root_agent_has_tools():
     tool_names = [
         getattr(t, "__name__", getattr(t, "name", "")) for t in agent.root_agent.tools
     ]
-    assert "get_current_time" in tool_names
+    assert "get_timezone_offset" in tool_names
+    assert "get_current_utc_time" in tool_names
 EOF
 
     cat > "${project_dir}/pytest.ini" << EOF
