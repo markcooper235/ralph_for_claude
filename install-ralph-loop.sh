@@ -1623,9 +1623,26 @@ EOF
 
 ## ADK Python Agent Specific
 
-This project is a Google Agent Development Kit (ADK) agent. The agent code lives
-in the `<agent_module>/` directory (the directory containing `agent.py` and
-`__init__.py`). The agent uses Gemini via the `GOOGLE_API_KEY` in `.env`.
+This project is a Google Agent Development Kit (ADK) agent. Layout:
+
+```
+project-root/
+├── agents/                        ← what `adk web agents/` scans
+│   └── <agent_module>/
+│       ├── __init__.py            # `from . import agent` (required for discovery)
+│       ├── agent.py               # defines `root_agent`
+│       └── .env                   # API key (canonical per-agent location)
+├── tests/                         # pytest — OUTSIDE agents/ so adk web ignores
+├── requirements.txt
+├── pytest.ini
+└── venv/                          # OUTSIDE agents/ so adk web ignores
+```
+
+**Important:** anything that isn't an agent must live OUTSIDE `agents/`.
+`adk web agents/` treats every subdirectory of `agents/` as a candidate
+agent — if you put `venv/`, `tests/`, or `ralph/` there, they'll all
+appear in the agent picker UI and clicking them produces "no agent flow
+defined". Keep `agents/` clean.
 
 ### Setup (First Time)
 ```bash
@@ -1634,17 +1651,17 @@ source venv/bin/activate           # Activate (Linux/Mac)
 # venv/Scripts/activate            # Activate (Windows)
 
 # REQUIRED before running the agent:
-#   Edit .env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY with a real key.
-#   Get one from https://aistudio.google.com/app/apikey
+#   Edit agents/<agent_module>/.env and replace REPLACE_WITH_YOUR_<PROVIDER>_API_KEY
+#   Get a Gemini key from https://aistudio.google.com/app/apikey
 ```
 
 ### Run the Agent
 ```bash
 # CLI mode — interactive conversation in the terminal:
-venv/bin/adk run <agent_module>
+venv/bin/adk run agents/<agent_module>
 
-# Web UI — run from the PARENT of the agent module directory:
-venv/bin/adk web --port 8000       # http://localhost:8000
+# Web UI — pass the agents/ dir so only your agent appears in the picker:
+venv/bin/adk web agents/ --port 8000      # http://localhost:8000
 ```
 
 ### Test Commands
@@ -1664,10 +1681,20 @@ venv/bin/flake8 .                  # Linting
 ```
 
 ### Editing the Agent
-- Tools: add functions in `<agent_module>/agent.py` and list them in `tools=[...]`.
+- Tools: add functions in `agents/<agent_module>/agent.py` and list them in `tools=[...]`.
+  Each tool function needs type hints on parameters and a docstring (becomes
+  the LLM schema). Return a dict with a `status` key.
 - Instructions: edit the `instruction=` parameter on `root_agent`.
+- Sub-agents: pass `sub_agents=[child_agent]` on the parent `Agent` — compose
+  in Python, NOT via separate top-level agent dirs.
+- Workflow agents: `SequentialAgent`, `ParallelAgent`, `LoopAgent` (deterministic
+  pipelines) — see https://adk.dev/agents/workflow-agents/.
+- Callbacks: `before_model_callback`, `after_model_callback`, `before_tool_callback`,
+  etc. — all optional kwargs on `Agent`. See https://adk.dev/callbacks/.
 - Model: see "Switching Models" below.
-- Multi-agent setups: see https://adk.dev/ for sub-agents, workflows, agent teams.
+- Adding more agents: create a sibling dir under `agents/` (e.g.
+  `agents/another_agent/`) with its own `__init__.py` + `agent.py` + `.env`.
+  `adk web agents/` will show both in the picker.
 
 ### Switching Models
 
@@ -1789,16 +1816,31 @@ EOF
 ## ADK TypeScript Agent Specific
 
 This project is a Google Agent Development Kit (ADK) agent written in
-TypeScript. `agent.ts` exports `rootAgent` — that's what `adk run` and
-`adk web` discover. Tools are defined as `FunctionTool` instances with
-Zod parameter schemas.
+TypeScript. Layout:
+
+```
+project-root/
+├── agents/                              ← what `adk web agents/` scans
+│   └── <agent_file>.ts                  # exports `rootAgent`; filename = app name
+├── tests/
+│   └── agent.test.ts                    # vitest — OUTSIDE agents/ so adk web ignores
+├── package.json
+├── tsconfig.json
+├── .env                                 # GEMINI_API_KEY at project root
+└── node_modules/                        # OUTSIDE agents/ so adk web ignores
+```
+
+**Important:** anything that isn't an agent file must live OUTSIDE
+`agents/`. `adk web agents/` lists every `.ts` file there as an agent
+(filename becomes the app name). Test files in `agents/` crash the
+picker (vitest internal-state errors). Keep `agents/` clean.
 
 ### Setup (First Time)
 ```bash
 # node_modules/ was populated and `npm install` was run during install.
 # REQUIRED before running the agent:
-#   Edit .env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY with a real key.
-#   Get one from https://aistudio.google.com/app/apikey
+#   Edit .env at project root and replace REPLACE_WITH_YOUR_GEMINI_API_KEY.
+#   Get a key from https://aistudio.google.com/app/apikey
 ```
 
 ### Run the Agent
@@ -1806,8 +1848,8 @@ Zod parameter schemas.
 npm start                       # CLI mode — interactive conversation
 npm run web                     # Web UI on http://localhost:8000
 # Or directly:
-npx adk run agent.ts
-npx adk web
+npx adk run agents/<agent_file>.ts
+npx adk web agents/
 ```
 
 ### Test Commands
@@ -3152,16 +3194,36 @@ create_typescript_adk_project() {
     local model_id="${PROJECT_CONFIG[adk_model]:-gemini-flash-latest}"
     local env_var="${PROJECT_CONFIG[adk_env_var]:-GEMINI_API_KEY}"
 
+    # Agent file name (becomes the app name in `adk web` picker).
+    # Derived from project name: lowercase, hyphens/dots/spaces -> underscores.
+    local agent_file
+    agent_file="$(echo "${project_name}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_]/_/g')"
+    [ -z "${agent_file}" ] && agent_file="agent"
+
+    # Canonical ADK TypeScript layout (mirrors the Python pattern):
+    #   project_dir/
+    #     agents/<agent_file>.ts        ← what `adk web agents/` scans
+    #     agent.test.ts                 ← outside agents/ so adk web ignores it
+    #     package.json
+    #     tsconfig.json
+    #     .env
+    #     node_modules/                 ← outside agents/ so adk web ignores it
+    # The TS `adk web` lists every .ts file in its target dir as one agent
+    # (filename = app name). Test files inside `agents/` break the picker
+    # (vitest internal state errors), so keep them OUTSIDE.
+    mkdir -p "${project_dir}/agents"
+    mkdir -p "${project_dir}/tests"
+
     # package.json — ESM + tsx for running .ts directly + vitest for tests
     cat > "${project_dir}/package.json" << EOF
 {
   "name": "${project_name}",
   "version": "1.0.0",
   "type": "module",
-  "main": "agent.ts",
+  "main": "agents/${agent_file}.ts",
   "scripts": {
-    "start": "npx adk run agent.ts",
-    "web": "npx adk web",
+    "start": "npx adk run agents/${agent_file}.ts",
+    "web": "npx adk web agents/",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -3203,10 +3265,11 @@ EOF
 }
 EOF
 
-    # agent.ts — verbatim shape from the ADK TypeScript quickstart, with the
-    # model ID parameterized. LlmAgent constructor is hermetic (no API call
-    # at construction time), so tests can import rootAgent directly.
-    cat > "${project_dir}/agent.ts" << EOF
+    # agents/<agent_file>.ts — exports `rootAgent`. The filename (without .ts)
+    # becomes the app name in the `adk web` picker. LlmAgent constructor is
+    # hermetic (no API call at construction time), so tests can import
+    # rootAgent directly.
+    cat > "${project_dir}/agents/${agent_file}.ts" << EOF
 import { FunctionTool, LlmAgent } from "@google/adk";
 import { z } from "zod";
 
@@ -3236,11 +3299,12 @@ export const rootAgent = new LlmAgent({
 });
 EOF
 
-    # agent.test.ts — vitest. Hermetic: LlmAgent does not call the model at
-    # construction time, so the tests run without GEMINI_API_KEY.
-    cat > "${project_dir}/agent.test.ts" << EOF
+    # tests/agent.test.ts — vitest. Hermetic: LlmAgent does not call the model
+    # at construction time, so the tests run without GEMINI_API_KEY.
+    # Tests live OUTSIDE agents/ so `adk web` does not try to load them.
+    cat > "${project_dir}/tests/agent.test.ts" << EOF
 import { describe, it, expect } from "vitest";
-import { rootAgent } from "./agent.js";
+import { rootAgent } from "../agents/${agent_file}.js";
 
 describe("rootAgent (ADK Gemini agent)", () => {
   it("is constructed without an API key", () => {
@@ -3262,7 +3326,8 @@ describe("rootAgent (ADK Gemini agent)", () => {
 });
 EOF
 
-    # .env — placeholder API key; user must replace before running the agent
+    # .env — placeholder API key; user must replace before running the agent.
+    # TypeScript ADK uses GEMINI_API_KEY (NOT GOOGLE_API_KEY like Python).
     cat > "${project_dir}/.env" << EOF
 # Get a Gemini API key from https://aistudio.google.com/app/apikey
 ${env_var}="REPLACE_WITH_YOUR_GEMINI_API_KEY"
@@ -3332,6 +3397,11 @@ EOF
     echo
     print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_GEMINI_API_KEY"
     print_warning "Get a key from https://aistudio.google.com/app/apikey (the agent will not run without it)"
+    echo
+    print_info "To run the agent:"
+    print_info "  cd ${project_dir}"
+    print_info "  npx adk run agents/${agent_file}.ts       # interactive CLI"
+    print_info "  npx adk web agents/                       # web UI at http://localhost:8000"
 }
 
 create_java_adk_project() {
@@ -4739,7 +4809,20 @@ create_python_adk_project() {
         *)         provider_display="${provider}"; key_url="your model provider's API key dashboard" ;;
     esac
 
-    mkdir -p "${project_dir}/${agent_module}"
+    # Canonical ADK Python layout (from `adk create` + docs):
+    #   project_dir/
+    #     agents/<agent_module>/        ← what `adk web agents/` scans
+    #       __init__.py
+    #       agent.py
+    #       .env                        ← canonical per-agent .env location
+    #     tests/                        ← outside agents/ so adk web ignores it
+    #     pytest.ini
+    #     requirements.txt
+    #     venv/                         ← outside agents/ so adk web ignores it
+    # This isolation matters: `adk web` treats every subdir of its target as a
+    # candidate agent, so anything that isn't an agent must live OUTSIDE agents/.
+    local agents_dir="${project_dir}/agents/${agent_module}"
+    mkdir -p "${agents_dir}"
     mkdir -p "${project_dir}/tests"
 
     # requirements.txt — google-adk[extensions] for LiteLLM-routed providers
@@ -4755,7 +4838,7 @@ flake8
 EOF
 
     # Agent package __init__.py — required for `adk run`/`adk web` discovery
-    cat > "${project_dir}/${agent_module}/__init__.py" << 'EOF'
+    cat > "${agents_dir}/__init__.py" << 'EOF'
 from . import agent  # noqa: F401  -- required for ADK agent discovery
 EOF
 
@@ -4763,7 +4846,7 @@ EOF
     #   - Gemini:        Agent(model="gemini-flash-latest", ...)
     #   - Other (via LiteLLM): Agent(model=LiteLlm("provider/model"), ...)
     if [ "${uses_litellm}" = "true" ]; then
-        cat > "${project_dir}/${agent_module}/agent.py" << EOF
+        cat > "${agents_dir}/agent.py" << EOF
 """Root ADK agent. Edit this file to change the agent's behavior."""
 
 from google.adk.agents.llm_agent import Agent
@@ -4787,7 +4870,7 @@ root_agent = Agent(
 )
 EOF
     else
-        cat > "${project_dir}/${agent_module}/agent.py" << EOF
+        cat > "${agents_dir}/agent.py" << EOF
 """Root ADK agent. Edit this file to change the agent's behavior."""
 
 from google.adk.agents.llm_agent import Agent
@@ -4811,11 +4894,22 @@ root_agent = Agent(
 EOF
     fi
 
-    # .env — placeholder API key; user must replace before running the agent
-    cat > "${project_dir}/.env" << EOF
+    # .env — INSIDE the agent dir (canonical, what `adk create` writes).
+    # ADK walks UP from this file to filesystem root looking for env vars.
+    # GOOGLE_GENAI_USE_VERTEXAI=FALSE selects the public Gemini API path
+    # (vs. Vertex AI, which would require GOOGLE_CLOUD_PROJECT instead).
+    if [ "${provider}" = "gemini" ]; then
+        cat > "${agents_dir}/.env" << EOF
+# Get ${article} ${provider_display} API key from ${key_url}
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+${env_var}="REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+EOF
+    else
+        cat > "${agents_dir}/.env" << EOF
 # Get ${article} ${provider_display} API key from ${key_url}
 ${env_var}="REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
 EOF
+    fi
 
     # tests/__init__.py
     touch "${project_dir}/tests/__init__.py"
@@ -4824,13 +4918,14 @@ EOF
     # does NOT call the model (no API key needed to run tests). The model
     # comparison uses _model_id() so it works for both plain-string and
     # LiteLlm-wrapped models (LiteLlm stores the model string at .model.model).
+    # sys.path is extended with the agents/ dir so `from <agent_module>` resolves.
     cat > "${project_dir}/tests/test_agent.py" << EOF
 """Hermetic tests for the ADK agent. Does not call the model."""
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agents"))
 
 from ${agent_module} import agent  # noqa: E402  -- import after sys.path setup
 
@@ -4865,7 +4960,7 @@ testpaths = tests
 python_files = test_*.py
 python_classes = Test*
 python_functions = test_*
-addopts = --cov=${agent_module} --cov-report=term-missing
+addopts = --cov=agents/${agent_module} --cov-report=term-missing
 EOF
 
     cat > "${project_dir}/.flake8" << 'EOF'
@@ -4919,8 +5014,13 @@ EOF
 
     print_success "Created Python ADK project structure (provider: ${provider}, model: ${model_id})"
     echo
-    print_warning "REQUIRED: Edit ${project_dir}/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
+    print_warning "REQUIRED: Edit ${project_dir}/agents/${agent_module}/.env and replace REPLACE_WITH_YOUR_${provider_display^^}_API_KEY"
     print_warning "Get a key from ${key_url} (the agent will not run without it)"
+    echo
+    print_info "To run the agent:"
+    print_info "  cd ${project_dir}"
+    print_info "  venv/bin/adk run agents/${agent_module}       # interactive CLI"
+    print_info "  venv/bin/adk web agents/ --port 8000          # web UI at http://localhost:8000"
 }
 
 create_ruby_project() {
